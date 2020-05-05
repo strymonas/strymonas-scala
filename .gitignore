@@ -156,3 +156,4 @@ META
 .bloop/
 scalav2/project/metals.sbt
 scalav2/.metals/*
+project/metals.sbt
