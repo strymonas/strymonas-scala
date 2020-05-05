@@ -15,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
 @Fork(3)
 class S {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
-   import strymonas.TestPipelines._
+   import TestPipelines._
    import S._
 
    var N: Int = 100000000
@@ -327,13 +327,13 @@ class S {
 }
 
 object S {
-  inline def sumMacro: Array[Int] => Int = ${strymonas.TestPipelines.sum }
-  inline def sumOfSquaresMacro: Array[Int] => Int = ${strymonas.TestPipelines.sumOfSquares}
-  inline def sumOfSquaresEvenMacro: Array[Int] => Int = ${strymonas.TestPipelines.sumOfSquaresEven}
-  inline def cartMacro: (Array[Int], Array[Int]) => Int = ${strymonas.TestPipelines.cart}
-  inline def dotProductMacro: (Array[Int], Array[Int]) => Int = ${strymonas.TestPipelines.dotProduct}
-  inline def flatMap_after_zipMacro: (Array[Int], Array[Int]) => Int = ${strymonas.TestPipelines.flatMap_after_zip}
-  inline def zip_after_flatMapMacro: (Array[Int], Array[Int]) => Int = ${strymonas.TestPipelines.zip_after_flatMap}
-  inline def flatMap_takeMacro: (Array[Int], Array[Int]) => Int = ${strymonas.TestPipelines.flatMap_take}
-  inline def zip_flat_flatMacro: (Array[Int], Array[Int]) => Int = ${strymonas.TestPipelines.zip_flat_flat}
+  inline def sumMacro: Array[Int] => Int = ${TestPipelines.sum }
+  inline def sumOfSquaresMacro: Array[Int] => Int = ${TestPipelines.sumOfSquares}
+  inline def sumOfSquaresEvenMacro: Array[Int] => Int = ${TestPipelines.sumOfSquaresEven}
+  inline def cartMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.cart}
+  inline def dotProductMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.dotProduct}
+  inline def flatMap_after_zipMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.flatMap_after_zip}
+  inline def zip_after_flatMapMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zip_after_flatMap}
+  inline def flatMap_takeMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.flatMap_take}
+  inline def zip_flat_flatMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zip_flat_flat}
 }

@@ -1,4 +1,4 @@
-package strymonas
+package benchmarks
 
 import scala.quoted._
 import scala.quoted.util._

@@ -3,7 +3,7 @@ val dottyVersion = "0.24.0-RC1"
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "strymonas-v2",
+    name := "strymonas",
     version := "0.1.0",
 
     scalaVersion := dottyVersion,
@@ -20,7 +20,7 @@ lazy val bench = project
   .in(file("bench"))
   .dependsOn(root)
   .settings(
-    name := "strymonas-v2-bench",
+    name := "strymonas-bench",
     version := "0.1.0",
 
     scalaVersion := dottyVersion,
