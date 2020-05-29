@@ -1,5 +1,6 @@
 package strymonas
 
-trait StreamShape[A]
-
-case class Init[A, S](s: init[S], initF: S => Stream[A]) extends StreamShape[A]
+enum StreamShape[A] {
+   case Lin[A](producer: Producer[A]) extends StreamShape[A]
+   case Initializer[S, A](init: Init[S], step: (S => StreamShape[A])) extends StreamShape[A]
+}
