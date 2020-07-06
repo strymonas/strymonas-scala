@@ -6,27 +6,41 @@ import imports._
 import imports.Cardinality._
 
 trait StreamRaw extends StreamRawOps {
+   type Goon = Expr[Boolean]
+
+   private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): Expr[Unit] = '{
+      var i = 0
+
+      while(i < ${upb}) {
+          ${body('i)}
+      }
+   }
+
    def foldRaw[A](consumer: A => Expr[Unit], stream: StreamShape[A]): E[Unit] = {
-      stream match {
-         case Linear(producer) => {
-            producer.card match {
-               case Many =>
-               producer.init(sp => '{
-                  while(${producer.hasNext(sp)}) {
-                     ${producer.step(sp, consumer)}
-                  }
-               })
-               case AtMost1 =>
-               producer.init(sp => '{
-                  if (${producer.hasNext(sp)}) {
-                     ${producer.step(sp, consumer)}
-                  }
-               })
-            }
-         }
-         case nested: Nested[A, bt] => {
-            foldRaw[bt](((e: bt) => foldRaw[A](consumer, nested.nestedf(e))), Linear(nested.producer))
+   
+      def consume(bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
+         (bp, st) match {
+            case (None, For(pullArray)) => 
+               cfor(pullArray.upb(), (i: Int) => pullArray.index(i, consumer))
+            case _ => 
+               error("consume failed")
          }
       }
+
+      def loop(bp: Option[Goon], consumer: A => Expr[Unit], stream: StreamShape[A]): Expr[Unit] = {
+         stream match {
+            case Initializer[St, A](ILet(i: St), sk: (St => StreamShape[A])) => '{
+               val z = ${i}
+
+               ${loop(bp, consumer, '{z})}
+            }
+            case Linear[A](st: Producer[A]) => 
+               consume(bp, consumer, st)
+            case _ => 
+               error("loop failed")
+         }
+      }
+
+      loop(None, consumer, st)
    }
 }
