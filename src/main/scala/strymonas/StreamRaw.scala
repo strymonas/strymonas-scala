@@ -4,6 +4,7 @@ import scala.quoted._
 import scala.quoted.util._
 import imports._
 import imports.Cardinality._
+import scala.compiletime._
 
 trait StreamRaw extends StreamRawOps {
    type Goon = Expr[Boolean]
@@ -23,7 +24,7 @@ trait StreamRaw extends StreamRawOps {
             case (None, For(pullArray)) => 
                cfor(pullArray.upb(), (i: Int) => pullArray.index(i, consumer))
             case _ => 
-               error("consume failed")
+               scala.compiletime.error("consume failed")
          }
       }
 

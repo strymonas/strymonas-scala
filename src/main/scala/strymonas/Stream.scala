@@ -29,16 +29,14 @@ object Stream {
       Initializer(ILet(init), sk)
    }
 
-   private def pull_array[A](upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
+   private def pull_array[A](exact_upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
       Linear(
          For(
             new PullArray[A] {
-               def upb(): Expr[Int] = {
-                  upb()
-               }
+               def upb(): Expr[Int] = exact_upb
 
-               def index(st: Expr[Int]): Emit[A] = {
-                  idx(st)
+               def index(st: Expr[Int]): Emit[A] = (k: A => Expr[Unit]) => {
+                  idx(st)(k)
                }
             }
          )
@@ -46,13 +44,11 @@ object Stream {
    }
 
    def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
-      initializing(arr, (arr: Array[A]) => 
-         initializing('{($arr).length - 1}, (len: Int) => 
-            pull_array(len, (i: Expr[Int], k: Expr[A] => Emit[A]) => '{ 
+      initializing(arr, (arr: Expr[Array[A]]) => 
+         initializing('{($arr).length - 1}, (len: Expr[Int]) => 
+            pull_array[Expr[A]](len, (i: Expr[Int]) => (k: Expr[A] => Expr[Unit]) => '{ 
                val el: A = ($arr).apply(${i})
-
-               ???
-               //${k('el)} // (A => Expr[Unit]) => Expr[Unit]
+               ${k('el)} 
             }))
       )
    }
