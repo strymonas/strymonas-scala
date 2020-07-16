@@ -35,8 +35,8 @@ object Stream {
             new PullArray[A] {
                def upb(): Expr[Int] = exact_upb
 
-               def index(st: Expr[Int]): Emit[A] = (k: A => Expr[Unit]) => {
-                  idx(st)(k)
+               def index(i: Expr[Int]): Emit[A] = (k: A => Expr[Unit]) => {
+                  idx(i)(k)
                }
             }
          )
@@ -44,13 +44,15 @@ object Stream {
    }
 
    def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
-      initializing(arr, (arr: Expr[Array[A]]) => 
+      val ret = initializing(arr, (arr: Expr[Array[A]]) => 
          initializing('{($arr).length - 1}, (len: Expr[Int]) => 
             pull_array[Expr[A]](len, (i: Expr[Int]) => (k: Expr[A] => Expr[Unit]) => '{ 
                val el: A = ($arr).apply(${i})
                ${k('el)} 
             }))
       )
+
+      Stream(ret)
    }
 }
 

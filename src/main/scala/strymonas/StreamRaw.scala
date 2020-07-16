@@ -9,7 +9,7 @@ import scala.compiletime._
 trait StreamRaw extends StreamRawOps {
    type Goon = Expr[Boolean]
 
-   private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): Expr[Unit] = '{
+   private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit])(using qctx: scala.quoted.QuoteContext): Expr[Unit] = '{
       var i = 0
 
       while(i < ${upb}) {
@@ -17,28 +17,34 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   def foldRaw[A](consumer: A => Expr[Unit], stream: StreamShape[A]): E[Unit] = {
-   
+   def foldRaw[A](consumer: A => Expr[Unit], st: StreamShape[A]): E[Unit] = {
+      import Init._
+      import Producer._
+      import StreamShape._
+
       def consume(bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
          (bp, st) match {
             case (None, For(pullArray)) => 
-               cfor(pullArray.upb(), (i: Int) => pullArray.index(i, consumer))
+               cfor(pullArray.upb(), (i: Expr[Int]) => 
+                  pullArray.index(i)(consumer))
             case _ => 
-               scala.compiletime.error("consume failed")
+               '{ println("consume failed") }
          }
       }
 
-      def loop(bp: Option[Goon], consumer: A => Expr[Unit], stream: StreamShape[A]): Expr[Unit] = {
-         stream match {
+      def loop(bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A]): Expr[Unit] = {
+         type St = Expr[Int]
+
+         st match {
             case Initializer[St, A](ILet(i: St), sk: (St => StreamShape[A])) => '{
                val z = ${i}
 
-               ${loop(bp, consumer, '{z})}
+               ${loop(bp, consumer, sk('{z}))}
             }
             case Linear[A](st: Producer[A]) => 
                consume(bp, consumer, st)
             case _ => 
-               error("loop failed")
+               '{ println("loop failed") }
          }
       }
 
