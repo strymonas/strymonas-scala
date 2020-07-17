@@ -33,15 +33,14 @@ trait StreamRaw extends StreamRawOps {
       }
 
       def loop(bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A]): Expr[Unit] = {
-         type St = Expr[Int]
 
          st match {
-            case Initializer[St, A](ILet(i: St), sk: (St => StreamShape[A])) => '{
+            case Initializer(ILet(i), sk) => '{
                val z = ${i}
 
                ${loop(bp, consumer, sk('{z}))}
             }
-            case Linear[A](st: Producer[A]) => 
+            case Linear(st) => 
                consume(bp, consumer, st)
             case _ => 
                '{ println("loop failed") }
