@@ -5,8 +5,6 @@ import scala.quoted.util._
 import scala.quoted.staging._
 import scala.quoted.autolift
 
-type E[T] = QuoteContext ?=> Expr[T]
-
 class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
 
    def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {

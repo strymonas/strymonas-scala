@@ -8,8 +8,8 @@ import scala.compiletime._
 
 trait StreamRaw extends StreamRawOps {
    type Goon = Expr[Boolean]
-
-   private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit])(using qctx: scala.quoted.QuoteContext): Expr[Unit] = '{
+   
+   private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
 
       while(i < ${upb}) {
@@ -17,12 +17,12 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   def foldRaw[A](consumer: A => Expr[Unit], st: StreamShape[A]): E[Unit] = {
+   def foldRaw[A: Type](consumer: A => Expr[Unit], st: StreamShape[A]): E[Unit] = {
       import Init._
       import Producer._
       import StreamShape._
 
-      def consume(bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
+      def consume[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
          (bp, st) match {
             case (None, For(pullArray)) => 
                cfor(pullArray.upb(), (i: Expr[Int]) => 
@@ -32,13 +32,15 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def loop(bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A]): Expr[Unit] = {
+      def loop[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A]): Expr[Unit] = {
 
          st match {
-            case Initializer(ILet(i), sk) => '{
-               val z = ${i}
+            case Initializer(ILet(i): Init[Expr[a]], sk): StreamShape[A] => '{
 
-               ${loop(bp, consumer, sk('{z}))}
+               ???
+               // val z = ${i} // TOFIX
+
+               // ${loop[A](bp, consumer, sk.asInstanceOf[Expr[a] => StreamShape[A]]('{z}))} 
             }
             case Linear(st) => 
                consume(bp, consumer, st)
@@ -49,4 +51,6 @@ trait StreamRaw extends StreamRawOps {
 
       loop(None, consumer, st)
    }
+
+   def mapRaw[A, B](f: A => (B => quoted.Expr[Unit]) => quoted.Expr[Unit], stream: StreamShape[A]): StreamShape[B] = ???
 }
