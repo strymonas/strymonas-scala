@@ -8,10 +8,13 @@ class StreamTest {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
 
    @Test def sum(): Unit = {
-      val t = run { '{ (array: Array[Int]) => 
-         ${ Stream.of('array)
-            .fold('{0}, ((a, b) => '{ $a + $b })) } 
-      } }
+
+      def sum_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) => 
+         ${ Stream.of('array).fold('{0}, ((a, b) => '{ $a + $b })) }  
+      }
+      // println(withQuoteContext(sum_staged.show))
+      val t = run { sum_staged }
+
       assert(t(Array(1, 2, 3)) == 6)
       assert(t(Array(1, 2, 3, 4)) == 10)
    }

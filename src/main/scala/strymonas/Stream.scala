@@ -24,7 +24,7 @@ object Stream {
    import Producer._
 
    private def initializing[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A]): StreamShape[A] = {
-      Initializer(ILet(init), sk)
+      Initializer[Expr[Z], A](ILet(init), sk)
    }
 
    private def pull_array[A](exact_upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
@@ -42,13 +42,14 @@ object Stream {
    }
 
    def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
-      val ret = initializing(arr, (arr: Expr[Array[A]]) => 
-         initializing('{($arr).length - 1}, (len: Expr[Int]) => 
-            pull_array[Expr[A]](len, (i: Expr[Int]) => (k: Expr[A] => Expr[Unit]) => '{ 
-               val el: A = ($arr).apply(${i})
-               ${k('el)} 
-            }))
-      )
+      val ret = 
+         initializing(arr, (arr: Expr[Array[A]]) => // Initializer[Expr[Array[A]], A](ILet(arr), sk)
+            initializing('{($arr).length - 1}, (len: Expr[Int]) => // Initializer[Expr[Int], A](ILet(arr), sk)
+               pull_array[Expr[A]](len, (i: Expr[Int]) => (k: Expr[A] => Expr[Unit]) => '{ 
+                  val el: A = ($arr).apply(${i})
+                  ${k('el)} 
+               }))
+         )
 
       Stream(ret)
    }

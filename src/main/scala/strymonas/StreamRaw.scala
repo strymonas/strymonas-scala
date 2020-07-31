@@ -12,8 +12,9 @@ trait StreamRaw extends StreamRawOps {
    private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
 
-      while(i < ${upb}) {
+      while(i <= ${upb}) {
           ${body('i)}
+          i = i + 1
       }
    }
 
@@ -33,14 +34,13 @@ trait StreamRaw extends StreamRawOps {
       }
 
       def loop[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A]): Expr[Unit] = {
-
          st match {
-            case Initializer(ILet(i): Init[Expr[a]], sk): StreamShape[A] => '{
+            case Initializer(ILet(i): Init[Expr[a]], sk /*: (Expr[a] => StreamShape[A])*/): StreamShape[A] => '{
+               // TODO: remove cast and/or report on Dotty
+               
+               val z = ${i.asInstanceOf[Expr[Any]]} 
 
-               ???
-               // val z = ${i} // TOFIX
-
-               // ${loop[A](bp, consumer, sk.asInstanceOf[Expr[a] => StreamShape[A]]('{z}))} 
+               ${loop[A](bp, consumer, sk.asInstanceOf[Expr[Any] => StreamShape[A]]('{z}))} 
             }
             case Linear(st) => 
                consume(bp, consumer, st)
