@@ -22,6 +22,10 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
+   private def cif[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
+      if(${cnd}) then ${bt} else ${bf}
+   }
+
    private def cseq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
       ${c1}
       ${c2}
@@ -60,10 +64,19 @@ trait StreamRaw extends StreamRawOps {
          st match {
             case Initializer(ILet(i, t), sk): StreamShape[A] => 
                lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
-            case Linear(st) => 
-               consume(bp, consumer, st)
-            // case Filtered(cnd, s) => 
-            // case Stuttered(s) => 
+            case Linear(producer) => 
+               consume(bp, consumer, producer)
+            case Filtered(cnd, producer) => 
+               val newConsumer = (x: A) => cif(cnd(x), consumer(x), '{()})
+               consume(bp, newConsumer, producer)
+            case Stuttered(producer) => 
+               val newConsumer =  (x: Option[A]) => {
+                  x match {
+                     case None => '{ () }
+                     case Some(xx) => consumer(xx)
+                  }
+               }
+               consume(bp, newConsumer, producer)
             // case Nested(st, last) =>
             // case Break(g, st) => 
          }
@@ -72,12 +85,22 @@ trait StreamRaw extends StreamRawOps {
       loop(None, consumer, st)
    }
 
-   def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A]): StreamShape[B] = {
+   def mkfmapOption_CPS[A, B, W](
+      f: (A => (B => W) => W))
+      (e: (Option[A]))
+      (k: (Option[B] => W)): W = {
+         e match {
+            case None => k(None)
+            case Some(x) => f(x)((y: B) => { k(Some(y))})
+         }
+      }
+
+   def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       s match {
          case Initializer(init, sk) => Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
          case Linear(s) => Linear(mkMapProducer(tr, s))
-         // case Filtered(cnd, s) => 
-         // case Stuttered(s) => 
+         case Filtered(cnd, s) => mapRaw_CPS(tr, Stuttered(filter_to_stutter(cnd, s)))
+         case Stuttered(s) => Stuttered(mkMapProducer(mkfmapOption_CPS[A, B, Expr[Unit]](tr), s))
          // case Nested(st, last) =>
          // case Break(g, st) => 
       }
@@ -85,8 +108,25 @@ trait StreamRaw extends StreamRawOps {
 
    // A => B ~> 
    // A => (B => Expr[Unit]) => Expr[Unit]
-   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A]): StreamShape[B] = {
+   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
    }
 
+   def filterRaw[A](pred: A => Expr[Boolean], s: StreamShape[A]): StreamShape[A] = {
+      s match { 
+         case Initializer(init, sk) => Initializer(init,  z => filterRaw(pred, sk(z)))
+         case Linear(s) => Filtered(pred, s)
+         // case Filtered(cnd, s) => 
+         // case Stuttered(s) => 
+         // case Nested(st, last) =>
+         // case Break(g, st) => 
+      }
+   }
+
+   def filter_to_stutter[A](cnd: A => Expr[Boolean], s: Producer[A])(using QuoteContext): Producer[Option[A]] = {
+      // mkMapProducer type: (A => Emit[Option[A]]) => Producer[A] => Producer[Option[A]]
+      mkMapProducer((x: A) => (k: Option[A] => Expr[Unit]) => {
+         cif(cnd(x), k(Some(x)), k(None))
+      }, s)
+   }
 }

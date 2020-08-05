@@ -28,7 +28,14 @@ class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
 
    def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
       val newStream = mapRaw_CPS[Expr[A], Expr[B]]((a: Expr[A]) => lets(f(a)), stream)
+      
       Stream[B](newStream)
+   }
+
+   def filter(f: Expr[A] => Expr[Boolean])(using QuoteContext): Stream[A] = {
+      val newStream = filterRaw[Expr[A]](f, stream)
+
+      Stream[A](newStream)
    }
 }
 

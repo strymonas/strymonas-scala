@@ -34,16 +34,20 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4)) == 30)
    }
 
-   // @Test def sumOfSquaresEven(): Unit = {
-   //    val t = run { '{ (array: Array[Int]) =>
-   //       ${ Stream.of('{array})
-   //       .filter((d) => '{ $d % 2 == 0 })
-   //       .map((a) => '{ $a * $a })
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3)) == 4)
-   //    assert(t(Array(1, 2, 3, 4)) == 20)
-   // }
+   @Test def sumOfSquaresEven(): Unit = {
+
+      def sumOfSquaresEven_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) =>
+         ${ Stream.of('array)
+            .filter((d) => '{ $d % 2 == 0 })
+            .map[Int]((a) => '{ $a * $a })
+            .fold('{0}, ((a, b) => '{ $a + $b })) }}
+
+      // println(withQuoteContext(sumOfSquaresEven_staged.show))
+      val t = run { sumOfSquaresEven_staged }
+
+      assert(t(Array(1, 2, 3)) == 4)
+      assert(t(Array(1, 2, 3, 4)) == 20)
+   }
 
    // @Test def cart(): Unit = {
    //    val t = run { '{ (vHi: Array[Int], vLo: Array[Int]) =>
