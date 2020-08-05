@@ -35,7 +35,7 @@ trait StreamRaw extends StreamRawOps {
 
    private def for_unfold[A](pull: PullArray[A])(using QuoteContext): StreamShape[A] = {
       Initializer(
-         IVar('{0}), (i: Var[Int]) => {
+         IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
             Break('{ ${ i.get } <= ${ pull.upb() }}, 
                Linear(Unfold((k: A => Expr[Unit]) => 
                   pull.index(i.get)((a: A) => cseq(
@@ -56,14 +56,16 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def loop[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A]): Expr[Unit] = {
-         st match {
-            case Initializer(ILet(i) /*: Init[Expr[a]]*/, sk /*: (Expr[a] => StreamShape[A])*/): StreamShape[A] => '{
-               // TODO: remove cast and/or report on Dotty
-               val z = ${i.asInstanceOf[Expr[Any]]} 
+      def to[T, R: Type](f: Expr[T] => Expr[R])(t: Type[T])(using QuoteContext): Expr[T => R] =
+         '{ (x: $t) => { 
+                  val y = ${ f('x) } 
+                  y
+            } }
 
-               ${loop[A](bp, consumer, sk.asInstanceOf[Expr[Any] => StreamShape[A]]('{z}))} 
-            }
+      def loop[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using QuoteContext): Expr[Unit] = {
+         st match {
+            case Initializer(ILet(i, t), sk): StreamShape[A] => 
+               lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
             case Linear(st) => 
                consume(bp, consumer, st)
             case _ => 

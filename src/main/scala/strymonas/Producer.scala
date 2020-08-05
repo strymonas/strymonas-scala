@@ -11,8 +11,8 @@ trait PullArray[A] {
 }
 
 enum Init[A] {
-   case ILet(init: Expr[A]) extends Init[Expr[A]]
-   case IVar(init: Expr[A]) extends Init[Var[A]]
+   case ILet(init: Expr[A], t: Type[A]) extends Init[Expr[A]]
+   case IVar(init: Expr[A], t: Type[A]) extends Init[Var[A]]
 } 
 
 enum Producer[A] { 

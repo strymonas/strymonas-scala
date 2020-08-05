@@ -12,7 +12,8 @@ class StreamTest {
       def sum_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) => 
          ${ Stream.of('array).fold('{0}, ((a, b) => '{ $a + $b })) }  
       }
-      // println(withQuoteContext(sum_staged.show))
+      
+      println(withQuoteContext(sum_staged.show))
       val t = run { sum_staged }
 
       assert(t(Array(1, 2, 3)) == 6)

@@ -23,8 +23,8 @@ object Stream {
    import Init._
    import Producer._
 
-   private def initializing[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A]): StreamShape[A] = {
-      Initializer[Expr[Z], A](ILet(init), sk)
+   private def initializing[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Expr[Z], A](ILet(init, t), sk)
    }
 
    private def pull_array[A](exact_upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
