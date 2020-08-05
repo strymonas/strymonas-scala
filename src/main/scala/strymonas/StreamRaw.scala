@@ -56,12 +56,6 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def to[T, R: Type](f: Expr[T] => Expr[R])(t: Type[T])(using QuoteContext): Expr[T => R] =
-         '{ (x: $t) => { 
-                  val y = ${ f('x) } 
-                  y
-            } }
-
       def loop[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using QuoteContext): Expr[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk): StreamShape[A] => 
