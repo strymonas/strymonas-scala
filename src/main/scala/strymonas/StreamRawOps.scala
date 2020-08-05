@@ -7,5 +7,5 @@ trait StreamRawOps {
    type E[T] = QuoteContext ?=> Expr[T]
    
    def foldRaw[A: Type](consumer: A => Expr[Unit], stream: StreamShape[A]): E[Unit]
-   def mapRaw[A, B](f: (A => (B => Expr[Unit]) => Expr[Unit]), stream: StreamShape[A]): StreamShape[B]
+   def mapRaw_CPS[A, B](tr: (A => (B => Expr[Unit]) => Expr[Unit]), stream: StreamShape[A]): StreamShape[B]
 }

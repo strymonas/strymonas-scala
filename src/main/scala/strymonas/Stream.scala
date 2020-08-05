@@ -16,6 +16,20 @@ class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
          }
       }
    }
+
+   /**
+    * Let-insertion in CPS
+    */
+   private def lets[A: Type, W: Type](x: Expr[A])(using QuoteContext) = (k: (Expr[A] => Expr[W])) => '{
+      val lv = ${x}
+
+      ${k('{lv})}
+   }
+
+   def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
+      val newStream = mapRaw_CPS[Expr[A], Expr[B]]((a: Expr[A]) => lets(f(a)), stream)
+      Stream[B](newStream)
+   }
 }
 
 object Stream {

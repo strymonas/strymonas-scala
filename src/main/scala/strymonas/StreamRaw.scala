@@ -62,13 +62,31 @@ trait StreamRaw extends StreamRawOps {
                lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
             case Linear(st) => 
                consume(bp, consumer, st)
-            case _ => 
-               '{ println("loop failed") }
+            // case Filtered(cnd, s) => 
+            // case Stuttered(s) => 
+            // case Nested(st, last) =>
+            // case Break(g, st) => 
          }
       }
 
       loop(None, consumer, st)
    }
 
-   def mapRaw[A, B](f: A => (B => quoted.Expr[Unit]) => quoted.Expr[Unit], stream: StreamShape[A]): StreamShape[B] = ???
+   def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A]): StreamShape[B] = {
+      s match {
+         case Initializer(init, sk) => Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
+         case Linear(s) => Linear(mkMapProducer(tr, s))
+         // case Filtered(cnd, s) => 
+         // case Stuttered(s) => 
+         // case Nested(st, last) =>
+         // case Break(g, st) => 
+      }
+   }
+
+   // A => B ~> 
+   // A => (B => Expr[Unit]) => Expr[Unit]
+   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A]): StreamShape[B] = {
+      mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
+   }
+
 }

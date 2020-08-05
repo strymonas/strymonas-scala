@@ -13,22 +13,26 @@ class StreamTest {
          ${ Stream.of('array).fold('{0}, ((a, b) => '{ $a + $b })) }  
       }
       
-      println(withQuoteContext(sum_staged.show))
+      // println(withQuoteContext(sum_staged.show))
       val t = run { sum_staged }
 
       assert(t(Array(1, 2, 3)) == 6)
       assert(t(Array(1, 2, 3, 4)) == 10)
    }
 
-   // @Test def sumOfSquares(): Unit = {
-   //    val t = run { '{ (array: Array[Int]) =>
-   //       ${ Stream.of('{array})
-   //          .map((a) => '{ $a * $a })
-   //          .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3)) == 14)
-   //    assert(t(Array(1, 2, 3, 4)) == 30)
-   // }
+   @Test def sumOfSquares(): Unit = {
+
+      def sumOfSquares_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) =>
+         ${ Stream.of('array)
+            .map[Int]((a) => '{ $a * $a })
+            .fold('{0}, ((a, b) => '{ $a + $b })) }}
+      
+      // println(withQuoteContext(sumOfSquares_staged.show))
+      val t = run { sumOfSquares_staged }
+
+      assert(t(Array(1, 2, 3)) == 14)
+      assert(t(Array(1, 2, 3, 4)) == 30)
+   }
 
    // @Test def sumOfSquaresEven(): Unit = {
    //    val t = run { '{ (array: Array[Int]) =>
