@@ -6,10 +6,8 @@ import org.junit.Assert._
 
 class StreamTest {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
-
-   inline val debug = false;
    
-   inline def showGen[W](f: QuoteContext ?=> Expr[W]) = if(debug) println(withQuoteContext(f.show))
+   inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
 
    @Test def sum(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) => 
@@ -110,15 +108,19 @@ class StreamTest {
    //    assert(t(Array(1, 1, 1, 1), Array(1, 2, 3, 4)) == 40)
    // }
 
-   // @Test def dotProduct(): Unit = {
-   //    val t = run { '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream.of('{array1})
-   //       .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}))
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 12)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 20)
-   // }
+   @Test def dotProduct(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream.of('{array1})
+         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}))
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }
+
+      // showGen(s)
+      val t = run { s }
+
+      assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 12)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 20)
+   }
 
    // @Test def flatMap_after_zip(): Unit = {
    //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>

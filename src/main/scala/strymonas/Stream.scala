@@ -43,10 +43,8 @@ object Helpers {
    }
 }
 
-class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
+class Stream[A: Type](val stream: StreamShape[Expr[A]]) extends StreamRaw {
    import Helpers._
-
-   def shape = stream
 
    def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {
       Var(z) { s => 
@@ -59,7 +57,7 @@ class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
    }
 
    def flatMap[B: Type](f: Expr[A] => Stream[B])(using QuoteContext): Stream[B] = {
-      val newShape = flatMapRaw[A, Expr[B]](x => f(x).shape, stream)
+      val newShape = flatMapRaw[A, Expr[B]](x => f(x).stream, stream)
       
       Stream(newShape)
    }
@@ -74,6 +72,12 @@ class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
       val newShape = filterRaw[Expr[A]](f, stream)
 
       Stream[A](newShape)
+   }
+
+   def zipWith[B: Type, C: Type](f: Expr[A] => Expr[B] => Expr[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
+      val newShape = mapRaw_Direct[(Expr[A], Expr[B]), Expr[C]](p => f(p._1)(p._2), zipRaw[Expr[A], Expr[B]](stream, str2.stream))
+
+      Stream[C](newShape)
    }
 }
 
