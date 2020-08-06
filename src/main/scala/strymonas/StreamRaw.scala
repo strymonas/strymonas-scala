@@ -45,7 +45,7 @@ trait StreamRaw extends StreamRawOps {
       ${c1} || ${c2}
    }
 
-   private def cmin(c1: Expr[Int], c2: Expr[Int]): E[Int] = {
+   private def cmin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
       //TODO: ported Oleg's, need to check perf
       cif('{ ${c1} < ${c2} }, c1, c2)
    }
@@ -188,5 +188,53 @@ trait StreamRaw extends StreamRawOps {
          case Break(g, st) => 
             Break(g, filterRaw(pred, st))
       }
+   }
+
+   def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Expr[Unit]) => {
+      // Emit[(A, B)] ~> (A, B) => Expr[Unit] => Expr[Unit]
+      i1(x => i2(y => k((x, y))))
+   }
+
+   def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
+      new PullArray[(A, B)] {
+         def upb(): Expr[Int] = {
+            cmin(p1.upb())(p2.upb())
+         }
+         def index(i: Expr[Int]): Emit[(A, B)] = {
+            zipEmit(p1.index(i), p2.index(i))
+         }
+      }
+   }
+
+   def zipRaw[A, B](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
+      def swap[A, B](st: StreamShape[(A, B)]) = {
+         mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
+      }
+ 
+      (st1, st2) match {
+         case (Initializer(init, sk), st2) => 
+            Initializer(init, z => zipRaw(sk(z), st2))
+         case (st1, Initializer(init, sk)) => 
+            Initializer(init, z => zipRaw(st1, sk(z)))
+         /* Early termination detection */
+         case (Break(g1, st1), Break(g2, st2)) => 
+            Break(cconj(g1)(g2), zipRaw(st1, st2))
+         case (Break(g1, st1), st2) => 
+            Break(g1, zipRaw(st1, st2))
+         case (st1, Break(g2, st2)) => 
+            Break(g2, zipRaw(st1, st2))
+         // /* Zipping of two For is special; in other cases, convert For to While */
+         // case (Linear(For(pa1), Linear(For(pa2)))) =>       // Fix: type error, is it type inference failure?
+         //    Linear(For(mkZipPullArray[A, B](pa1.asInstanceOf[PullArray[A]], pa2.asInstanceOf[PullArray[B]]))) 
+         // case (Linear(For(pa1)), _) => 
+         //    zipRaw(for_unfold(pa1), st2)
+         // case (_, Linear(For(_)))=> 
+         //    swap(zipRaw(st2, st1))
+         // case (Linear(Unfold(s1)), Linear(Unfold(s2))) => 
+         //    Linear(Unfold(zipEmit(s1, s2)))
+         // /* Zipping with a stream that is linear */
+         // case (Linear(Unfold(s), st2)) =>                   // Fix: type error
+         //    mapRaw_CPS((y => k => s(x => k((x, y)))), st2)
+      } 
    }
 }
