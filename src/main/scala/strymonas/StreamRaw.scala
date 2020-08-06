@@ -79,7 +79,12 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def loop[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using QuoteContext): Expr[Unit] = {
+      def applyNested[A : Type, B : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[B], last: B => StreamShape[A]) : Expr[Unit] = {
+         loop[B](bp, (x => loop[A](bp, consumer, last(x))), st)
+      }
+
+
+      def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using QuoteContext): Expr[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk): StreamShape[A] => 
                lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
@@ -96,7 +101,9 @@ trait StreamRaw extends StreamRawOps {
                   }
                }
                consume(bp, newConsumer, producer)
-            // case Nested(st, last) =>
+            case Nested(st, t, last) =>
+               applyNested(bp, consumer, st, last)(summon[Type[A]], t)
+               
             // case Break(g, st) => 
          }
       }
@@ -124,6 +131,11 @@ trait StreamRaw extends StreamRawOps {
          // case Break(g, st) => 
       }
    }
+
+   def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[Expr[A]]) : StreamShape[B] = {
+      Nested(s, t, last)
+   }
+      
 
    // A => B ~> 
    // A => (B => Expr[Unit]) => Expr[Unit]

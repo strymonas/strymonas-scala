@@ -7,6 +7,8 @@ import scala.quoted.autolift
 
 class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
 
+   def shape = stream
+
    def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {
       Var(z) { s => 
          '{
@@ -25,6 +27,10 @@ class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
 
       ${k('{lv})}
    }
+
+   def flatMap[B: Type](f: Expr[A] => Stream[B])(using QuoteContext): Stream[B] = 
+      Stream(flatMapRaw[A, Expr[B]](x => f(x).shape, stream))
+   
 
    def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
       val newStream = mapRaw_CPS[Expr[A], Expr[B]]((a: Expr[A]) => lets(f(a)), stream)

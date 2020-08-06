@@ -49,15 +49,15 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4)) == 20)
    }
 
-   // @Test def cart(): Unit = {
-   //    val t = run { '{ (vHi: Array[Int], vLo: Array[Int]) =>
-   //       ${ Stream.of('{vHi})
-   //       .flatMap((d) => Stream.of('{vLo}).map((dp) => '{ $d * $dp }))
-   //       .fold('{0}, ((a: Expr[Int], b: Expr[Int]) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 36)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 100)
-   // }
+   @Test def cart(): Unit = {
+      val t = run { '{ (vHi: Array[Int], vLo: Array[Int]) =>
+         ${ Stream.of('{vHi})
+         .flatMap((d) => Stream.of('{vLo}).map((dp) => '{ $d * $dp }))
+         .fold('{0}, ((a: Expr[Int], b: Expr[Int]) => '{ $a + $b })) }
+      }}
+      assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 36)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 100)
+   }
 
    // @Test def filter(): Unit = {
    //    val t = run { '{ (array: Array[Int]) => 
