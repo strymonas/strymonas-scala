@@ -135,7 +135,6 @@ trait StreamRaw extends StreamRawOps {
    def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[Expr[A]]) : StreamShape[B] = {
       Nested(s, t, last)
    }
-      
 
    // A => B ~> 
    // A => (B => Expr[Unit]) => Expr[Unit]
