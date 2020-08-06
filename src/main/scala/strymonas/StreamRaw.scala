@@ -22,6 +22,12 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
+   private def cwhile(goon: Goon, body: Expr[Unit] => Expr[Unit]): E[Unit] = '{
+      while(${goon}) {
+         ${body('{()})}
+      }
+   }
+
    private def cif[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
       if(${cnd}) then ${bt} else ${bf}
    }
