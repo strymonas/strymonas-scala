@@ -206,6 +206,12 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
+   // TODO
+   def linearize[A](st: StreamShape[A]): StreamShape[A] = ???
+
+   // TODO
+   def linearize_score[A](st: StreamShape[A]): Int = ???
+
    def zipRaw[A, B](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
       def swap[A, B](st: StreamShape[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
@@ -223,18 +229,25 @@ trait StreamRaw extends StreamRawOps {
             Break(g1, zipRaw(st1, st2))
          case (st1, Break(g2, st2)) => 
             Break(g2, zipRaw(st1, st2))
-         // /* Zipping of two For is special; in other cases, convert For to While */
-         // case (Linear(For(pa1), Linear(For(pa2)))) =>       // Fix: type error, is it type inference failure?
-         //    Linear(For(mkZipPullArray[A, B](pa1.asInstanceOf[PullArray[A]], pa2.asInstanceOf[PullArray[B]]))) 
-         // case (Linear(For(pa1)), _) => 
-         //    zipRaw(for_unfold(pa1), st2)
-         // case (_, Linear(For(_)))=> 
-         //    swap(zipRaw(st2, st1))
-         // case (Linear(Unfold(s1)), Linear(Unfold(s2))) => 
-         //    Linear(Unfold(zipEmit(s1, s2)))
-         // /* Zipping with a stream that is linear */
-         // case (Linear(Unfold(s), st2)) =>                   // Fix: type error
-         //    mapRaw_CPS((y => k => s(x => k((x, y)))), st2)
+         /* Zipping of two For is special; in other cases, convert For to While */
+         case (Linear(For(pa1)), Linear(For(pa2))) =>
+            Linear(For(mkZipPullArray[A, B](pa1, pa2))) 
+         case (Linear(For(pa1)), _) => 
+            zipRaw(for_unfold(pa1), st2)
+         case (_, Linear(For(_)))=> 
+            swap(zipRaw(st2, st1))
+         case (Linear(Unfold(s1)), Linear(Unfold(s2))) => 
+            Linear(Unfold(zipEmit(s1, s2)))
+         /* Zipping with a stream that is linear */
+         case (Linear(Unfold(s)), st2) =>
+            mapRaw_CPS[B, (A, B)]((y => k => s(x => k((x, y)))), st2)
+         case (_, Linear(Unfold(_))) => 
+            swap(zipRaw(st2, st1))
+         /* If both streams are non-linear, make at least on of them linear */
+         case (st1, st2) => 
+            if linearize_score(st2) > linearize_score(st1)
+            then zipRaw (linearize(st1), st2)
+            else zipRaw (st1, linearize(st2))
       } 
    }
 }
