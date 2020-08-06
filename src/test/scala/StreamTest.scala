@@ -122,6 +122,21 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 20)
    }
 
+   // @Test def earlyTerminatingZip(): Unit = {
+   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+   //       ${ Stream
+   //          .of('{array1})
+   //          .filter(d => '{ $d > 2 })
+   //          .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}))
+   //          .fold('{0}, ((a, b) => '{ $a + $b })) }
+   //    }
+
+   //    // showGen(s)
+   //    val t = run { s }
+
+   //    assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
+   // }
+
    // @Test def flatMap_after_zip(): Unit = {
    //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
    //       ${ Stream.of('{array1})

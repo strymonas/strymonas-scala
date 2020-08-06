@@ -90,6 +90,8 @@ trait StreamRaw extends StreamRawOps {
          st match {
             case Initializer(ILet(i, t), sk): StreamShape[A] => 
                lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
+            // case Initializer(IVar(i, t), sk): StreamShape[A] => 
+            //    TODO
             case Linear(producer) => 
                consume(bp, consumer, producer)
             case Filtered(cnd, producer) => 
@@ -111,7 +113,6 @@ trait StreamRaw extends StreamRawOps {
                      last: B => StreamShape[A]) : Expr[Unit] = {
                   loop[B](bp, (x => loop[A](bp, consumer, last(x))), st)
                }
-
                applyNested(bp, consumer, st, last)(t)
             case Break(g, shape) => 
                loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](cconj, g, bp)), consumer, shape)
