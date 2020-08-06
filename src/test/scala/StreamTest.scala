@@ -7,67 +7,87 @@ import org.junit.Assert._
 class StreamTest {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
 
-   @Test def sum(): Unit = {
+   inline val debug = false;
+   
+   inline def showGen[W](f: QuoteContext ?=> Expr[W]) = if(debug) println(withQuoteContext(f.show))
 
-      def sum_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) => 
+   @Test def sum(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) => 
          ${ Stream.of('array).fold('{0}, ((a, b) => '{ $a + $b })) }  
       }
       
-      // println(withQuoteContext(sum_staged.show))
-      val t = run { sum_staged }
+      val t = run { s }
 
       assert(t(Array(1, 2, 3)) == 6)
       assert(t(Array(1, 2, 3, 4)) == 10)
    }
 
    @Test def sumOfSquares(): Unit = {
-
-      def sumOfSquares_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) =>
+      def s(using QuoteContext) = '{ (array: Array[Int]) =>
          ${ Stream.of('array)
             .map[Int]((a) => '{ $a * $a })
             .fold('{0}, ((a, b) => '{ $a + $b })) }}
       
-      // println(withQuoteContext(sumOfSquares_staged.show))
-      val t = run { sumOfSquares_staged }
+      val t = run { s }
 
       assert(t(Array(1, 2, 3)) == 14)
       assert(t(Array(1, 2, 3, 4)) == 30)
    }
 
    @Test def sumOfSquaresEven(): Unit = {
-
-      def sumOfSquaresEven_staged(using QuoteContext): Expr[Array[Int] => Int] = '{ (array: Array[Int]) =>
+      def s(using QuoteContext) = '{ (array: Array[Int]) =>
          ${ Stream.of('array)
             .filter((d) => '{ $d % 2 == 0 })
             .map[Int]((a) => '{ $a * $a })
             .fold('{0}, ((a, b) => '{ $a + $b })) }}
 
-      // println(withQuoteContext(sumOfSquaresEven_staged.show))
-      val t = run { sumOfSquaresEven_staged }
+      val t = run { s }
 
       assert(t(Array(1, 2, 3)) == 4)
       assert(t(Array(1, 2, 3, 4)) == 20)
    }
 
    @Test def cart(): Unit = {
-      val t = run { '{ (vHi: Array[Int], vLo: Array[Int]) =>
+      def s(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
          ${ Stream.of('{vHi})
          .flatMap((d) => Stream.of('{vLo}).map((dp) => '{ $d * $dp }))
          .fold('{0}, ((a: Expr[Int], b: Expr[Int]) => '{ $a + $b })) }
-      }}
+      }
+
+      val t = run { s }
+   
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 36)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 100)
    }
 
-   // @Test def filter(): Unit = {
-   //    val t = run { '{ (array: Array[Int]) => 
-   //       ${ Stream.of('{array})
-   //       .filter((d) => '{ $d % 2 == 0 })
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3)) == 2)
-   //    assert(t(Array(1, 2, 3, 4)) == 6)
-   // }
+   @Test def onefilter(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) => 
+         ${ Stream.of('{array})
+         .filter((d) => '{ $d % 2 == 0 })
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }
+
+      val t = run { s }
+
+      assert(t(Array(1, 2, 3)) == 2)
+      assert(t(Array(1, 2, 3, 4)) == 6)
+   }
+
+   @Test def manyFilters(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) => 
+         ${ Stream.of('{array})
+         .filter(d => '{ $d > 0 })
+         .filter(d => '{ $d > 1 })
+         .filter(d => '{ $d > 2 })
+
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }
+
+      val t = run { s }
+
+      assert(t(Array(1, 2, 3)) == 3)
+      assert(t(Array(1, 2, 3, 4)) == 7)
+   }
 
    // @Test def take(): Unit = {
    //    val t = run { '{ (array: Array[Int]) => 
