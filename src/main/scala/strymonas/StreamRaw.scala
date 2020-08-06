@@ -31,6 +31,19 @@ trait StreamRaw extends StreamRawOps {
       ${c2}
    }
 
+   private def cconj[A: Type](c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
+      ${c1} && ${c2}
+   }
+
+   private def cdisj[A: Type](c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
+      ${c1} || ${c2}
+   }
+
+   private def cmin[A: Type](c1: Expr[Int], c2: Expr[Int]): E[Int] = {
+      //TODO: ported Oleg's, need to check perf
+      cif('{ ${c1} < ${c2} }, c1, c2)
+   }
+
    private def lets[A: Type, W: Type](x: Expr[A], k: (Expr[A] => Expr[W])): E[W] = '{
       val lv = ${x}
 
