@@ -87,15 +87,15 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4)) == 7)
    }
 
-   // @Test def take(): Unit = {
-   //    val t = run { '{ (array: Array[Int]) => 
-   //       ${ Stream.of('{array})
-   //       .take('{2})
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3)) == 3)
-   //    assert(t(Array(1, 2, 3, 4)) == 3)
-   // }
+   @Test def take(): Unit = {
+      val t = run { '{ (array: Array[Int]) => 
+         ${ Stream.of('{array})
+         .take('{2})
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }}
+      assert(t(Array(1, 2, 3)) == 3)
+      assert(t(Array(1, 2, 3, 4)) == 3)
+   }
 
    // @Test def flatMap_take(): Unit = {
    //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>

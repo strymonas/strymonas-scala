@@ -79,6 +79,18 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) extends StreamRaw {
 
       Stream[C](newShape)
    }
+
+   def take(n: Expr[Int])(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Expr[A]] = 
+         mkInit('{$n - 1}, i => {
+            var vsSt: StreamShape[Expr[Unit]] = 
+               mkPullArray[Expr[Unit]](i, i => k => k('{()}))
+            val zipSt: StreamShape[(Expr[Unit], Expr[A])] = zipRaw(vsSt, stream)
+            mapRaw_Direct[(Expr[Unit], Expr[A]), Expr[A]](_._2, zipSt)
+         })
+      Stream(shape)
+   }
+
 }
 
 object Stream {
