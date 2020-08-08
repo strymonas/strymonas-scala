@@ -45,6 +45,10 @@ object Helpers {
 
       ${k('{lv})}
    }
+
+   def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W]))(using ctx: QuoteContext): Expr[W] =  
+      Var(x)(k)   
+   
 }
 
 class Stream[A: Type](val stream: StreamShape[Expr[A]]) extends StreamRaw {

@@ -86,12 +86,12 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using QuoteContext): Expr[Unit] = {
+      def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using ctx: QuoteContext): Expr[Unit] = {
          st match {
-            case Initializer(ILet(i, t), sk): StreamShape[A] => 
+            case Initializer(ILet(i, t), sk) =>
                lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
-            // case Initializer(IVar(i, t), sk): StreamShape[A] => 
-            //    TODO
+            case Initializer(IVar(i, t), sk) => 
+               Var(i)(z => loop[A](bp, consumer, sk(z)))(t, summon[Type[Unit]], ctx)
             case Linear(producer) => 
                consume(bp, consumer, producer)
             case Filtered(cnd, producer) => 
