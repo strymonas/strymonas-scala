@@ -18,6 +18,10 @@ object Helpers {
       Initializer[Expr[Z], A](ILet(init, t), sk)
    }
 
+   def mkInitVar[Z, A](init: Expr[Z], sk: Var[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Var[Z], A](IVar(init, t), sk)
+   }
+
    /**
     * Make a new pull array from an upper bound and an indexing function in CPS
     */
