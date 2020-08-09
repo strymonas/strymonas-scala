@@ -214,15 +214,24 @@ trait StreamRaw extends StreamRawOps {
    // TODO
    def linearize[A](st: StreamShape[A]): StreamShape[A] = ???
 
-   // TODO
-   def linearize_score[A](st: StreamShape[A]): Int = ???
+   def linearize_score[A](st: StreamShape[A])(using QuoteContext): Int = {
+      st match {
+         case Initializer(ILet(i, t), sk) => linearize_score(sk(???)) 
+         case Initializer(IVar(i, t), sk) => linearize_score(sk(???)) 
+         case Linear(_) => 0
+         case Filtered(_, _) | Stuttered(_) => 3
+         case Nested(s, _, sk) => 
+            5 + linearize_score(s) + linearize_score(sk(???))
+         case Break(_, st) => linearize_score(st)
+      }
+   }
 
    def zipRaw[A, B](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
       def swap[A, B](st: StreamShape[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
 
-      // println(st1.toString() + " , " + st2.toString())
+      println(st1.toString() + " , " + st2.toString())
 
       (st1, st2) match {
          case (Initializer(init, sk), st2) => 

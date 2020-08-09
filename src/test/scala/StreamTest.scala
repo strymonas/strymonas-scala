@@ -127,7 +127,7 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 20)
    }
 
-   @Test def earlyTerminatingZip(): Unit = {
+   @Test def earlyTerminatingZipLeft(): Unit = {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream
             .of('{array1})
@@ -139,6 +139,48 @@ class StreamTest {
       val t = run { s }
 
       assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
+   }
+
+   @Test def earlyTerminatingZipRight(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}).filter(d => '{ $d > 5 }))
+            .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }
+
+      val t = run { s }
+
+      assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
+   }
+
+   @Test def earlyTerminatingZipBoth(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .filter(d => '{ $d > 1 })
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}).filter(d => '{ $d > 5 }))
+            .fold('{0}, ((a, b) => '{ $a + $b })) } 
+      }
+
+      val t = run { s }
+
+      assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
+   }
+
+   @Test def testlinearizeScore(): Unit = {
+      def s(using QuoteContext) = 
+         val s = new StreamRaw {}
+         import s._
+         
+         val t1 = Stream.of('{Array(1,2,3)}).filter(d => '{ $d > 1 })
+         val t2 = t1.flatMap((d) => Stream.of('{Array(1,2,3)}))
+         val t3 = t2.flatMap((d) => Stream.of('{Array(1,2,3)}))
+         assert(linearize_score(t1.stream) == 3)
+         assert(linearize_score(t2.stream) == 8)
+         assert(linearize_score(t3.stream) == 13)
+
+      withQuoteContext(s)
    }
 
    // @Test def flatMap_after_zip(): Unit = {
