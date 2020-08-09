@@ -233,7 +233,7 @@ trait StreamRaw extends StreamRawOps {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
 
-      println(st1.toString() + " , " + st2.toString())
+      // println(st1.toString() + " , " + st2.toString())
 
       (st1, st2) match {
          case (Initializer(init, sk), st2) => 
