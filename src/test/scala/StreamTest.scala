@@ -180,7 +180,6 @@ class StreamTest {
          assert(linearize_score(t1.stream) == 3)
          assert(linearize_score(t2.stream) == 8)
          assert(linearize_score(t3.stream) == 13)
-         assert(linearize_score(t3.stream) == 13)
          assert(linearize_score(t4) == 0)
 
       withQuoteContext(s)
