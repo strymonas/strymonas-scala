@@ -216,10 +216,18 @@ trait StreamRaw extends StreamRawOps {
       ???
    }
 
-   def linearize_score[A](st: StreamShape[A])(using QuoteContext): Int = {
+   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
       st match {
          case Initializer(ILet(i, t), sk) => linearize_score(sk('{???})) 
-         case Initializer(IVar(i, t), sk) => linearize_score(sk(???)) 
+         case Initializer(IVar(i, t), sk) => {
+            var score = 0
+            val _ = 
+               Var(i)(z => {
+                  score = linearize_score(sk(z)) 
+                  '{()}
+               })(t, summon[Type[Unit]], ctx)
+            score
+         }
          case Linear(_) => 0
          case Filtered(_, _) | Stuttered(_) => 3
          case Nested(s, _, sk) => 
