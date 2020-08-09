@@ -176,9 +176,12 @@ class StreamTest {
          val t1 = Stream.of('{Array(1,2,3)}).filter(d => '{ $d > 1 })
          val t2 = t1.flatMap((d) => Stream.of('{Array(1,2,3)}))
          val t3 = t2.flatMap((d) => Stream.of('{Array(1,2,3)}))
+         val t4 = Helpers.mkInitVar('{10}, i => Stream.of('{Array(1,2,3)}).stream)
          assert(linearize_score(t1.stream) == 3)
          assert(linearize_score(t2.stream) == 8)
          assert(linearize_score(t3.stream) == 13)
+         assert(linearize_score(t3.stream) == 13)
+         assert(linearize_score(t4) == 0)
 
       withQuoteContext(s)
    }
