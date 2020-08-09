@@ -88,25 +88,31 @@ class StreamTest {
    }
 
    @Test def take(): Unit = {
-      val t = run { '{ (array: Array[Int]) => 
+      def s(using QuoteContext) = { '{ (array: Array[Int]) => 
          ${ Stream.of('{array})
          .take('{2})
          .fold('{0}, ((a, b) => '{ $a + $b })) }
       }}
+
+      val t = run { s }
+
       assert(t(Array(1, 2, 3)) == 3)
       assert(t(Array(1, 2, 3, 4)) == 3)
    }
 
-   // @Test def flatMap_take(): Unit = {
-   //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
-   //       ${ Stream.of('{array1})
-   //       .flatMap((d) => Stream.of('{array2}))
-   //       .take('{20000000})
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 1, 1), Array(1, 2, 3)) == 18)
-   //    assert(t(Array(1, 1, 1, 1), Array(1, 2, 3, 4)) == 40)
-   // }
+   @Test def flatMap_take(): Unit = {
+      def s(using QuoteContext) =  '{ (array1: Array[Int], array2: Array[Int]) =>
+         ${ Stream.of('{array1})
+         .flatMap((d) => Stream.of('{array2}))
+         .take('{20000000})
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }
+
+      val t = run { s }
+
+      assert(t(Array(1, 1, 1), Array(1, 2, 3)) == 18)
+      assert(t(Array(1, 1, 1, 1), Array(1, 2, 3, 4)) == 40)
+   }
 
    @Test def dotProduct(): Unit = {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
@@ -115,27 +121,25 @@ class StreamTest {
          .fold('{0}, ((a, b) => '{ $a + $b })) }
       }
 
-      // showGen(s)
       val t = run { s }
 
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 12)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 20)
    }
 
-   // @Test def earlyTerminatingZip(): Unit = {
-   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream
-   //          .of('{array1})
-   //          .filter(d => '{ $d > 2 })
-   //          .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}))
-   //          .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }
+   @Test def earlyTerminatingZip(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .filter(d => '{ $d > 2 })
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}))
+            .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }
 
-   //    // showGen(s)
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
-   // }
+      assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
+   }
 
    // @Test def flatMap_after_zip(): Unit = {
    //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>

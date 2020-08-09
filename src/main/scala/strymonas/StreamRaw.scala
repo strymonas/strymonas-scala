@@ -22,9 +22,9 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   private def cwhile(goon: Goon, body: Expr[Unit] => Expr[Unit]): E[Unit] = '{
+   private def cwhile(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
       while(${goon}) {
-         ${body('{()})}
+         ${body}
       }
    }
 
@@ -81,8 +81,12 @@ trait StreamRaw extends StreamRawOps {
             case (None, For(pullArray)) => 
                cfor(pullArray.upb(), (i: Expr[Int]) => 
                   pullArray.index(i)(consumer))
-            case _ => 
-               '{ println("consume failed") }
+            case (bp, For(pullArray)) => 
+               loop(bp, consumer, for_unfold(pullArray))
+            case (None, Unfold(step)) => 
+               cwhile('{true})(step(consumer))
+            case (Some(bp), Unfold(step)) => 
+               cwhile(bp)(step(consumer))      
          }
       }
 
@@ -217,7 +221,9 @@ trait StreamRaw extends StreamRawOps {
       def swap[A, B](st: StreamShape[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
- 
+
+      // println(st1.toString() + " , " + st2.toString())
+
       (st1, st2) match {
          case (Initializer(init, sk), st2) => 
             Initializer(init, z => zipRaw(sk(z), st2))
