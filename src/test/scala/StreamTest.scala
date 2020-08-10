@@ -184,6 +184,23 @@ class StreamTest {
       withQuoteContext(s)
    }
 
+   @Test def testDefault(): Unit = {
+      def s(using QuoteContext) = 
+         val s = new StreamRaw {}
+         import s._
+         
+         assert(default[Int].show == "0")
+         assert(default[Boolean].show == "false")
+         assert(default[String].show == "null")
+         //assert(default[Char].show == "0")
+         //assert(default[Byte].show == "0")
+         
+         
+
+      withQuoteContext(s)
+   }
+
+
    @Test def flatMap_after_zip(): Unit = {
       val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
          ${ Stream.of('{array1})

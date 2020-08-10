@@ -25,7 +25,21 @@ trait StreamRaw extends StreamRawOps {
       Initializer[Var[Z], A](IVar(init, t), sk)
    }
 
-   def default[A : Type](using QuoteContext) : Expr[A] = ???
+   def default[A: Type](using QuoteContext): Expr[A] = 
+      val expr: Expr[Any] = 
+         summon[Type[A]] match {
+            case '[Int] => '{0}
+            case '[Char] => '{0: Char}
+            case '[Byte] => '{0: Byte}
+            case '[Short] => '{0: Short}
+            case '[Long] => '{0L}
+            case '[Float] => '{0.0f}
+            case '[Double] => '{0.0d}
+            case '[Boolean] => '{false}
+            case '[Unit] => '{()}
+            case _ => '{null}
+         }
+      expr.asInstanceOf[Expr[A]]
 
    private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
