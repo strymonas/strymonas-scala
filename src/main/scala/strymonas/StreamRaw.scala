@@ -13,6 +13,18 @@ import StreamShape._
 
 trait StreamRaw extends StreamRawOps {
    
+
+   /**
+    * Introduces initialization for let insertion (or var)
+    */
+   def mkInit[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Expr[Z], A](ILet(init, t), sk)
+   }
+
+   def mkInitVar[Z, A](init: Expr[Z], sk: Var[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Var[Z], A](IVar(init, t), sk)
+   }
+
    private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
 
@@ -335,7 +347,21 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def split_init[A, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = ???
+      def split_init[A, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = 
+         st match{
+            case Initializer(ILet(i, t), sk) => ???
+            case Initializer(IVar(i, t), sk) => ???
+            case Break (g, st) => 
+               split_init(init, st, (i => st => k(i)(Break (g, st))))
+            case Linear(_) | Filtered(_, _) | Stuttered(_)  => k(init)(st)
+            case Nested(Initializer(i, sk), t, last) => 
+               split_init(init, (Initializer (i, (z => Nested (sk(z), t, last)))), k)
+            case Nested(Break(g, st), t, last) => 
+               split_init(init, (Break (g, Nested (st, t, last))), k)
+            case Nested(Nested(st, t, next), _t, last) => 
+               split_init(init, (Nested (st, t, (y => Nested (next(y), _t, last)))), k)
+            case Nested(_, _, _) => k(init)(st)
+         }
       def consume_outer[A](st: StreamShape[Expr[A]], consumer: (Expr[A] => Expr[Unit])): Expr[Unit] = 
          st match {
             case Linear(Unfold(step)) => step(consumer)
