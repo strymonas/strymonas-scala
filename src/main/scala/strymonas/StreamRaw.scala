@@ -32,6 +32,10 @@ trait StreamRaw extends StreamRawOps {
       if(${cnd}) then ${bt} else ${bf}
    }
 
+   private def if1[A: Type](cnd: Expr[Boolean], bt: Expr[A]): E[Unit] = '{
+      if(${cnd}) then ${bt}
+   }
+
    private def cseq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
       ${c1}
       ${c2}
@@ -332,7 +336,18 @@ trait StreamRaw extends StreamRawOps {
       }
 
       def split_init[A, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = ???
-      def consume_outer[A](st: StreamShape[A], consumer: (Expr[A] => Expr[Unit])): Expr[Unit] = ???
+      def consume_outer[A](st: StreamShape[Expr[A]], consumer: (Expr[A] => Expr[Unit])): Expr[Unit] = 
+         st match {
+            case Linear(Unfold(step)) => step(consumer)
+            case Filtered (cnd, Unfold(step)) => step (x => if1(cnd(x), consumer(x)))
+            case Stuttered (Unfold(step)) => step { x =>
+               x match {
+                  case None => '{()}
+                  case Some(x) => consumer(x)
+               }
+            } 
+            case _ => assert(false)
+         }
       def consumer_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = ???
 
       if nestedp(st) 
