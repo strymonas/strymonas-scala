@@ -137,7 +137,6 @@ class StreamTest {
       }
 
       val t = run { s }
-
       assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
    }
 
@@ -154,19 +153,19 @@ class StreamTest {
       assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
    }
 
-   // @Test def earlyTerminatingZipBoth(): Unit = {
-   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream
-   //          .of('{array1})
-   //          .filter(d => '{ $d > 1 })
-   //          .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}).filter(d => '{ $d > 5 }))
-   //          .fold('{0}, ((a, b) => '{ $a + $b })) } 
-   //    }
+   @Test def earlyTerminatingZipBoth(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .filter(d => '{ $d > 1 })
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}).filter(d => '{ $d > 5 }))
+            .fold('{0}, ((a, b) => '{ $a + $b })) } 
+      }
+      
+      val t = run { s }
 
-   //    val t = run { s }
-
-   //    assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
-   // }
+      assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 8)
+   }
 
    @Test def testlinearizeScore(): Unit = {
       def s(using QuoteContext) = 
