@@ -348,7 +348,19 @@ trait StreamRaw extends StreamRawOps {
             } 
             case _ => assert(false)
          }
-      def consumer_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = ???
+      def consumer_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = 
+         st match {
+            case Initializer (_, _) => assert(false)
+            case Break(g, st) => 
+               consumer_inner(Some(foldOpt(cconj, g, bp)), st, consumer, ondone)
+            case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => assert(false)
+            case Linear(Unfold(step)) => 
+               bp match {
+                  case None => step(consumer)
+                  case Some(g) => cif(g, step(consumer), ondone)
+               }
+            case _ => assert(false)
+         }
 
       if nestedp(st) 
       then nested(None)(for_unfold_deep(st))
