@@ -185,27 +185,27 @@ class StreamTest {
       withQuoteContext(s)
    }
 
-   // @Test def flatMap_after_zip(): Unit = {
-   //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
-   //       ${ Stream.of('{array1})
-   //       .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}))
-   //       .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3) ) == 54)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 120)
-   // }
+   @Test def flatMap_after_zip(): Unit = {
+      val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
+         ${ Stream.of('{array1})
+         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}))
+         .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }}
+      assert(t(Array(1, 2, 3), Array(1, 2, 3) ) == 54)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 120)
+   }
 
-   // @Test def zip_after_flatMap(): Unit = {
-   //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
-   //       ${ Stream.of('{array1})
-   //       .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-   //       .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}) )
-   //       .fold('{0}, ((a, b) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 15)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
-   // }
+   @Test def zip_after_flatMap(): Unit = {
+      val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
+         ${ Stream.of('{array1})
+         .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
+         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}) )
+         .fold('{0}, ((a, b) => '{ $a + $b })) }
+      }}
+      assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 15)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
+   }
 
    // @Test def zip_flat_flat(): Unit = {
    //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
