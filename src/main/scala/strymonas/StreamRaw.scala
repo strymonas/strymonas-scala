@@ -25,9 +25,11 @@ trait StreamRaw extends StreamRawOps {
       Initializer[Var[Z], A](IVar(init, t), sk)
    }
 
-   def default[A: Type](using QuoteContext): Expr[A] = 
+   // TODO: Extraneous check was removed in the compiler with this
+   // https://github.com/lampepfl/dotty/pull/9501/files
+   def default[A](t: Type[A])(using QuoteContext): Expr[A] = 
       val expr: Expr[Any] = 
-         summon[Type[A]] match {
+         t match {
             case '[Int] => '{0}
             case '[Char] => '{0: Char}
             case '[Byte] => '{0: Byte}
@@ -332,7 +334,7 @@ trait StreamRaw extends StreamRawOps {
       }
 
       // Note: WIP
-      def nested(bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] ={
+      def nested[A](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] ={
          stt match { 
             case Initializer(init, sk) => 
                Initializer(init, z => nested(bp)(sk(z)))
@@ -351,13 +353,18 @@ trait StreamRaw extends StreamRawOps {
                  Nested(Stuttered(For(_)), _, _) => 
                assert(false)
             case Nested(st, t, last) => 
-               Initializer(IVar('{1}, summon[Type[Int]]), status => {
+               mkInitVar('{false}, in_inner => {
                   val guard = bp match {
                      case None => '{ true }
-                     case Some(g) => cdisj(g, '{${status.get} > 1})
+                     case Some(g) => cdisj(g, '{${in_inner.get}})
                   }
 
-                  // To be continued 
+                  // // default: A => Expr[A]
+ 
+                  // val newShape: StreamShape[A] = 
+                  //    mkInitVar(default(t), (xres: Var[_]) => ???)
+
+                  // Break(guard, newShape)
                   ???
                })
          }
@@ -367,14 +374,14 @@ trait StreamRaw extends StreamRawOps {
          st match{
             case Initializer(ILet(i, t), sk) => 
                def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
-                  mkInitVar[B, W](default[B], { zres => 
+                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
                      split_init(cseq(init, zres.update(i)), sk(zres.get), k)
                   })
                }
                applyLet(i, sk)(t)
             case Initializer(IVar(i, t), sk) => 
                def applyLet[B : Type](i: Expr[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
-                  mkInitVar[B, W](default[B], { zres => 
+                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
                      split_init(cseq(init, zres.update(i)), sk(zres), k)
                   })
                }

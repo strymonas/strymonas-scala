@@ -189,14 +189,18 @@ class StreamTest {
          val s = new StreamRaw {}
          import s._
          
-         assert(default[Int].show == "0")
-         assert(default[Boolean].show == "false")
-         assert(default[String].show == "null")
-         //assert(default[Char].show == "0")
-         //assert(default[Byte].show == "0")
+         assert(default('[Int]).show == "0")
+         assert(default('[Boolean]).show == "false")
+         assert(default('[String]).show == "null")
+         assert(default('[Char]) match {
+            case '{0 : Char} => true
+            case _ => false
+         })
+         assert(default('[Byte]) match {
+            case '{0 : Byte} => true
+            case _ => false
+         })
          
-         
-
       withQuoteContext(s)
    }
 
