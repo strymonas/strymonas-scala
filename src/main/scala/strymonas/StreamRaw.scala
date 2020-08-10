@@ -25,6 +25,8 @@ trait StreamRaw extends StreamRawOps {
       Initializer[Var[Z], A](IVar(init, t), sk)
    }
 
+   def default[A : Type](using QuoteContext) : Expr[A] = ???
+
    private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
 
@@ -349,8 +351,20 @@ trait StreamRaw extends StreamRawOps {
 
       def split_init[A, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = 
          st match{
-            case Initializer(ILet(i, t), sk) => ???
-            case Initializer(IVar(i, t), sk) => ???
+            case Initializer(ILet(i, t), sk) => 
+               def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
+                  mkInitVar[B, W](default[B], { zres => 
+                     split_init(cseq(init, zres.update(i)), sk(zres.get), k)
+                  })
+               }
+               applyLet(i, sk)(t)
+            case Initializer(IVar(i, t), sk) => 
+               def applyLet[B : Type](i: Expr[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
+                  mkInitVar[B, W](default[B], { zres => 
+                     split_init(cseq(init, zres.update(i)), sk(zres), k)
+                  })
+               }
+               applyLet(i, sk)(t)
             case Break (g, st) => 
                split_init(init, st, (i => st => k(i)(Break (g, st))))
             case Linear(_) | Filtered(_, _) | Stuttered(_)  => k(init)(st)
