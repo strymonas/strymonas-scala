@@ -335,7 +335,7 @@ trait StreamRaw extends StreamRawOps {
                ))
             // TOFIX: compiler reports warning: StreamShape.Filtered(_, Producer.For(_)), StreamShape.Stuttered(Producer.For(_))
             // case Nested(_, _, _) => assert(false)
-            case _ => { println("loopnn"); assert(false) }
+            case _ => assert(false)
             
          }
       }
@@ -347,8 +347,7 @@ trait StreamRaw extends StreamRawOps {
                Initializer(init, z => nested(bp)(sk(z)))
             case Break(g, st) => 
                nested(Some(foldOpt(cconj, g, bp)))(st)
-            case Filtered(_, _) | Stuttered(_) | Linear(_) => 
-               { println("nested Filtered(_, _) | Stuttered(_) | Linear(_)"); assert(false) }
+            case Filtered(_, _) | Stuttered(_) | Linear(_) => assert(false)
             case Nested(Initializer(i, sk), t, last) => 
                Initializer(i, z => nested(bp)(Nested(sk(z), t, last)))
             case Nested(Break(g, st), t, last) => 
@@ -357,8 +356,7 @@ trait StreamRaw extends StreamRawOps {
                nested(bp)(Nested(st, t1, x => Nested(next(x), t2, last)))
             case Nested(Linear(For(_)), _, _) |
                  Nested(Filtered(_, For(_)), _, _) |
-                 Nested(Stuttered(For(_)), _, _) => 
-               { println("nested Nested(Linear(For(_)), _, _) | Nested(Filtered(_, For(_)), _, _) | Nested(Stuttered(For(_)), _, _)"); assert(false) }
+                 Nested(Stuttered(For(_)), _, _) =>  assert(false)
             case Nested(st, t, last) => 
                def applyNested[B: Type](st: StreamShape[Expr[B]], last: (Expr[B] => StreamShape[A])): StreamShape[A] = {
                   mkInitVar('{false}, in_inner => {
@@ -426,14 +424,14 @@ trait StreamRaw extends StreamRawOps {
                   case Some(x) => consumer(x)
                }
             } 
-            case _ => { println("consume_outer"); assert(false) }
+            case _ => assert(false)
          }
       def consume_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = 
          st match {
             case Initializer (_, _) => throw new Exception("All Init should have been split") 
             case Break(g, st) => 
                consume_inner(Some(foldOpt(cconj, g, bp)), st, consumer, ondone)
-            case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => { println("consume_inner Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_))"); assert(false) }
+            case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => assert(false)
             case Linear(Unfold(step)) => 
                bp match {
                   case None => step(consumer)
