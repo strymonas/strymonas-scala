@@ -236,16 +236,18 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
    }
 
-   // @Test def zip_flat_flat(): Unit = {
-   //    val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
-   //       ${ Stream.of('{array1})
-   //       .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-   //       .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => '{ $d + $dp })) )
-   //       .take('{20000000})
-   //       .fold('{0}, ((a, b ) => '{ $a + $b })) }
-   //    }}
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 160)
-   // }
+   @Test def zip_flat_flat(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream.of('{array1})
+         .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
+         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => '{ $d + $dp })) )
+         .take('{20000000})
+         .fold('{0}, ((a, b ) => '{ $a + $b })) }
+      }
+      //showGen(s)
+      val t = run { s }
+      assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 160)
+   }
 
 }

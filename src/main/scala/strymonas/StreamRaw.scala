@@ -52,6 +52,13 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
+   private def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
+      Var('{true}) { again => 
+         cwhile(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
+                body(x => cseq(again.update('{false}), k(x))))
+      }
+   }
+
    private def cwhile(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
       while(${goon}) {
          ${body}
@@ -147,9 +154,9 @@ trait StreamRaw extends StreamRawOps {
                def applyNested[B : Type](
                      bp: Option[Goon], 
                      consumer: A => Expr[Unit], 
-                     st: StreamShape[B], 
-                     last: B => StreamShape[A]) : Expr[Unit] = {
-                  loop[B](bp, (x => loop[A](bp, consumer, last(x))), st)
+                     st: StreamShape[Expr[B]], 
+                     last: Expr[B] => StreamShape[A]) : Expr[Unit] = {
+                  loop[Expr[B]](bp, (x => loop[A](bp, consumer, last(x))), st)
                }
                applyNested(bp, consumer, st, last)(t)
             case Break(g, shape) => 
@@ -187,7 +194,7 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[Expr[A]]) : StreamShape[B] = {
+   def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
       Nested(s, t, last)
    }
 
@@ -276,7 +283,7 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   def linearize[A](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
+   def linearize[A: Type](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
       def nestedp(stt: StreamShape[A]): Boolean = {
          stt match {
             case Initializer(ILet(i, t), sk) => nestedp(sk('{???})) 
@@ -296,7 +303,7 @@ trait StreamRaw extends StreamRawOps {
          }
       }
 
-      def loopnn[A](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] = {
+      def loopnn[A: Type](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] = {
          stt match {
             case Initializer(init, sk) => 
                Initializer(init, z => loopnn(bp)(sk(z)))
@@ -328,20 +335,20 @@ trait StreamRaw extends StreamRawOps {
                ))
             // TOFIX: compiler reports warning: StreamShape.Filtered(_, Producer.For(_)), StreamShape.Stuttered(Producer.For(_))
             // case Nested(_, _, _) => assert(false)
-            case _ => assert(false)
+            case _ => { println("loopnn"); assert(false) }
             
          }
       }
 
       // Note: WIP
-      def nested[A](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] ={
+      def nested[A: Type](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] ={
          stt match { 
             case Initializer(init, sk) => 
                Initializer(init, z => nested(bp)(sk(z)))
             case Break(g, st) => 
                nested(Some(foldOpt(cconj, g, bp)))(st)
             case Filtered(_, _) | Stuttered(_) | Linear(_) => 
-               assert(false)
+               { println("nested Filtered(_, _) | Stuttered(_) | Linear(_)"); assert(false) }
             case Nested(Initializer(i, sk), t, last) => 
                Initializer(i, z => nested(bp)(Nested(sk(z), t, last)))
             case Nested(Break(g, st), t, last) => 
@@ -351,26 +358,38 @@ trait StreamRaw extends StreamRawOps {
             case Nested(Linear(For(_)), _, _) |
                  Nested(Filtered(_, For(_)), _, _) |
                  Nested(Stuttered(For(_)), _, _) => 
-               assert(false)
+               { println("nested Nested(Linear(For(_)), _, _) | Nested(Filtered(_, For(_)), _, _) | Nested(Stuttered(For(_)), _, _)"); assert(false) }
             case Nested(st, t, last) => 
-               mkInitVar('{false}, in_inner => {
-                  val guard = bp match {
-                     case None => '{ true }
-                     case Some(g) => cdisj(g, '{${in_inner.get}})
-                  }
+               def applyNested[B: Type](st: StreamShape[Expr[B]], last: (Expr[B] => StreamShape[A])): StreamShape[A] = {
+                  mkInitVar('{false}, in_inner => {
+                     val guard = bp match {
+                        case None => '{ true }
+                        case Some(g) => cdisj(g, in_inner.get)
+                     }
 
-                  // // default: A => Expr[A]
- 
-                  // val newShape: StreamShape[A] = 
-                  //    mkInitVar(default(t), (xres: Var[_]) => ???)
+                     val newShape: StreamShape[A] = 
+                        mkInitVar[B, A](default(summon[Type[B]]), xres => {
+                           val st2 = linearize(last(xres.get))
+                           split_init('{()}, st2, (i_) => (st_) => {
+                              Linear(Unfold((k: A=>Expr[Unit]) => {
+                                 cloop(k, Some(guard), ((k: A => Expr[Unit]) => {
+                                    cseq(if1('{!${in_inner.get}}, 
+                                          consume_outer(st, x => cseq(xres.update(x), cseq(i_, in_inner.update('{true}))))),
+                                       if1(in_inner.get, 
+                                          consume_inner(None, st_, k, in_inner.update('{false}))))
+                                 }))
+                              }))
+                           })
+                        })
 
-                  // Break(guard, newShape)
-                  ???
-               })
+                     Break(guard, newShape)
+                  })
+               }
+               applyNested(st, last)(t)
          }
       }
 
-      def split_init[A, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = 
+      def split_init[A: Type, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = 
          st match{
             case Initializer(ILet(i, t), sk) => 
                def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
@@ -407,20 +426,20 @@ trait StreamRaw extends StreamRawOps {
                   case Some(x) => consumer(x)
                }
             } 
-            case _ => assert(false)
+            case _ => { println("consume_outer"); assert(false) }
          }
       def consume_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = 
          st match {
-            case Initializer (_, _) => assert(false)
+            case Initializer (_, _) => throw new Exception("All Init should have been split") 
             case Break(g, st) => 
                consume_inner(Some(foldOpt(cconj, g, bp)), st, consumer, ondone)
-            case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => assert(false)
+            case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => { println("consume_inner Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_))"); assert(false) }
             case Linear(Unfold(step)) => 
                bp match {
                   case None => step(consumer)
                   case Some(g) => cif(g, step(consumer), ondone)
                }
-            case _ => assert(false)
+            case _ => throw new Exception("Inner stream must be linearized first")
          }
 
       if nestedp(st) 
@@ -448,7 +467,7 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   def zipRaw[A, B](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
+   def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
       def swap[A, B](st: StreamShape[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
