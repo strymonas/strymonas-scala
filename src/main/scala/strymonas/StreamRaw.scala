@@ -11,8 +11,8 @@ import Init._
 import Producer._
 import StreamShape._
 
-trait StreamRaw extends StreamRawOps {
-   
+object StreamRaw {
+   type E[T] = QuoteContext ?=> Expr[T]
 
    /**
     * Introduces initialization for let insertion (or var)
@@ -43,7 +43,7 @@ trait StreamRaw extends StreamRawOps {
          }
       expr.asInstanceOf[Expr[A]]
 
-   private def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
+   def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
 
       while(i <= ${upb}) {
@@ -52,59 +52,81 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   private def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
+   def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
       Var('{true}) { again => 
          cwhile(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
                 body(x => cseq(again.update('{false}), k(x))))
       }
    }
 
-   private def cwhile(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
+   def cwhile(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
       while(${goon}) {
          ${body}
       }
    }
 
-   private def cif[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
+   def cif[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
       if(${cnd}) then ${bt} else ${bf}
    }
 
-   private def if1[A: Type](cnd: Expr[Boolean], bt: Expr[A]): E[Unit] = '{
+   def if1[A: Type](cnd: Expr[Boolean], bt: Expr[A]): E[Unit] = '{
       if(${cnd}) then ${bt}
    }
 
-   private def cseq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
+   def cseq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
       ${c1}
       ${c2}
    }
 
-   private def cconj(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
+   def cconj(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
       ${c1} && ${c2}
    }
 
-   private def cdisj(c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
+   def cdisj(c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
       ${c1} || ${c2}
    }
 
-   private def cmin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
+   def cmin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
       //TODO: ported Oleg's, need to check perf
       cif('{ ${c1} < ${c2} }, c1, c2)
    }
 
-   private def lets[A: Type, W: Type](x: Expr[A], k: (Expr[A] => Expr[W])): E[W] = '{
+   def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W])): E[W] =  
+      Var(x)(k) 
+
+   def lets[A: Type, W: Type](x: Expr[A])(k: (Expr[A] => Expr[W])): E[W] = '{
       val lv = ${x}
 
       ${k('{lv})}
    }
 
-   private def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
+   /**
+    * Make a new pull array from an upper bound and an indexing function in CPS
+    */
+   def mkPullArray[A](exact_upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
+      Linear(For(
+         new PullArray[A] {
+            def upb(): Expr[Int] = exact_upb
+
+            def index(i: Expr[Int]): Emit[A] = (k: A => Expr[Unit]) => {
+               idx(i)(k)
+            }
+         }
+      ))
+   }
+   
+   def infinite[A](step: Emit[A]): StreamShape[A] = {
+      Linear(Unfold(step))
+   }   
+
+   def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
       value match {
          case None => z
          case Some(x) => f(z)(x)
       }
    }  
 
-   private def for_unfold[A](pull: PullArray[A])(using QuoteContext): StreamShape[A] = {
+   def for_unfold[A](pull: PullArray[A])(using QuoteContext): StreamShape[A] = {
       Initializer(
          IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
             Break('{ ${ i.get } <= ${ pull.upb() }}, 
@@ -134,7 +156,7 @@ trait StreamRaw extends StreamRawOps {
       def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using ctx: QuoteContext): Expr[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk) =>
-               lets(i, i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
+               lets(i)(i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
             case Initializer(IVar(i, t), sk) => 
                Var(i)(z => loop[A](bp, consumer, sk(z)))(t, summon[Type[Unit]], ctx)
             case Linear(producer) => 

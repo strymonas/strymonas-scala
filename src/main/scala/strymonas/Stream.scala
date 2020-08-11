@@ -5,54 +5,8 @@ import scala.quoted.util._
 import scala.quoted.staging._
 import scala.quoted.autolift
 
-object Helpers {
-   import StreamShape._ 
-   import Init._
-   import Producer._
-   import Helpers._
-
-   /**
-    * Introduces initialization for let insertion (or var)
-    */
-   def mkInit[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
-      Initializer[Expr[Z], A](ILet(init, t), sk)
-   }
-
-   def mkInitVar[Z, A](init: Expr[Z], sk: Var[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
-      Initializer[Var[Z], A](IVar(init, t), sk)
-   }
-
-   /**
-    * Make a new pull array from an upper bound and an indexing function in CPS
-    */
-   def mkPullArray[A](exact_upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
-      Linear(For(
-         new PullArray[A] {
-            def upb(): Expr[Int] = exact_upb
-
-            def index(i: Expr[Int]): Emit[A] = (k: A => Expr[Unit]) => {
-               idx(i)(k)
-            }
-         }
-      ))
-   }
-
-   /**
-    * Let-insertion in CPS
-    */
-   def lets[A: Type, W: Type](x: Expr[A])(using QuoteContext) = (k: (Expr[A] => Expr[W])) => '{
-      val lv = ${x}
-
-      ${k('{lv})}
-   }
-
-   def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W]))(using ctx: QuoteContext): Expr[W] =  
-      Var(x)(k)   
-   
-}
-
-class Stream[A: Type](val stream: StreamShape[Expr[A]]) extends StreamRaw {
-   import Helpers._
+class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
+   import strymonas.StreamRaw._
 
    def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {
       Var(z) { s => 
@@ -71,7 +25,7 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) extends StreamRaw {
    }
    
    def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
-      val newShape = mapRaw_CPS[Expr[A], Expr[B]]((a: Expr[A]) => lets(f(a)), stream)
+      val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => lets(f(a)), stream)
       
       Stream[B](newShape)
    }
@@ -98,14 +52,13 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) extends StreamRaw {
          })
       Stream(shape)
    }
-
 }
 
 object Stream {
    import StreamShape._
    import Init._
    import Producer._
-   import Helpers._
+   import strymonas.StreamRaw._
 
    def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
       val shape = 
@@ -117,6 +70,16 @@ object Stream {
                }))
          )
 
+      Stream(shape)
+   }
+
+   def iota(n: Expr[Int])(using QuoteContext): Stream[Int] = {
+      val shape = mkInitVar(n, z => {
+         infinite[Expr[Int]]((k: Expr[Int] => Expr[Unit]) => {
+            lets(z.get)((v: Expr[Int]) => { cseq(z.update('{ ${z.get} + 1 }), k(v))}) 
+         })
+      })
+      
       Stream(shape)
    }
 }

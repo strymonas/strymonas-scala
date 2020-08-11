@@ -9,6 +9,12 @@ class StreamTest {
    
    inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
 
+   /**
+    *    Basic tests from:
+    *    - Stream Fusion, to Completeness
+    *    - A Practical Unification of Multi-Stage Programming and Macros
+    */
+
    @Test def sum(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) => 
          ${ Stream.of('array).fold('{0}, ((a, b) => '{ $a + $b })) }  
@@ -169,13 +175,12 @@ class StreamTest {
 
    @Test def testlinearizeScore(): Unit = {
       def s(using QuoteContext) = 
-         val s = new StreamRaw {}
-         import s._
+         import strymonas.StreamRaw._
          
          val t1 = Stream.of('{Array(1,2,3)}).filter(d => '{ $d > 1 })
          val t2 = t1.flatMap((d) => Stream.of('{Array(1,2,3)}))
          val t3 = t2.flatMap((d) => Stream.of('{Array(1,2,3)}))
-         val t4 = Helpers.mkInitVar('{10}, i => Stream.of('{Array(1,2,3)}).stream)
+         val t4 = mkInitVar('{10}, i => Stream.of('{Array(1,2,3)}).stream)
          assert(linearize_score(t1.stream) == 3)
          assert(linearize_score(t2.stream) == 8)
          assert(linearize_score(t3.stream) == 13)
@@ -186,8 +191,7 @@ class StreamTest {
 
    @Test def testDefault(): Unit = {
       def s(using QuoteContext) = 
-         val s = new StreamRaw {}
-         import s._
+         import strymonas.StreamRaw._
          
          assert(default('[Int]) match {
             case '{0} => true
@@ -244,10 +248,20 @@ class StreamTest {
          .take('{20000000})
          .fold('{0}, ((a, b ) => '{ $a + $b })) }
       }
-      //showGen(s)
       val t = run { s }
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 160)
    }
 
+   @Test def infinite(): Unit = {
+      def s(using QuoteContext) = '{ () =>
+         ${ Stream
+            .iota('{1})
+            .take('{3})
+            .fold('{0}, ((a, b) => '{ $a + $b })) }}
+      
+      val t = run { s }
+
+      assert(t() == 6)
+   }
 }
