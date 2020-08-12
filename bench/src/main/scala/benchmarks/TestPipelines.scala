@@ -53,13 +53,13 @@ object TestPipelines {
 
    def dotProduct(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
       ${ Stream.of('{array1})
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}))
+      .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}))
       .fold('{0}, ((a, b) => '{ $a + $b })) }
    }
 
    def flatMap_after_zip(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
       ${ Stream.of('{array1})
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}))
+      .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}))
       .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
       .fold('{0}, ((a, b) => '{ $a + $b })) }
    }
@@ -67,14 +67,14 @@ object TestPipelines {
    def zip_after_flatMap(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}) )
+      .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}) )
       .fold('{0}, ((a, b) => '{ $a + $b })) }
    }
 
    def zip_flat_flat(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => '{ $d + $dp })) )
+      .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => '{ $d + $dp })) )
       .take('{20000000})
       .fold('{0}, ((a, b ) => '{ $a + $b })) }
    }

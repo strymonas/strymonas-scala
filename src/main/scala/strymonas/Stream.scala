@@ -4,28 +4,12 @@ import scala.quoted._
 import scala.quoted.util._
 import scala.quoted.staging._
 import scala.quoted.autolift
-import imports._
 
-/**
-  * Port of the strymonas library as described in O. Kiselyov et al., Stream fusion, to completeness (POPL 2017)
-  */
+class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
+   import strymonas.StreamRaw._
 
-type E[T] = QuoteContext ?=> Expr[T]
-
-case class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
-   import imports.Cardinality._
-
-   /** Main consumer
-   *
-   * Fold accumulates the results in a variable and delegates its functionality to `foldRaw`
-   *
-   * @param z   the accumulator
-   * @param f   the zipping function
-   * @tparam W  the type of the accumulator
-   * @return
-   */
    def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {
-      Var(z) { s =>
+      Var(z) { s => 
          '{
             ${ foldRaw[Expr[A]]((a: Expr[A]) => s.update(f(s.get, a)), stream) }
 
@@ -34,95 +18,69 @@ case class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
       }
    }
 
-   /** Builds a new stream by applying a function to all elements of this stream.
-   *
-   * @param  f the function to apply to each quoted element.
-   * @tparam B the element type of the returned stream
-   * @return a new stream resulting from applying `mapRaw` and threading the element of the first stream downstream.
-   */
-   def map[B : Type](f: (Expr[A] => Expr[B])): Stream[B] = {
-      Stream(mapRaw[Expr[A], Expr[B]](a => k => k(f(a)), stream))
+   def flatMap[B: Type](f: Expr[A] => Stream[B])(using QuoteContext): Stream[B] = {
+      val newShape = flatMapRaw[A, Expr[B]](x => f(x).stream, stream)
+      
+      Stream(newShape)
+   }
+   
+   def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
+      val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => lets(f(a)), stream)
+      
+      Stream[B](newShape)
    }
 
-   /** Flatmap */
-   def flatMap[B : Type](f: (Expr[A] => Stream[B])): Stream[B] = {
-      Stream(flatMapRaw[Expr[A], Expr[B]]((a => { val Stream (nested) = f(a); nested }), stream))
+   def filter(f: Expr[A] => Expr[Boolean])(using QuoteContext): Stream[A] = {
+      val newShape = filterRaw[Expr[A]](f, stream)
+
+      Stream[A](newShape)
    }
 
-   /** Selects all elements of this stream which satisfy a predicate.
-   *
-   *    Note: this is merely a special case of `flatMap` as the resulting stream in each step may return 0 or 1
-   *    element.
-   *
-   * @param f    the predicate used to test elements.
-   * @return     a new stream consisting of all elements of the input stream that do satisfy the given
-   *             predicate `pred`.
-   */
-   def filter(pred: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
-      val filterStream = (a: Expr[A]) =>
-         new Producer[Expr[A]] {
+   def zipWith[B: Type, C: Type](f: Expr[A] => Expr[B] => Expr[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
+      val newShape = mapRaw_Direct[(Expr[A], Expr[B]), Expr[C]](p => f(p._1)(p._2), zipRaw[Expr[A], Expr[B]](stream, str2.stream))
 
-            type St = Expr[A]
-            val card = AtMost1
-
-            def init(k: St => Expr[Unit]): E[Unit] =
-            k(a)
-
-            def step(st: St, k: (Expr[A] => Expr[Unit])): E[Unit] =
-            k(st)
-
-            def hasNext(st: St): E[Boolean] =
-            pred(st)
-         }
-
-      Stream(flatMapRaw[Expr[A], Expr[A]]((a => { Linear(filterStream(a)) }), stream))
+      Stream[C](newShape)
    }
 
-
-   /** A stream containing the first `n` elements of this stream. */
-   def take(n: Expr[Int])(using QuoteContext): Stream[A] = Stream(takeRaw[Expr[A]](n, stream))
-
-   /** zip **/
-   def zip[B: Type, C: Type](f: (Expr[A] => Expr[B] => Expr[C]), stream2: Stream[B])(using QuoteContext): Stream[C] = {
-      val Stream(stream_b) = stream2
-      Stream(mapRaw[(Expr[A], Expr[B]), Expr[C]]((t => k => k(f(t._1)(t._2))), zipRaw[A, Expr[B]](stream, stream_b)))
+   def take(n: Expr[Int])(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Expr[A]] = 
+         mkInit('{$n - 1}, i => {
+            var vsSt: StreamShape[Expr[Unit]] = 
+               mkPullArray[Expr[Unit]](i, i => k => k('{()}))
+            val zipSt: StreamShape[(Expr[Unit], Expr[A])] = zipRaw(vsSt, stream)
+            mapRaw_Direct[(Expr[Unit], Expr[A]), Expr[A]](_._2, zipSt)
+         })
+      Stream(shape)
    }
 }
 
 object Stream {
+   import StreamShape._
+   import Init._
+   import Producer._
+   import strymonas.StreamRaw._
+
    def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
-      import imports.Cardinality._
+      val shape = 
+         mkInit(arr, (arr: Expr[Array[A]]) => // Initializer[Expr[Array[A]], A](ILet(arr), sk)
+            mkInit('{($arr).length - 1}, (len: Expr[Int]) => // Initializer[Expr[Int], A](ILet(arr), sk)
+               mkPullArray[Expr[A]](len, (i: Expr[Int]) => (k: Expr[A] => Expr[Unit]) => '{ 
+                  val el: A = ($arr).apply(${i})
+                  ${k('el)} 
+               }))
+         )
 
-      val prod = new Producer[Expr[A]] {
-         type St = (Var[Int], Var[Int], Expr[Array[A]])
+      Stream(shape)
+   }
 
-         val card = Many
-
-         def init(k: St => Expr[Unit]): E[Unit] = {
-            Var('{($arr).length}) { n =>
-               Var(Expr(0)){ i =>
-                  k((i, n, arr))
-               }
-            }
-         }
-
-         def step(st: St, k: (Expr[A] => Expr[Unit])): E[Unit] = {
-            val (i, _, arr) = st
-            '{
-               val el = ($arr).apply(${i.get})
-               ${i.update('{ ${i.get} + 1 })}
-               ${k('el)}
-            }
-         }
-
-         def hasNext(st: St): E[Boolean] =  {
-            val (i, n, _) = st
-            '{
-               (${i.get} < ${n.get})
-            }
-         }
-      }
-
-      Stream(Linear(prod))
+   def iota(n: Expr[Int])(using QuoteContext): Stream[Int] = {
+      val shape = mkInitVar(n, z => {
+         infinite[Expr[Int]]((k: Expr[Int] => Expr[Unit]) => {
+            lets(z.get)((v: Expr[Int]) => { cseq(z.update('{ ${z.get} + 1 }), k(v))}) 
+         })
+      })
+      
+      Stream(shape)
    }
 }
+

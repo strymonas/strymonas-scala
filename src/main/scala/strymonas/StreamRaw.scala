@@ -2,432 +2,527 @@ package strymonas
 
 import scala.quoted._
 import scala.quoted.util._
+
 import imports._
 import imports.Cardinality._
+import scala.compiletime._
 
-trait StreamRaw extends StreamRawOps {
-   def foldRaw[A](consumer: A => Expr[Unit], stream: StreamShape[A]): E[Unit] = {
-      stream match {
-         case Linear(producer) => {
-            producer.card match {
-               case Many =>
-               producer.init(sp => '{
-                  while(${producer.hasNext(sp)}) {
-                     ${producer.step(sp, consumer)}
+import Init._
+import Producer._
+import StreamShape._
+
+object StreamRaw {
+   type E[T] = QuoteContext ?=> Expr[T]
+
+   /**
+    * Introduces initialization for let insertion (or var)
+    */
+   def mkInit[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Expr[Z], A](ILet(init, t), sk)
+   }
+
+   def mkInitVar[Z, A](init: Expr[Z], sk: Var[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Var[Z], A](IVar(init, t), sk)
+   }
+
+   // TODO: Extraneous check was removed in the compiler with this
+   // https://github.com/lampepfl/dotty/pull/9501/files
+   def default[A](t: Type[A])(using QuoteContext): Expr[A] = 
+      val expr: Expr[Any] = 
+         t match {
+            case '[Int] => '{0}
+            case '[Char] => '{0: Char}
+            case '[Byte] => '{0: Byte}
+            case '[Short] => '{0: Short}
+            case '[Long] => '{0L}
+            case '[Float] => '{0.0f}
+            case '[Double] => '{0.0d}
+            case '[Boolean] => '{false}
+            case '[Unit] => '{()}
+            case _ => '{null}
+         }
+      expr.asInstanceOf[Expr[A]]
+
+   def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
+      var i = 0
+
+      while(i <= ${upb}) {
+          ${body('i)}
+          i = i + 1
+      }
+   }
+
+   def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
+      Var('{true}) { again => 
+         cwhile(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
+                body(x => cseq(again.update('{false}), k(x))))
+      }
+   }
+
+   def cwhile(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
+      while(${goon}) {
+         ${body}
+      }
+   }
+
+   def cif[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
+      if(${cnd}) then ${bt} else ${bf}
+   }
+
+   def if1[A: Type](cnd: Expr[Boolean], bt: Expr[A]): E[Unit] = '{
+      if(${cnd}) then ${bt}
+   }
+
+   def cseq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
+      ${c1}
+      ${c2}
+   }
+
+   def cconj(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
+      ${c1} && ${c2}
+   }
+
+   def cdisj(c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
+      ${c1} || ${c2}
+   }
+
+   def cmin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
+      //TODO: ported Oleg's, need to check perf
+      cif('{ ${c1} < ${c2} }, c1, c2)
+   }
+
+   def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W])): E[W] =  
+      Var(x)(k) 
+
+   def lets[A: Type, W: Type](x: Expr[A])(k: (Expr[A] => Expr[W])): E[W] = '{
+      val lv = ${x}
+
+      ${k('{lv})}
+   }
+
+   /**
+    * Make a new pull array from an upper bound and an indexing function in CPS
+    */
+   def mkPullArray[A](exact_upb: Expr[Int], idx: Expr[Int] => Emit[A]): StreamShape[A] = {
+      Linear(For(
+         new PullArray[A] {
+            def upb(): Expr[Int] = exact_upb
+
+            def index(i: Expr[Int]): Emit[A] = (k: A => Expr[Unit]) => {
+               idx(i)(k)
+            }
+         }
+      ))
+   }
+   
+   def infinite[A](step: Emit[A]): StreamShape[A] = {
+      Linear(Unfold(step))
+   }   
+
+   def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
+      value match {
+         case None => z
+         case Some(x) => f(z)(x)
+      }
+   }  
+
+   def for_unfold[A](pull: PullArray[A])(using QuoteContext): StreamShape[A] = {
+      Initializer(
+         IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
+            Break('{ ${ i.get } <= ${ pull.upb() }}, 
+               Linear(Unfold((k: A => Expr[Unit]) => 
+                  pull.index(i.get)((a: A) => cseq(
+                     i.update('{ ${i.get} + 1}),
+                     k(a)
+                  )))))})
+   }
+
+   def foldRaw[A: Type](consumer: A => Expr[Unit], st: StreamShape[A]): E[Unit] = {
+
+      def consume[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
+         (bp, st) match {
+            case (None, For(pullArray)) => 
+               cfor(pullArray.upb(), (i: Expr[Int]) => 
+                  pullArray.index(i)(consumer))
+            case (bp, For(pullArray)) => 
+               loop(bp, consumer, for_unfold(pullArray))
+            case (None, Unfold(step)) => 
+               cwhile('{true})(step(consumer))
+            case (Some(bp), Unfold(step)) => 
+               cwhile(bp)(step(consumer))      
+         }
+      }
+
+      def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using ctx: QuoteContext): Expr[Unit] = {
+         st match {
+            case Initializer(ILet(i, t), sk) =>
+               lets(i)(i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
+            case Initializer(IVar(i, t), sk) => 
+               Var(i)(z => loop[A](bp, consumer, sk(z)))(t, summon[Type[Unit]], ctx)
+            case Linear(producer) => 
+               consume(bp, consumer, producer)
+            case Filtered(cnd, producer) => 
+               val newConsumer = (x: A) => cif(cnd(x), consumer(x), '{()})
+               consume(bp, newConsumer, producer)
+            case Stuttered(producer) => 
+               val newConsumer =  (x: Option[A]) => {
+                  x match {
+                     case None => '{ () }
+                     case Some(xx) => consumer(xx)
                   }
-               })
-               case AtMost1 =>
-               producer.init(sp => '{
-                  if (${producer.hasNext(sp)}) {
-                     ${producer.step(sp, consumer)}
-                  }
-               })
-            }
-         }
-         case nested: Nested[A, bt] => {
-            foldRaw[bt](((e: bt) => foldRaw[A](consumer, nested.nestedf(e))), Linear(nested.producer))
-         }
-      }
-   }
-
-   /** Handles generically the mapping of elements from one producer to another.
-   * `mapRaw` can be potentially used threading quoted values from one stream to another. However
-   * is can be also used by declaring any kind of computation we need to perform during each step.
-   *
-   * e.g., `mapRaw[(Var[Int], A), A]` transforms a stream that declares a variable and holds a value in each
-   * iteration step, to a stream that is not aware of the aforementioned variable.
-   *
-   * @param  f      the function to apply at each step. f is of type `(A => (B => Expr[Unit])` where A is the type of
-   *                the incoming stream. When applied to an element, `f` returns the continuation for elements of `B`
-   * @param  stream that contains the stream we want to map.
-   * @tparam A      the type of the input stream
-   * @tparam B      the element type of the resulting stream
-   * @return        a new stream resulting from applying `f` in the `step` function of the input stream's producer.
-   */
-   def mapRaw[A, B](f: (A => (B => Expr[Unit]) => Expr[Unit]), stream: StreamShape[A]): StreamShape[B] = {
-      stream match {
-         case Linear(producer) => {
-            val prod = new Producer[B] {
-
-            type St = producer.St
-            val card = producer.card
-
-            def init(k: St => Expr[Unit]): E[Unit] = {
-               producer.init(k)
-            }
-
-            def step(st: St, k: (B => Expr[Unit])): E[Unit] = {
-               producer.step(st, el => f(el)(k))
-            }
-
-            def hasNext(st: St): E[Boolean] = {
-               producer.hasNext(st)
-            }
-            }
-
-            Linear(prod)
-         }
-         case nested: Nested[A, bt] => {
-            Nested(nested.producer, (a: bt) => mapRaw[A, B](f, nested.nestedf(a)))
-         }
-      }
-   }
-
-   /** Returns a new stream that applies a function `f` to each element of the input stream.
-   * If the input stream is simply linear then its packed with the function `f`.
-   * If the input stream is nested then a new one is created by using its producer and then passing the `f`
-   * recursively to build the `nestedf` of the returned stream.
-   *
-   *    Note: always returns a nested stream.
-   *
-   * @param  f      the function of `flatMap``
-   * @param  stream the input stream
-   * @tparam A      the type of the input stream
-   * @tparam B      the element type of the resulting stream
-   * @return        a new stream resulting from registering `f`
-   */
-   def flatMapRaw[A, B](f: (A => StreamShape[B]), stream: StreamShape[A]): StreamShape[B] = {
-      stream match {
-         case Linear(producer) => Nested(producer, f)
-         case nested: Nested[a, bt] =>
-            Nested(nested.producer, (a: bt) => flatMapRaw[A, B](f, nested.nestedf(a)))
-      }
-   }
-
-      /** Adds a new counter variable by enhancing a producer's state with a variable of type `Int`.
-   * The counter is initialized in `init`, propageted in `step` and checked in the `hasNext` of the *current* stream.
-   *
-   * @param  n        is the initial value of the counter
-   * @param  producer the producer that we want to enhance
-   * @tparam A        the type of the producer's elements.
-   * @return          the enhanced producer
-   */
-   private def addCounter[A](n: Expr[Int], producer: Producer[A]): Producer[(Var[Int], A)] = {
-      new Producer[(Var[Int], A)] {
-         type St = (Var[Int], producer.St)
-         val card = producer.card
-
-         def init(k: St => Expr[Unit]): E[Unit] = {
-            producer.init(st => {
-               Var(n) { counter =>
-                  k(counter, st)
                }
-            })
-         }
-
-         def step(st: St, k: (((Var[Int], A)) => Expr[Unit])): E[Unit] = {
-            val (counter, currentState) = st
-            producer.step(currentState, el => k((counter, el)))
-         }
-
-         def hasNext(st: St): E[Boolean] = {
-            val (counter, currentState) = st
-            producer.card match {
-               case Many => '{ ${counter.get} > 0 && ${producer.hasNext(currentState)} }
-               case AtMost1 => producer.hasNext(currentState)
-            }
-         }
-      }
-   }
-
-   /** The nested stream receives the same variable reference; thus all streams decrement the same global count.
-   *
-   * @param  n      code of the variable to be threaded to the downstream.
-   * @param  stream the upstream to enhance.
-   * @tparam A      the type of the producer's elements.
-   * @return        a linear or nested stream aware of the variable reference to decrement.
-   */
-   def takeRaw[A: Type](n: Expr[Int], stream: StreamShape[A])(using QuoteContext): StreamShape[A] = {
-      stream match {
-         case linear: Linear[A] => {
-            val enhancedProducer: Producer[(Var[Int], A)] = addCounter[A](n, linear.producer)
-            val enhancedStream: Linear[(Var[Int], A)] = Linear(enhancedProducer)
-
-            // Map an enhanced stream to a stream that produces the elements. Before
-            // invoking the continuation for the element, "use" the variable accordingly.
-            mapRaw[(Var[Int], A), A]((t: (Var[Int], A)) => k => '{
-               ${t._1.update('{${t._1.get} - 1})}
-               ${k(t._2)}
-               }, enhancedStream)
-         }
-         case nested: Nested[A, bt] => {
-            val enhancedProducer: Producer[(Var[Int], bt)] = addCounter[bt](n, nested.producer)
-
-            Nested(enhancedProducer, (t: (Var[Int], bt)) => {
-               // Before invoking the continuation for the element, "use" the variable accordingly.
-               // In contrast to the linear case, the variable is initialized in the originating stream.
-               mapRaw[A, A]((el => k => '{
-                     ${t._1.update('{${t._1.get} - 1})}
-                     ${k(el)}
-                  }), addTerminationCondition(b => '{ ${t._1.get} > 0 && $b}, nested.nestedf(t._2)))
-            })
-         }
-      }
-   }
-
-   /** Adds a new termination condition to a stream (recursively if nested) of cardinality `Many`.
-   *
-   * @param  condition      the termination condition as a function accepting the existing condition (the result
-   *                of the `hasNext` from the passed `stream`'s producer.
-   * @param  stream that contains the producer we want to enhance.
-   * @tparam A      the type of the stream's elements.
-   * @return        the stream with the new producer. If the passed stream was linear, the new termination is added
-   *                otherwise the new termination is propagated to all nested ones, recursively.
-   */
-   private def addTerminationCondition[A](condition: Expr[Boolean] => Expr[Boolean], stream: StreamShape[A]): StreamShape[A] = {
-      def addToProducer[A](f: Expr[Boolean] => Expr[Boolean], producer: Producer[A]): Producer[A] = {
-         producer.card match {
-            case Many =>
-               new Producer[A] {
-                  type St = producer.St
-                  val card = producer.card
-
-                  def init(k: St => Expr[Unit]): E[Unit] =
-                     producer.init(k)
-
-                  def step(st: St, k: (A => Expr[Unit])): E[Unit] =
-                     producer.step(st, el => k(el))
-
-                  def hasNext(st: St): E[Boolean] =
-                     f(producer.hasNext(st))
+               consume(bp, newConsumer, producer)
+            case Nested(st, t, last) =>
+               def applyNested[B : Type](
+                     bp: Option[Goon], 
+                     consumer: A => Expr[Unit], 
+                     st: StreamShape[Expr[B]], 
+                     last: Expr[B] => StreamShape[A]) : Expr[Unit] = {
+                  loop[Expr[B]](bp, (x => loop[A](bp, consumer, last(x))), st)
                }
-            case AtMost1 => producer
+               applyNested(bp, consumer, st, last)(t)
+            case Break(g, shape) => 
+               loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](cconj, g, bp)), consumer, shape)
          }
       }
 
-      stream match {
-         case Linear(producer) => Linear(addToProducer(condition, producer))
-         case nested: Nested[a, bt] =>
-            Nested(addToProducer(condition, nested.producer), (a: bt) => addTerminationCondition(condition, nested.nestedf(a)))
+      loop(None, consumer, st)
+   }
+
+   def mkfmapOption_CPS[A, B, W](
+      f: (A => (B => W) => W))
+      (e: (Option[A]))
+      (k: (Option[B] => W)): W = {
+         e match {
+            case None => k(None)
+            case Some(x) => f(x)((y: B) => { k(Some(y))})
+         }
+      }
+
+   def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+      s match {
+         case Initializer(init, sk) => 
+            Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
+         case Linear(s) => 
+            Linear(mkMapProducer(tr, s))
+         case Filtered(cnd, s) => 
+            mapRaw_CPS(tr, Stuttered(filter_to_stutter(cnd, s)))
+         case Stuttered(s) => 
+            Stuttered(mkMapProducer(mkfmapOption_CPS[A, B, Expr[Unit]](tr), s))
+         case Nested(st, t, last) =>
+            Nested(st, t, x => mapRaw_CPS(tr, last(x)))
+         case Break(g, st) => 
+            Break(g, mapRaw_CPS(tr, st))
       }
    }
 
-   def zipRaw[A: Type, B: Type](stream1: StreamShape[Expr[A]], stream2: StreamShape[B])(using QuoteContext): StreamShape[(Expr[A], B)] = {
-      (stream1, stream2) match {
+   def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
+      Nested(s, t, last)
+   }
 
-         case (Linear(producer1), Linear(producer2)) =>
-            Linear(zip_producer(producer1, producer2))
+   /**
+    * Transforms a map raw operation from CPS to direct style
+    * 
+    * A => B ~> A => (B => Expr[Unit]) => Expr[Unit]
+    * 
+    */
+   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+      mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
+   }
 
-         case (Linear(producer1), Nested(producer2, nestf2)) =>
-            pushLinear[A = Expr[A], C = B](producer1, producer2, nestf2)
+   private def filter_to_stutter[A](cnd: A => Expr[Boolean], s: Producer[A])(using QuoteContext): Producer[Option[A]] = {
+      // (A => Emit[Option[A]]) => Producer[A] => Producer[Option[A]]
+      mkMapProducer((x: A) => (k: Option[A] => Expr[Unit]) => {
+         cif(cnd(x), k(Some(x)), k(None))
+      }, s)
+   }
 
-         case (Nested(producer1, nestf1), Linear(producer2)) =>
-            mapRaw[(B, Expr[A]), (Expr[A], B)]((t => k => k((t._2, t._1))), pushLinear[A = B, C = Expr[A]](producer2, producer1, nestf1))
-
-         case (Nested(producer1, nestf1), Nested(producer2, nestf2)) =>
-            zipRaw[A, B](Linear(makeLinear(stream1)), stream2)
+   def filterRaw[A](pred: A => Expr[Boolean], s: StreamShape[A])(using QuoteContext): StreamShape[A] = {
+      s match { 
+         case Initializer(init, sk) => 
+            Initializer(init,  z => filterRaw(pred, sk(z)))
+         case Linear(s) => 
+            Filtered(pred, s)
+         case Filtered(cnd, s) => 
+            Filtered((x: A) => cconj(cnd(x))((pred(x))), s)
+         case Stuttered(s) =>
+            def f[B: Type](x: Option[A])(k: Option[A] => Expr[B]): Expr[B] = x match {
+               case None => k(None)
+               case Some(x) => cif(pred(x), k(Some(x)), k(None))
+            }
+            Stuttered(mkMapProducer(f, s))
+         case Nested(s, t, last) => 
+            Nested(s, t, x => filterRaw(pred, last(x)))
+         case Break(g, st) => 
+            Break(g, filterRaw(pred, st))
       }
    }
 
-   /** Make a stream linear
-   *
-   * Performs reification of the `stream`. It converts it to a function that will, when called, produce the current element
-   * and advance the stream -- or report the end-of-stream.
-   * The reified stream is an imperative *non-recursive* function, called `adv`, of `Unit => Unit` type. Nested streams are
-   * also handled.
-   *
-   * @example {{{
-   *
-   *    Stream.of(1,2,3).flatMap(d => ...)
-   *          .zip(Stream.of(1,2,3).flatMap(d => ...))
-   *          .map{ case (a, b) => a + b }
-   *          .fold(0)((a, b) => a + b)
-   * }}}
-   *
-   * -->
-   *
-   * {{{
-   *           /* initialization for stream 1 */
-   *
-   *           var curr = 0.asInstanceOf[Int]  // keeps each element from reified stream
-   *           var nadv: Unit => Unit = (_) => () // keeps the advance for each nested level
-   *
-   *           def adv: Unit => Unit = {
-   *              /* Linearization of stream1 - updates curr from stream1 */
-   *              curr = ...
-   *           }
-   *           nadv = adv
-   *           nadv()
-   *
-   *           /* initialization for stream 2 */
-   *
-   *           def outer () = {
-   *               /* initialization for outer stream of stream 2 */
-   *               def inner() = {
-   *                 /* initialization for inner stream of stream 2 */
-   *                 val el = curr
-   *                 nadv()
-   *                 /* process elements for map and fold */
-   *                 inner()
-   *               }
-   *               inner()
-   *               outer()
-   *           }
-   *           outer()
-   * }}}
-   *
-   * @param  stream
-   * @tparam A
-   * @return
-   */
-   private def makeLinear[A: Type](stream: StreamShape[Expr[A]])(using QuoteContext): Producer[Expr[A]] = {
-      stream match {
-         case Linear(producer) => producer
-         case Nested(producer, nestedf) => {
-            /** Helper function that orchestrates the handling of the function that represents an `advance: Unit => Unit`.
-            * It reifies a nested stream as calls to `advance`. Advance encodes the step function of each nested stream.
-            * It is used in the init of a producer of a nested stream. When an inner stream finishes, the
-            * `nadv` holds the function to the `advance` function of the earlier stream.
-            * `makeAdvanceFunction`, for each nested stream, installs a new `advance` function that after
-            * the stream finishes it will restore the earlier one.
-            *
-            * When `advance` is called the result is consumed in the continuation. Within this continuation
-            * the resulting value should be saved in a variable.
-            *
-            * @param  nadv variable that holds a function that represents the stream at each level.
-            * @param  k              the continuation that consumes a variable.
-            * @return the quote of the orchestrated code that will be executed as
-            */
-            def makeAdvanceFunction[A](nadv: Var[Unit => Unit], k: A => Expr[Unit], stream: StreamShape[A]): E[Unit] = {
-               stream match {
-                  case Linear(producer) =>
-                     producer.card match {
-                        case AtMost1 => producer.init(st => '{
-                           if(${producer.hasNext(st)}) {
-                              ${producer.step(st, k)}
-                           }
-                           else {
-                              val f = ${nadv.get}
-                              f(())
-                           }
-                        })
-                        case Many => producer.init(st => '{
-                           val oldnadv: Unit => Unit = ${nadv.get}
-                           val adv1: Unit => Unit = { (_: Unit) => {
-                              if(${producer.hasNext(st)}) {
-                              ${producer.step(st, k)}
-                              }
-                              else {
-                              ${nadv.update('oldnadv)}
-                              oldnadv(())
-                              }
-                           }}
+   def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Expr[Unit]) => {
+      // Emit[(A, B)] ~> (A, B) => Expr[Unit] => Expr[Unit]
+      i1(x => i2(y => k((x, y))))
+   }
 
-                           ${nadv.update('adv1)}
-                           adv1(())
-                        })
+   def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
+      new PullArray[(A, B)] {
+         def upb(): Expr[Int] = {
+            cmin(p1.upb())(p2.upb())
+         }
+         def index(i: Expr[Int]): Emit[(A, B)] = {
+            zipEmit(p1.index(i), p2.index(i))
+         }
+      }
+   }
+
+   def for_unfold_deep[A](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
+      st match {
+         case Initializer(i, sk) => 
+            Initializer(i, z => for_unfold_deep(sk(z)))
+         case Break(g, st) => 
+            Break(g, for_unfold_deep(st))
+         case Nested(st, t, last) => 
+            Nested(for_unfold_deep(st), t, x => for_unfold_deep(last(x)))
+         case st@Linear(Unfold(_)) => st
+         case st@Filtered(_, Unfold(_)) => st
+         case st@Stuttered(Unfold(_)) => st
+         case Linear(For(pa)) => 
+            for_unfold(pa)
+         case Filtered(pr, For(pa)) => 
+            filterRaw(pr, for_unfold(pa))
+         case Stuttered(For(pa)) => 
+            def stutter[A](st: StreamShape[Option[A]]): StreamShape[A] = st match {
+               case Linear(st) => 
+                  Stuttered(st) 
+               case Initializer(init, sk) => 
+                  Initializer(init, z => stutter(sk(z)))
+               case Break(g, st) => 
+                  Break(g, stutter(st))
+               case _ => 
+                  assert(false)
+            }
+
+            stutter(for_unfold(pa))
+      }
+   }
+
+   def linearize[A: Type](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
+      def nestedp(stt: StreamShape[A]): Boolean = {
+         stt match {
+            case Initializer(ILet(i, t), sk) => nestedp(sk('{???})) 
+            // TODO: extract common behavior for scrutinizing IVar
+            case Initializer(IVar(i, t), sk) => {
+               var ret = false
+               val _ = 
+                  Var(i)(z => {
+                     ret = nestedp(sk(z)) 
+                     '{()}
+                  })(t, summon[Type[Unit]], ctx)
+               ret
+            }
+            case Break(_, st) => nestedp(st)
+            case Nested(_,_,_) => true
+            case _ => false
+         }
+      }
+
+      def loopnn[A: Type](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] = {
+         stt match {
+            case Initializer(init, sk) => 
+               Initializer(init, z => loopnn(bp)(sk(z)))
+            case Linear(st) => 
+               Linear(st)
+            case Break(g, st) =>
+               Break(g, loopnn(Some(foldOpt(cconj, g, bp)))(st))
+            case Filtered(pr, Unfold(s)) =>
+               Linear(Unfold(k =>
+                  Var('{true})(again => 
+                     cwhile(foldOpt(cconj, again.get, bp)) // condition
+                           (s((x: A) => {                  // loop body
+                              cif(pr(x), 
+                                 cseq(again.update('{false}), k(x)), 
+                                 '{()})
+                              }))) 
+               ))
+            case Stuttered(Unfold(s)) =>
+               Linear(Unfold(k => 
+                  Var('{true})(again => {
+                     cwhile(foldOpt(cconj, again.get, bp))
+                           (s((x: Option[A]) => 
+                              x match {
+                                 case None => '{()}
+                                 case Some(e) => cseq(again.update('{false}), k(e))
+                              }  
+                     ))
+                  })
+               ))
+            // TOFIX: compiler reports warning: StreamShape.Filtered(_, Producer.For(_)), StreamShape.Stuttered(Producer.For(_))
+            // case Nested(_, _, _) => assert(false)
+            case _ => assert(false)
+            
+         }
+      }
+
+      // Note: WIP
+      def nested[A: Type](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] ={
+         stt match { 
+            case Initializer(init, sk) => 
+               Initializer(init, z => nested(bp)(sk(z)))
+            case Break(g, st) => 
+               nested(Some(foldOpt(cconj, g, bp)))(st)
+            case Filtered(_, _) | Stuttered(_) | Linear(_) => assert(false)
+            case Nested(Initializer(i, sk), t, last) => 
+               Initializer(i, z => nested(bp)(Nested(sk(z), t, last)))
+            case Nested(Break(g, st), t, last) => 
+               nested(bp)(Break(g, Nested(st, t, last)))
+            case Nested(Nested(st, t1, next), t2, last) => 
+               nested(bp)(Nested(st, t1, x => Nested(next(x), t2, last)))
+            case Nested(Linear(For(_)), _, _) |
+                 Nested(Filtered(_, For(_)), _, _) |
+                 Nested(Stuttered(For(_)), _, _) =>  assert(false)
+            case Nested(st, t, last) => 
+               def applyNested[B: Type](st: StreamShape[Expr[B]], last: (Expr[B] => StreamShape[A])): StreamShape[A] = {
+                  mkInitVar('{false}, in_inner => {
+                     val guard = bp match {
+                        case None => '{ true }
+                        case Some(g) => cdisj(g, in_inner.get)
                      }
-                  case nested: Nested[A, bt] =>
-                     makeAdvanceFunction(nadv, (a: bt) => makeAdvanceFunction(nadv, k, nested.nestedf(a)), Linear(nested.producer))
+
+                     val newShape: StreamShape[A] = 
+                        mkInitVar[B, A](default(summon[Type[B]]), xres => {
+                           val st2 = linearize(last(xres.get))
+                           split_init('{()}, st2, (i_) => (st_) => {
+                              Linear(Unfold((k: A=>Expr[Unit]) => {
+                                 cloop(k, Some(guard), ((k: A => Expr[Unit]) => {
+                                    cseq(if1('{!${in_inner.get}}, 
+                                          consume_outer(st, x => cseq(xres.update(x), cseq(i_, in_inner.update('{true}))))),
+                                       if1(in_inner.get, 
+                                          consume_inner(None, st_, k, in_inner.update('{false}))))
+                                 }))
+                              }))
+                           })
+                        })
+
+                     Break(guard, newShape)
+                  })
                }
-            }
-
-            new Producer[Expr[A]] {
-               // _1: if the stream has ended,
-               // _2: the current element,
-               // _3: the step of the inner most steam
-               type St = (Var[Boolean], Var[A], Var[Unit => Unit])
-               val card: Cardinality = Many
-
-               def init(k: St => Expr[Unit]): E[Unit] = {
-                  producer.init(st =>
-                     Var('{ (_: Unit) => ()}){ nadv => {
-                        Var('{ true }) { hasNext => {
-                           Var('{ null.asInstanceOf[A] }) { curr => '{
-
-                              // Code generation of the `adv` function
-                              def adv: Unit => Unit = { _ =>
-                                 ${hasNext.update(producer.hasNext(st))}
-                                 if(${hasNext.get}) {
-                                    ${producer.step(st, el => {
-                                       makeAdvanceFunction[Expr[A]](nadv, (a => curr.update(a)), nestedf(el))
-                                    })}
-                                 }
-                              }
-
-                              ${nadv.update('adv)}
-                              
-                              adv(())
-                              
-                              ${k((hasNext, curr, nadv))}
-                           }}
-                        }}
-                     }})
-               }
-
-               def step(st: St, k: Expr[A] => Expr[Unit]): E[Unit] = {
-                  val (flag, current, nadv) = st
-                  '{
-                     var el = ${current.get}
-                     val f: Unit => Unit = ${nadv.get}
-                     f(())
-                     ${k('el)}
-                  }
-               }
-
-               def hasNext(st: St): E[Boolean] = {
-                  val (flag, _, _) = st
-                  flag.get
-               }
-            }
+               applyNested(st, last)(t)
          }
+      }
+
+      def split_init[A: Type, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = 
+         st match{
+            case Initializer(ILet(i, t), sk) => 
+               def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
+                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
+                     split_init(cseq(init, zres.update(i)), sk(zres.get), k)
+                  })
+               }
+               applyLet(i, sk)(t)
+            case Initializer(IVar(i, t), sk) => 
+               def applyLet[B : Type](i: Expr[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
+                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
+                     split_init(cseq(init, zres.update(i)), sk(zres), k)
+                  })
+               }
+               applyLet(i, sk)(t)
+            case Break (g, st) => 
+               split_init(init, st, (i => st => k(i)(Break (g, st))))
+            case Linear(_) | Filtered(_, _) | Stuttered(_)  => k(init)(st)
+            case Nested(Initializer(i, sk), t, last) => 
+               split_init(init, (Initializer (i, (z => Nested (sk(z), t, last)))), k)
+            case Nested(Break(g, st), t, last) => 
+               split_init(init, (Break (g, Nested (st, t, last))), k)
+            case Nested(Nested(st, t, next), _t, last) => 
+               split_init(init, (Nested (st, t, (y => Nested (next(y), _t, last)))), k)
+            case Nested(_, _, _) => k(init)(st)
+         }
+      def consume_outer[A](st: StreamShape[Expr[A]], consumer: (Expr[A] => Expr[Unit])): Expr[Unit] = 
+         st match {
+            case Linear(Unfold(step)) => step(consumer)
+            case Filtered (cnd, Unfold(step)) => step (x => if1(cnd(x), consumer(x)))
+            case Stuttered (Unfold(step)) => step { x =>
+               x match {
+                  case None => '{()}
+                  case Some(x) => consumer(x)
+               }
+            } 
+            case _ => assert(false)
+         }
+      def consume_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = 
+         st match {
+            case Initializer (_, _) => throw new Exception("All Init should have been split") 
+            case Break(g, st) => 
+               consume_inner(Some(foldOpt(cconj, g, bp)), st, consumer, ondone)
+            case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => assert(false)
+            case Linear(Unfold(step)) => 
+               bp match {
+                  case None => step(consumer)
+                  case Some(g) => cif(g, step(consumer), ondone)
+               }
+            case _ => throw new Exception("Inner stream must be linearized first")
+         }
+
+      if nestedp(st) 
+      then nested(None)(for_unfold_deep(st))
+      else loopnn(None)(for_unfold_deep(st))
+   }
+
+   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
+      st match {
+         case Initializer(ILet(i, t), sk) => linearize_score(sk('{???})) 
+         case Initializer(IVar(i, t), sk) => {
+            var score = 0
+            val _ = 
+               Var(i)(z => {
+                  score = linearize_score(sk(z)) 
+                  '{()}
+               })(t, summon[Type[Unit]], ctx)
+            score
+         }
+         case Linear(_) => 0
+         case Filtered(_, _) | Stuttered(_) => 3
+         case Nested(s, _, sk) => 
+            5 + linearize_score(s) + linearize_score(sk('{???}))
+         case Break(_, st) => linearize_score(st)
       }
    }
 
-   private def pushLinear[A, B, C](producer: Producer[A], nestedProducer: Producer[B], nestedf: (B => StreamShape[C]))(using QuoteContext): StreamShape[(A, C)] = {
-      val newProducer = new Producer[(Var[Boolean], producer.St, B)] {
-
-         type St = (Var[Boolean], producer.St, nestedProducer.St)
-         val card: Cardinality = Many
-
-         def init(k: St => Expr[Unit]): E[Unit] = {
-            producer.init(s1 => nestedProducer.init(s2 =>
-            Var(producer.hasNext(s1)) { flag =>
-               k((flag, s1, s2))
-            }))
-         }
-
-         def step(st: St, k: ((Var[Boolean], producer.St, B)) => Expr[Unit]): E[Unit] = {
-            val (flag, s1, s2) = st
-            nestedProducer.step(s2, b => k((flag, s1, b)))
-         }
-
-         def hasNext(st: St): E[Boolean] = {
-            val (flag, s1, s2) = st
-            '{ ${flag.get} && ${nestedProducer.hasNext(s2)} }
-         }
+   def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
+      def swap[A, B](st: StreamShape[(A, B)]) = {
+         mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
 
-      Nested(newProducer, (t: (Var[Boolean], producer.St, B)) => {
-         val (flag, s1, b) = t
-
-         mapRaw[C, (A, C)]((c => k => '{
-            ${producer.step(s1, a => k((a, c)))}
-            ${flag.update(producer.hasNext(s1))}
-         }), addTerminationCondition((b_flag: Expr[Boolean]) => '{ ${flag.get} && $b_flag }, nestedf(b)))
-      })
-   }
-
-   /** Computes the producer of zipping two linear streams **/
-   private def zip_producer[A, B](producer1: Producer[A], producer2: Producer[B]) = {
-      new Producer[(A, B)] {
-
-         type St = (producer1.St, producer2.St)
-         val card: Cardinality = Many
-
-         def init(k: St => Expr[Unit]): E[Unit] = {
-            producer1.init(s1 => producer2.init(s2 => k((s1, s2)) ))
-         }
-
-         def step(st: St, k: ((A, B)) => Expr[Unit]): E[Unit] = {
-            val (s1, s2) = st
-            producer1.step(s1, el1 => producer2.step(s2, el2 => k((el1, el2)) ))
-         }
-
-         def hasNext(st: St): E[Boolean] = {
-            val (s1, s2) = st
-            '{ ${producer1.hasNext(s1)} && ${producer2.hasNext(s2)} }
-         }
-      }
+      (st1, st2) match {
+         case (Initializer(init, sk), st2) => 
+            Initializer(init, z => zipRaw(sk(z), st2))
+         case (st1, Initializer(init, sk)) => 
+            Initializer(init, z => zipRaw(st1, sk(z)))
+         /* Early termination detection */
+         case (Break(g1, st1), Break(g2, st2)) => 
+            Break(cconj(g1)(g2), zipRaw(st1, st2))
+         case (Break(g1, st1), st2) => 
+            Break(g1, zipRaw(st1, st2))
+         case (st1, Break(g2, st2)) => 
+            Break(g2, zipRaw(st1, st2))
+         /* Zipping of two For is special; in other cases, convert For to While */
+         case (Linear(For(pa1)), Linear(For(pa2))) =>
+            Linear(For(mkZipPullArray[A, B](pa1, pa2))) 
+         case (Linear(For(pa1)), _) => 
+            zipRaw(for_unfold(pa1), st2)
+         case (_, Linear(For(_)))=> 
+            swap(zipRaw(st2, st1))
+         case (Linear(Unfold(s1)), Linear(Unfold(s2))) => 
+            Linear(Unfold(zipEmit(s1, s2)))
+         /* Zipping with a stream that is linear */
+         case (Linear(Unfold(s)), st2) =>
+            mapRaw_CPS[B, (A, B)]((y => k => s(x => k((x, y)))), st2)
+         case (_, Linear(Unfold(_))) => 
+            swap(zipRaw(st2, st1))
+         /* If both streams are non-linear, make at least on of them linear */
+         case (st1, st2) => 
+            if linearize_score(st2) > linearize_score(st1)
+            then zipRaw (linearize(st1), st2)
+            else zipRaw (st1, linearize(st2))
+      } 
    }
 }
