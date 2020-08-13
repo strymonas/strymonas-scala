@@ -8,5 +8,8 @@ image: bitbucketpipelines/scala-sbt:scala-2.12
 pipelines:
   default:
     - step:
+        caches:
+          - sbt 
+          - ivy2
         script: # Modify the commands below to build your repository.
           - sbt test
