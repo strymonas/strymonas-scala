@@ -157,3 +157,6 @@ META
 scalav2/project/metals.sbt
 scalav2/.metals/*
 project/metals.sbt
+.vscode/
+project/project/project/metals.sbt
+project/project/metals.sbt

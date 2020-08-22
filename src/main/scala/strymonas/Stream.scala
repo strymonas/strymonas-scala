@@ -3,7 +3,6 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 import scala.quoted.staging._
-import scala.quoted.autolift
 
 class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
    import strymonas.StreamRaw._

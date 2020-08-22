@@ -1,4 +1,4 @@
-val dottyVersion = "0.25.0-RC2"
+val dottyVersion = "0.26.0-RC1"
 
 lazy val root = project
   .in(file("."))
@@ -9,8 +9,8 @@ lazy val root = project
     scalaVersion := dottyVersion,
 
     libraryDependencies ++= Seq(
-      "ch.epfl.lamp" % "dotty_0.25" % dottyVersion,
-      "ch.epfl.lamp" % "dotty_0.25" % dottyVersion % "test->runtime",
+      "ch.epfl.lamp" % "dotty_0.26" % dottyVersion,
+      "ch.epfl.lamp" % "dotty_0.26" % dottyVersion % "test->runtime",
       "com.novocode" % "junit-interface" % "0.11" % "test",
       "ch.epfl.lamp" %% "dotty-staging" % dottyVersion
     )
@@ -26,8 +26,8 @@ lazy val bench = project
     scalaVersion := dottyVersion,
 
     libraryDependencies ++= Seq(
-      "ch.epfl.lamp" % "dotty_0.25" % dottyVersion,
-      "ch.epfl.lamp" % "dotty_0.25" % dottyVersion % "test->runtime",
+      "ch.epfl.lamp" % "dotty_0.26" % dottyVersion,
+      "ch.epfl.lamp" % "dotty_0.26" % dottyVersion % "test->runtime",
       "ch.epfl.lamp" %% "dotty-staging" % dottyVersion
     ),
 
