@@ -5,7 +5,7 @@
 ## Places the two CSV v1 and v2 on the same directory after the cleanup.
 
 
-JMH_SETTINGS="-i 30 -wi 30 -f 3"
+JMH_SETTINGS="-i 10 -wi 10 -f 2"
 REPO="git@bitbucket.org:biboudis/strymonas-mirror.git"
 
 echo "# Cloning repo locally"
@@ -18,13 +18,13 @@ echo "# Benchmarking strymonas-v1"
 
 git checkout v1 
 
-sbt clean "bench/jmh:run ${JMH_SETTINGS} -rff v1.csv .*cart_staged_macro"
+sbt clean "bench/jmh:run ${JMH_SETTINGS} -rff v1.csv .*"
 
 echo "# Benchmarking strymonas-v2"
 
 git checkout master
 
-sbt clean "bench/jmh:run ${JMH_SETTINGS} -rff v2.csv .*cart_staged_macro"
+sbt clean "bench/jmh:run ${JMH_SETTINGS} -rff v2.csv .*"
 
 echo "# Cleanup"
 
