@@ -499,7 +499,18 @@ object StreamRaw {
             Initializer(init, z => zipRaw(st1, sk(z)))
          /* Early termination detection */
          case (Break(g1, st1), Break(g2, st2)) => 
-            Break(cconj(g1)(g2), zipRaw(st1, st2))
+            (st1, st2) match {
+               case (Stuttered(_), Stuttered(_)) | 
+                    (Stuttered(_), Filtered(_, _))  |
+                    (Filtered(_, _), Stuttered(_))  |
+                    (Filtered(_, _), Filtered(_, _)) =>
+                  if(linearize_score(st2) > linearize_score(st1))
+                  then Break(cconj(g1)(g2), zipRaw(linearize(Break(g1, st1)), st2)) 
+                  else Break(cconj(g1)(g2), zipRaw(st1, linearize(Break(g2, st2)))) 
+               case _ => 
+                  Break(cconj(g1)(g2), zipRaw(st1, st2)) 
+            }
+         
          case (Break(g1, st1), st2) => 
             Break(g1, zipRaw(st1, st2))
          case (st1, Break(g2, st2)) => 
