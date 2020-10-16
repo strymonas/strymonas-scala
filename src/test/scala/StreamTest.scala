@@ -19,7 +19,7 @@ class StreamTest {
 
    @Test def sum(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) => 
-         ${ Stream.of('array).fold(int(0), ((a, b) => '{ $a + $b })) }  
+         ${ Stream.of('array).fold(int(0), (_+_)) }  
       }
       
       val t = run { s }
@@ -31,8 +31,8 @@ class StreamTest {
    @Test def sumOfSquares(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) =>
          ${ Stream.of('array)
-            .map[Int]((a) => '{ $a * $a })
-            .fold(int(0), ((a, b) => '{ $a + $b })) }}
+            .map[Int]((a) => a*a )
+            .fold(int(0), (_+_)) }}
       
       val t = run { s }
 
@@ -43,9 +43,9 @@ class StreamTest {
    @Test def sumOfSquaresEven(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) =>
          ${ Stream.of('array)
-            .filter((d) => '{ $d % 2 == 0 })
-            .map[Int]((a) => '{ $a * $a })
-            .fold(int(0), ((a, b) => '{ $a + $b })) }}
+            .filter((d) => (d mod int(2)) === int(0))
+            .map[Int]((a) => a * a)
+            .fold(int(0), (_+_)) }}
 
       val t = run { s }
 
@@ -56,8 +56,8 @@ class StreamTest {
    @Test def cart(): Unit = {
       def s(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
          ${ Stream.of('{vHi})
-         .flatMap((d) => Stream.of('{vLo}).map((dp) => '{ $d * $dp }))
-         .fold(int(0), ((a: Expr[Int], b: Expr[Int]) => '{ $a + $b })) }
+         .flatMap((d) => Stream.of('{vLo}).map((dp) => d * dp))
+         .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -69,8 +69,8 @@ class StreamTest {
    @Test def onefilter(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) => 
          ${ Stream.of('{array})
-         .filter((d) => '{ $d % 2 == 0 })
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .filter((d) => (d mod int(2)) === int(0))
+         .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -82,11 +82,11 @@ class StreamTest {
    @Test def manyFilters(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) => 
          ${ Stream.of('{array})
-         .filter(d => '{ $d > 0 })
-         .filter(d => '{ $d > 1 })
-         .filter(d => '{ $d > 2 })
+         .filter(_ > int(0))
+         .filter(_ > int(1))
+         .filter(_ > int(2))
 
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -99,7 +99,7 @@ class StreamTest {
       def s(using QuoteContext) = { '{ (array: Array[Int]) => 
          ${ Stream.of('{array})
          .take(int(2))
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .fold(int(0), (_+_)) }
       }}
 
       val t = run { s }
@@ -113,7 +113,7 @@ class StreamTest {
          ${ Stream.of('{array1})
          .flatMap((d) => Stream.of('{array2}))
          .take(int(20000000))
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -125,8 +125,8 @@ class StreamTest {
    @Test def dotProduct(): Unit = {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream.of('{array1})
-         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}))
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}))
+         .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -139,9 +139,9 @@ class StreamTest {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream
             .of('{array1})
-            .filter(d => '{ $d > 2 })
-            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}))
-            .fold(int(0), ((a, b) => '{ $a + $b })) }
+            .filter((_ > int(2)))
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}))
+            .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -152,8 +152,8 @@ class StreamTest {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream
             .of('{array1})
-            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}).filter(d => '{ $d > 5 }))
-            .fold(int(0), ((a, b) => '{ $a + $b })) }
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).filter(_ > int(5)))
+            .fold(int(0), (_+_)) }
       }
 
       val t = run { s }
@@ -165,9 +165,9 @@ class StreamTest {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream
             .of('{array1})
-            .filter(d => '{ $d > 1 })
-            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }, Stream.of('{array2}).filter(d => '{ $d > 5 }))
-            .fold(int(0), ((a, b) => '{ $a + $b })) } 
+            .filter(_ > int(1))
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).filter(_ > int(5)))
+            .fold(int(0), (_+_)) } 
       }
       
       val t = run { s }
@@ -179,7 +179,7 @@ class StreamTest {
       def s(using QuoteContext) = 
          import strymonas.StreamRaw._
          
-         val t1 = Stream.of('{Array(1,2,3)}).filter(d => '{ $d > 1 })
+         val t1 = Stream.of('{Array(1,2,3)}).filter(_ > int(1))
          val t2 = t1.flatMap((d) => Stream.of('{Array(1,2,3)}))
          val t3 = t2.flatMap((d) => Stream.of('{Array(1,2,3)}))
          val t4 = mkInitVar(int(10), i => Stream.of('{Array(1,2,3)}).stream)
@@ -223,9 +223,9 @@ class StreamTest {
    @Test def flatMap_after_zip(): Unit = {
       val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
          ${ Stream.of('{array1})
-         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}))
-         .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array1}))
+         .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
+         .fold(int(0), (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3) ) == 54)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 120)
@@ -235,8 +235,8 @@ class StreamTest {
       val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
          ${ Stream.of('{array1})
          .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}) )
-         .fold(int(0), ((a, b) => '{ $a + $b })) }
+         .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array1}) )
+         .fold(int(0), (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 15)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
@@ -245,10 +245,10 @@ class StreamTest {
    @Test def zip_flat_flat(): Unit = {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream.of('{array1})
-         .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-         .zipWith(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => '{ $d + $dp })) )
+         .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
+         .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)))
          .take(int(20000000))
-         .fold(int(0), ((a, b ) => '{ $a + $b })) }
+         .fold(int(0), (_+_)) }
       }
       val t = run { s }
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
@@ -260,7 +260,8 @@ class StreamTest {
          ${ Stream
             .iota(int(1))
             .take(int(3))
-            .fold(int(0), ((a, b) => '{ $a + $b })) }}
+            .fold(int(0), (_+_)) }
+      }
       
       val t = run { s }
 

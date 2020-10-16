@@ -68,38 +68,49 @@ object Cde {
   // Integers
   def int(c1: Int): E[Int] = Expr(c1)
 
-  def +(c1: Expr[Int], c2: Expr[Int]): E[Int] = '{
-      ${c1} + ${c2}
+  implicit class IntCde(val c1: Expr[Int]) {
+    def +(c2: Expr[Int]): E[Int] = '{
+        ${c1} + ${c2}
+    }
+  
+    def -(c2: Expr[Int]): E[Int] = '{
+        ${c1} - ${c2}
+    }
+
+    def *(c2: Expr[Int]): E[Int] = '{
+        ${c1} * ${c2}
+    }
+
+    def /(c2: Expr[Int]): E[Int] = '{
+        ${c1} / ${c2}
+    }
+
+    def mod(c2: Expr[Int]): E[Int] = '{
+        ${c1} % ${c2}
+    }
+  
+    // `=` is not available, original `==` has high priority
+    def ===(c2: Expr[Int]): E[Boolean] = '{
+        ${c1} == ${c2}
+    }
+  
+    def <(c2: Expr[Int]): E[Boolean] = '{
+        ${c1} < ${c2}
+    }
+  
+    def >(c2: Expr[Int]): E[Boolean] = '{
+        ${c1} > ${c2}
+    }
+  
+    def <=(c2: Expr[Int]): E[Boolean] = '{
+        ${c1} <= ${c2}
+    }
+  
+    def >=(c2: Expr[Int]): E[Boolean] = '{
+        ${c1} >= ${c2}
+    }
   }
 
-  def -(c1: Expr[Int], c2: Expr[Int]): E[Int] = '{
-      ${c1} - ${c2}
-  }
-
-  def mod(c1: Expr[Int], c2: Expr[Int]): E[Int] = '{
-      ${c1} % ${c2}
-  }
-
-  // = is not available
-  def ==(c1: Expr[Int], c2: Expr[Int]): E[Boolean] = '{
-      ${c1} == ${c2}
-  }
-
-  def <(c1: Expr[Int], c2: Expr[Int]): E[Boolean] = '{
-      ${c1} < ${c2}
-  }
-
-  def >(c1: Expr[Int], c2: Expr[Int]): E[Boolean] = '{
-      ${c1} > ${c2}
-  }
-
-  def <=(c1: Expr[Int], c2: Expr[Int]): E[Boolean] = '{
-      ${c1} <= ${c2}
-  }
-
-  def >=(c1: Expr[Int], c2: Expr[Int]): E[Boolean] = '{
-      ${c1} >= ${c2}
-  }
 
   def imin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
       //TODO: ported Oleg's, need to check perf
