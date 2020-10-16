@@ -26,7 +26,7 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
    }
    
    def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
-      val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => lets(f(a)), stream)
+      val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => letl(f(a)), stream)
       
       Stream[B](newShape)
    }
@@ -77,7 +77,7 @@ object Stream {
    def iota(n: Expr[Int])(using QuoteContext): Stream[Int] = {
       val shape = mkInitVar(n, z => {
          infinite[Expr[Int]]((k: Expr[Int] => Expr[Unit]) => {
-            lets(z.get)((v: Expr[Int]) => { seq(z.update('{ ${z.get} + 1 }), k(v))}) 
+            letl(z.get)((v: Expr[Int]) => { seq(z.update('{ ${z.get} + 1 }), k(v))}) 
          })
       })
       

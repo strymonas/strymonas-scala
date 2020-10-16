@@ -66,7 +66,7 @@ object StreamRaw {
       def consume[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
          (bp, st) match {
             case (None, For(pullArray)) => 
-               cfor(pullArray.upb(), (i: Expr[Int]) => 
+               for_(pullArray.upb(), None, (i: Expr[Int]) => 
                   pullArray.index(i)(consumer))
             case (bp, For(pullArray)) => 
                loop(bp, consumer, for_unfold(pullArray))
@@ -80,7 +80,7 @@ object StreamRaw {
       def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using ctx: QuoteContext): Expr[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk) =>
-               lets(i)(i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
+               letl(i)(i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
             case Initializer(IVar(i, t), sk) => 
                Var(i)(z => loop[A](bp, consumer, sk(z)))(t, summon[Type[Unit]], ctx)
             case Linear(producer) => 
