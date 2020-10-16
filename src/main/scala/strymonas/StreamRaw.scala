@@ -3,8 +3,6 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
-import imports._
-import imports.Cardinality._
 import scala.compiletime._
 
 import Init._
@@ -14,18 +12,11 @@ import StreamShape._
 object StreamRaw {
    type E[T] = QuoteContext ?=> Expr[T]
 
+
    /**
-    * Introduces initialization for let insertion (or var)
+    * The Scala's code generator
     */
-   def mkInit[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
-      Initializer[Expr[Z], A](ILet(init, t), sk)
-   }
-
-   def mkInitVar[Z, A](init: Expr[Z], sk: Var[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
-      Initializer[Var[Z], A](IVar(init, t), sk)
-   }
-
-   // TODO: Extraneous check was removed in the compiler with this
+    // TODO: Extraneous check was removed in the compiler with this
    // https://github.com/lampepfl/dotty/pull/9501/files
    def default[A](t: Type[A])(using QuoteContext): Expr[A] = 
       val expr: Expr[Any] = 
@@ -43,6 +34,44 @@ object StreamRaw {
          }
       expr.asInstanceOf[Expr[A]]
 
+   def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W])): E[W] =  
+      Var(x)(k) 
+
+   def lets[A: Type, W: Type](x: Expr[A])(k: (Expr[A] => Expr[W])): E[W] = '{
+      val lv = ${x}
+
+      ${k('{lv})}
+   }
+
+   def seq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
+      ${c1}
+      ${c2}
+   }
+
+   // Booleans
+   def &&(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
+      ${c1} && ${c2}
+   }
+
+   def ||(c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
+      ${c1} || ${c2}
+   }
+
+   // Integers
+   def imin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
+      //TODO: ported Oleg's, need to check perf
+      cond('{ ${c1} < ${c2} }, c1, c2)
+   }
+   
+
+   def cond[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
+      if(${cnd}) then ${bt} else ${bf}
+   }
+
+   def if1[A: Type](cnd: Expr[Boolean], bt: Expr[A]): E[Unit] = '{
+      if(${cnd}) then ${bt}
+   }
+
    def cfor(upb: Expr[Int], body: Expr[Int] => Expr[Unit]): E[Unit] = '{
       var i = 0
 
@@ -54,50 +83,27 @@ object StreamRaw {
 
    def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
       Var('{true}) { again => 
-         cwhile(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
-                body(x => cseq(again.update('{false}), k(x))))
+         while_(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
+                body(x => seq(again.update('{false}), k(x))))
       }
    }
 
-   def cwhile(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
+   def while_(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
       while(${goon}) {
          ${body}
       }
    }
 
-   def cif[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
-      if(${cnd}) then ${bt} else ${bf}
+
+   /**
+    * Introduces initialization for let insertion (or var)
+    */
+    def mkInit[Z, A](init: Expr[Z], sk: Expr[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Expr[Z], A](ILet(init, t), sk)
    }
 
-   def if1[A: Type](cnd: Expr[Boolean], bt: Expr[A]): E[Unit] = '{
-      if(${cnd}) then ${bt}
-   }
-
-   def cseq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
-      ${c1}
-      ${c2}
-   }
-
-   def cconj(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
-      ${c1} && ${c2}
-   }
-
-   def cdisj(c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
-      ${c1} || ${c2}
-   }
-
-   def cmin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
-      //TODO: ported Oleg's, need to check perf
-      cif('{ ${c1} < ${c2} }, c1, c2)
-   }
-
-   def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W])): E[W] =  
-      Var(x)(k) 
-
-   def lets[A: Type, W: Type](x: Expr[A])(k: (Expr[A] => Expr[W])): E[W] = '{
-      val lv = ${x}
-
-      ${k('{lv})}
+   def mkInitVar[Z, A](init: Expr[Z], sk: Var[Z] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Var[Z], A](IVar(init, t), sk)
    }
 
    /**
@@ -131,7 +137,7 @@ object StreamRaw {
          IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
             Break('{ ${ i.get } <= ${ pull.upb() }}, 
                Linear(Unfold((k: A => Expr[Unit]) => 
-                  pull.index(i.get)((a: A) => cseq(
+                  pull.index(i.get)((a: A) => seq(
                      i.update('{ ${i.get} + 1}),
                      k(a)
                   )))))})
@@ -147,9 +153,9 @@ object StreamRaw {
             case (bp, For(pullArray)) => 
                loop(bp, consumer, for_unfold(pullArray))
             case (None, Unfold(step)) => 
-               cwhile('{true})(step(consumer))
+               while_('{true})(step(consumer))
             case (Some(bp), Unfold(step)) => 
-               cwhile(bp)(step(consumer))      
+               while_(bp)(step(consumer))      
          }
       }
 
@@ -162,7 +168,7 @@ object StreamRaw {
             case Linear(producer) => 
                consume(bp, consumer, producer)
             case Filtered(cnd, producer) => 
-               val newConsumer = (x: A) => cif(cnd(x), consumer(x), '{()})
+               val newConsumer = (x: A) => cond(cnd(x), consumer(x), '{()})
                consume(bp, newConsumer, producer)
             case Stuttered(producer) => 
                val newConsumer =  (x: Option[A]) => {
@@ -182,7 +188,7 @@ object StreamRaw {
                }
                applyNested(bp, consumer, st, last)(t)
             case Break(g, shape) => 
-               loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](cconj, g, bp)), consumer, shape)
+               loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](&&, g, bp)), consumer, shape)
          }
       }
 
@@ -233,7 +239,7 @@ object StreamRaw {
    private def filter_to_stutter[A](cnd: A => Expr[Boolean], s: Producer[A])(using QuoteContext): Producer[Option[A]] = {
       // (A => Emit[Option[A]]) => Producer[A] => Producer[Option[A]]
       mkMapProducer((x: A) => (k: Option[A] => Expr[Unit]) => {
-         cif(cnd(x), k(Some(x)), k(None))
+         cond(cnd(x), k(Some(x)), k(None))
       }, s)
    }
 
@@ -244,11 +250,11 @@ object StreamRaw {
          case Linear(s) => 
             Filtered(pred, s)
          case Filtered(cnd, s) => 
-            Filtered((x: A) => cconj(cnd(x))((pred(x))), s)
+            Filtered((x: A) => &&(cnd(x))((pred(x))), s)
          case Stuttered(s) =>
             def f[B: Type](x: Option[A])(k: Option[A] => Expr[B]): Expr[B] = x match {
                case None => k(None)
-               case Some(x) => cif(pred(x), k(Some(x)), k(None))
+               case Some(x) => cond(pred(x), k(Some(x)), k(None))
             }
             Stuttered(mkMapProducer(f, s))
          case Nested(s, t, last) => 
@@ -266,7 +272,7 @@ object StreamRaw {
    def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
       new PullArray[(A, B)] {
          def upb(): Expr[Int] = {
-            cmin(p1.upb())(p2.upb())
+            imin(p1.upb())(p2.upb())
          }
          def index(i: Expr[Int]): Emit[(A, B)] = {
             zipEmit(p1.index(i), p2.index(i))
@@ -332,25 +338,25 @@ object StreamRaw {
             case Linear(st) => 
                Linear(st)
             case Break(g, st) =>
-               Break(g, loopnn(Some(foldOpt(cconj, g, bp)))(st))
+               Break(g, loopnn(Some(foldOpt(&&, g, bp)))(st))
             case Filtered(pr, Unfold(s)) =>
                Linear(Unfold(k =>
                   Var('{true})(again => 
-                     cwhile(foldOpt(cconj, again.get, bp)) // condition
+                     while_(foldOpt(&&, again.get, bp)) // condition
                            (s((x: A) => {                  // loop body
-                              cif(pr(x), 
-                                 cseq(again.update('{false}), k(x)), 
+                              cond(pr(x), 
+                                 seq(again.update('{false}), k(x)), 
                                  '{()})
                               }))) 
                ))
             case Stuttered(Unfold(s)) =>
                Linear(Unfold(k => 
                   Var('{true})(again => {
-                     cwhile(foldOpt(cconj, again.get, bp))
+                     while_(foldOpt(&&, again.get, bp))
                            (s((x: Option[A]) => 
                               x match {
                                  case None => '{()}
-                                 case Some(e) => cseq(again.update('{false}), k(e))
+                                 case Some(e) => seq(again.update('{false}), k(e))
                               }  
                      ))
                   })
@@ -368,7 +374,7 @@ object StreamRaw {
             case Initializer(init, sk) => 
                Initializer(init, z => nested(bp)(sk(z)))
             case Break(g, st) => 
-               nested(Some(foldOpt(cconj, g, bp)))(st)
+               nested(Some(foldOpt(&&, g, bp)))(st)
             case Filtered(_, _) | Stuttered(_) | Linear(_) => assert(false)
             case Nested(Initializer(i, sk), t, last) => 
                Initializer(i, z => nested(bp)(Nested(sk(z), t, last)))
@@ -384,7 +390,7 @@ object StreamRaw {
                   mkInitVar('{false}, in_inner => {
                      val guard = bp match {
                         case None => '{ true }
-                        case Some(g) => cdisj(g, in_inner.get)
+                        case Some(g) => ||(g, in_inner.get)
                      }
 
                      val newShape: StreamShape[A] = 
@@ -393,8 +399,8 @@ object StreamRaw {
                            split_init('{()}, st2, (i_) => (st_) => {
                               Linear(Unfold((k: A=>Expr[Unit]) => {
                                  cloop(k, Some(guard), ((k: A => Expr[Unit]) => {
-                                    cseq(if1('{!${in_inner.get}}, 
-                                          consume_outer(st, x => cseq(xres.update(x), cseq(i_, in_inner.update('{true}))))),
+                                    seq(if1('{!${in_inner.get}}, 
+                                          consume_outer(st, x => seq(xres.update(x), seq(i_, in_inner.update('{true}))))),
                                        if1(in_inner.get, 
                                           consume_inner(None, st_, k, in_inner.update('{false}))))
                                  }))
@@ -414,14 +420,14 @@ object StreamRaw {
             case Initializer(ILet(i, t), sk) => 
                def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
                   mkInitVar[B, W](default(summon[Type[B]]), { zres => 
-                     split_init(cseq(init, zres.update(i)), sk(zres.get), k)
+                     split_init(seq(init, zres.update(i)), sk(zres.get), k)
                   })
                }
                applyLet(i, sk)(t)
             case Initializer(IVar(i, t), sk) => 
                def applyLet[B : Type](i: Expr[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
                   mkInitVar[B, W](default(summon[Type[B]]), { zres => 
-                     split_init(cseq(init, zres.update(i)), sk(zres), k)
+                     split_init(seq(init, zres.update(i)), sk(zres), k)
                   })
                }
                applyLet(i, sk)(t)
@@ -452,12 +458,12 @@ object StreamRaw {
          st match {
             case Initializer (_, _) => throw new Exception("All Init should have been split") 
             case Break(g, st) => 
-               consume_inner(Some(foldOpt(cconj, g, bp)), st, consumer, ondone)
+               consume_inner(Some(foldOpt(&&, g, bp)), st, consumer, ondone)
             case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => assert(false)
             case Linear(Unfold(step)) => 
                bp match {
                   case None => step(consumer)
-                  case Some(g) => cif(g, step(consumer), ondone)
+                  case Some(g) => cond(g, step(consumer), ondone)
                }
             case _ => throw new Exception("Inner stream must be linearized first")
          }
@@ -505,10 +511,10 @@ object StreamRaw {
                     (Filtered(_, _), Stuttered(_))  |
                     (Filtered(_, _), Filtered(_, _)) =>
                   if(linearize_score(st2) > linearize_score(st1))
-                  then Break(cconj(g1)(g2), zipRaw(linearize(Break(g1, st1)), st2)) 
-                  else Break(cconj(g1)(g2), zipRaw(st1, linearize(Break(g2, st2)))) 
+                  then Break(&&(g1)(g2), zipRaw(linearize(Break(g1, st1)), st2)) 
+                  else Break(&&(g1)(g2), zipRaw(st1, linearize(Break(g2, st2)))) 
                case _ => 
-                  Break(cconj(g1)(g2), zipRaw(st1, st2)) 
+                  Break(&&(g1)(g2), zipRaw(st1, st2)) 
             }
          
          case (Break(g1, st1), st2) => 

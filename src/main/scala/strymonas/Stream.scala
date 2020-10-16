@@ -75,7 +75,7 @@ object Stream {
    def iota(n: Expr[Int])(using QuoteContext): Stream[Int] = {
       val shape = mkInitVar(n, z => {
          infinite[Expr[Int]]((k: Expr[Int] => Expr[Unit]) => {
-            lets(z.get)((v: Expr[Int]) => { cseq(z.update('{ ${z.get} + 1 }), k(v))}) 
+            lets(z.get)((v: Expr[Int]) => { seq(z.update('{ ${z.get} + 1 }), k(v))}) 
          })
       })
       
