@@ -49,6 +49,8 @@ object StreamRaw {
    }
 
    // Booleans
+   def bool(c1: Boolean): E[Boolean] = Expr(c1)
+
    def &&(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
       ${c1} && ${c2}
    }
@@ -58,6 +60,8 @@ object StreamRaw {
    }
 
    // Integers
+   def int(c1: Int): E[Int] = Expr(c1)
+
    def imin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
       //TODO: ported Oleg's, need to check perf
       cond('{ ${c1} < ${c2} }, c1, c2)
@@ -82,9 +86,9 @@ object StreamRaw {
    }
 
    def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
-      Var('{true}) { again => 
+      Var(bool(true)) { again => 
          while_(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
-                body(x => seq(again.update('{false}), k(x))))
+                body(x => seq(again.update(bool(false)), k(x))))
       }
    }
 
@@ -153,7 +157,7 @@ object StreamRaw {
             case (bp, For(pullArray)) => 
                loop(bp, consumer, for_unfold(pullArray))
             case (None, Unfold(step)) => 
-               while_('{true})(step(consumer))
+               while_(bool(true))(step(consumer))
             case (Some(bp), Unfold(step)) => 
                while_(bp)(step(consumer))      
          }
@@ -341,22 +345,22 @@ object StreamRaw {
                Break(g, loopnn(Some(foldOpt(&&, g, bp)))(st))
             case Filtered(pr, Unfold(s)) =>
                Linear(Unfold(k =>
-                  Var('{true})(again => 
+                  Var(bool(true))(again => 
                      while_(foldOpt(&&, again.get, bp)) // condition
                            (s((x: A) => {                  // loop body
                               cond(pr(x), 
-                                 seq(again.update('{false}), k(x)), 
+                                 seq(again.update(bool(false)), k(x)), 
                                  '{()})
                               }))) 
                ))
             case Stuttered(Unfold(s)) =>
                Linear(Unfold(k => 
-                  Var('{true})(again => {
+                  Var(bool(true))(again => {
                      while_(foldOpt(&&, again.get, bp))
                            (s((x: Option[A]) => 
                               x match {
                                  case None => '{()}
-                                 case Some(e) => seq(again.update('{false}), k(e))
+                                 case Some(e) => seq(again.update(bool(false)), k(e))
                               }  
                      ))
                   })
@@ -387,7 +391,7 @@ object StreamRaw {
                  Nested(Stuttered(For(_)), _, _) =>  assert(false)
             case Nested(st, t, last) => 
                def applyNested[B: Type](st: StreamShape[Expr[B]], last: (Expr[B] => StreamShape[A])): StreamShape[A] = {
-                  mkInitVar('{false}, in_inner => {
+                  mkInitVar(bool(false), in_inner => {
                      val guard = bp match {
                         case None => '{ true }
                         case Some(g) => ||(g, in_inner.get)
@@ -400,9 +404,9 @@ object StreamRaw {
                               Linear(Unfold((k: A=>Expr[Unit]) => {
                                  cloop(k, Some(guard), ((k: A => Expr[Unit]) => {
                                     seq(if1('{!${in_inner.get}}, 
-                                          consume_outer(st, x => seq(xres.update(x), seq(i_, in_inner.update('{true}))))),
+                                          consume_outer(st, x => seq(xres.update(x), seq(i_, in_inner.update(bool(true)))))),
                                        if1(in_inner.get, 
-                                          consume_inner(None, st_, k, in_inner.update('{false}))))
+                                          consume_inner(None, st_, k, in_inner.update(bool(false)))))
                                  }))
                               }))
                            })
