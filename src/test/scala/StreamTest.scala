@@ -4,7 +4,7 @@ import strymonas._
 import org.junit.Test
 import org.junit.Assert._
 
-import StreamRaw._
+import Cde._
 
 class StreamTest {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
