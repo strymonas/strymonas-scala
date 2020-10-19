@@ -3,11 +3,36 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
+type E[T] = QuoteContext ?=> Expr[T]
+
 type Emit[A] = (A => Expr[Unit]) => Expr[Unit]
+
+enum Goon {
+   case GTrue
+   case GExp(e: Expr[Boolean])
+   case GRef(e: Var[Boolean])
+} 
+
+def cde_of_goon(g: Goon): E[Boolean] = 
+   g match {
+      case Goon.GTrue => '{ true } 
+      case Goon.GExp(e) => e
+      case Goon.GRef(e) => e.get
+   }
 
 trait PullArray[A] {
    def upb(): Expr[Int]
    def index(st: Expr[Int]): Emit[A]
+}
+
+/* Linear is when a stream does not stutter (fails to produce at least one value while the state advances)
+ * Nonlinear when a stream is nested and 
+ * Filtered with the list of predicates (for fusion)
+ * */
+enum Linearity[+A] {
+   case Linear
+   case NonLinear
+   case Filtered(pred: List[A => Expr[Boolean]])
 }
 
 enum Init[A] {

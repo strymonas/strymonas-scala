@@ -7,7 +7,6 @@ import scala.quoted.util._
  * The Scala's code generator
  */
 object Cde {
-  type E[T] = QuoteContext ?=> Expr[T]
 
   def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
       value match {
@@ -163,7 +162,7 @@ object Cde {
       }
   }
   
-  def while_(goon: Goon)(body: Expr[Unit]): E[Unit] = '{
+  def while_(goon: Expr[Boolean])(body: Expr[Unit]): E[Unit] = '{
       while(${goon}) {
         ${body}
       }
