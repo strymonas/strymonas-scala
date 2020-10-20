@@ -175,21 +175,21 @@ class StreamTest {
    //    assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 8)
    // }
 
-   // @Test def testlinearizeScore(): Unit = {
-   //    def s(using QuoteContext) = 
-   //       import strymonas.StreamRaw._
+   @Test def testlinearizeScore(): Unit = {
+      def s(using QuoteContext) = 
+         import strymonas.StreamRaw._
          
-   //       val t1 = Stream.of('{Array(1,2,3)}).filter(_ > int(1))
-   //       val t2 = t1.flatMap((d) => Stream.of('{Array(1,2,3)}))
-   //       val t3 = t2.flatMap((d) => Stream.of('{Array(1,2,3)}))
-   //       val t4 = mkInitVar(int(10), i => Stream.of('{Array(1,2,3)}).stream)
-   //       assert(linearize_score(t1.stream) == 3)
-   //       assert(linearize_score(t2.stream) == 8)
-   //       assert(linearize_score(t3.stream) == 13)
-   //       assert(linearize_score(t4) == 0)
+         val t1 = Stream.of('{Array(1,2,3)}).filter(_ > int(1))
+         val t2 = t1.flatMap((d) => Stream.of('{Array(1,2,3)}))
+         val t3 = t2.flatMap((d) => Stream.of('{Array(1,2,3)}))
+         val t4 = mkInitVar(int(10), i => Stream.of('{Array(1,2,3)}).stream)
+         assert(linearize_score(t1.stream) == 3)
+         assert(linearize_score(t2.stream) == 8)
+         assert(linearize_score(t3.stream) == 13)
+         assert(linearize_score(t4) == 0)
 
-   //    withQuoteContext(s)
-   // }
+      withQuoteContext(s)
+   }
 
    @Test def testDefault(): Unit = {
       def s(using QuoteContext) = 

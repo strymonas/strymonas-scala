@@ -142,6 +142,8 @@ object StreamRaw {
          //    mapRaw_CPS(tr, Flattened(normalizeFlat(Filtered(pred), g, p)))
          case Flattened(Linear, g, p) =>
             Flattened(Linear, g, mkMapProducer(tr, p))
+         case Flattened(NonLinear, g, p) =>
+            Flattened(NonLinear, g, mkMapProducer(tr, p))
          case Nested(g, sf, t, next) =>
             Nested(g, sf, t, x => mapRaw_CPS(tr, next(x)))
       }
@@ -171,18 +173,10 @@ object StreamRaw {
             Initializer(init,  z => filterRaw(pred, sk(z)))
          case Flattened(Filtered(pred2), g, p) =>
             Flattened(Filtered((x: A) => pred2(x) && pred(x)), g, p)
-         case Flattened(Linear, g, p) =>
+         case Flattened(_, g, p) =>
             Flattened(Filtered(pred), g, p)
-         // case Stuttered(s) =>
-         //    def f[B: Type](x: Option[A])(k: Option[A] => Expr[B]): Expr[B] = x match {
-         //       case None => k(None)
-         //       case Some(x) => cond(pred(x), k(Some(x)), k(None))
-         //    }
-         //    Stuttered(mkMapProducer(f, s))
-         // case Nested(s, t, last) => 
-         //    Nested(s, t, x => filterRaw(pred, last(x)))
-         // case Break(g, st) => 
-         //    Break(g, filterRaw(pred, st))
+         case Nested(g, s, t, last) => 
+            Nested(g, s, t, x => filterRaw(pred, last(x)))
       }
    }
 
@@ -202,218 +196,106 @@ object StreamRaw {
       }
    }
 
-   // def for_unfold_deep[A](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
-   //    st match {
-   //       case Initializer(i, sk) => 
-   //          Initializer(i, z => for_unfold_deep(sk(z)))
-   //       case Break(g, st) => 
-   //          Break(g, for_unfold_deep(st))
-   //       case Nested(st, t, last) => 
-   //          Nested(for_unfold_deep(st), t, x => for_unfold_deep(last(x)))
-   //       case st@Linear(Unfold(_)) => st
-   //       case st@Filtered(_, Unfold(_)) => st
-   //       case st@Stuttered(Unfold(_)) => st
-   //       case Linear(For(pa)) => 
-   //          for_unfold(pa)
-   //       case Filtered(pr, For(pa)) => 
-   //          filterRaw(pr, for_unfold(pa))
-   //       case Stuttered(For(pa)) => 
-   //          def stutter[A](st: StreamShape[Option[A]]): StreamShape[A] = st match {
-   //             case Linear(st) => 
-   //                Stuttered(st) 
-   //             case Initializer(init, sk) => 
-   //                Initializer(init, z => stutter(sk(z)))
-   //             case Break(g, st) => 
-   //                Break(g, stutter(st))
-   //             case _ => 
-   //                assert(false)
-   //          }
+   def linearize[A: Type](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
+      def loopnn[A: Type](stt: Flat[A]): StreamShape[A] = {
+         stt match {
+            case (Linear, _, _) => Flattened(stt)
+            // case (Filtered, _, _) =>  loopnn(normalizeFlat(sf))
+            case (NonLinear, g, For(_)) => assert(false)
+            case (NonLinear, g, Unfold(s)) =>
+               val bp = if (g == GTrue) then None else Some(cde_of_goon(g))
+               Flattened(Linear, g, Unfold(k => cloop(k, bp, s)))  
+         }
+      }
 
-   //          stutter(for_unfold(pa))
-   //    }
-   // }
+      def nested[A: Type, B: Type](gouter: Goon, next : Expr[B] => StreamShape[A], stt: Flat[Expr[B]]): StreamShape[A] = {
+         stt match { 
+            case (Filtered(_),_,_) | (_,_,For(_)) => assert(false)
+            case (_, g1, Unfold(step)) =>
+               val g = goon_conj(gouter, g1)
+               mkInitVar[Boolean, A](cde_of_goon(g), gref => {
+               mkInitVar[Boolean, A](bool(false), in_inner => {
+               val guard = goon_disj(GRef(gref), GRef(in_inner))
+               mkInitVar[B, A](default(summon[Type[B]]), xres => {
+               val st2 = mmain(true, next(xres.get))
+               split_init('{()}, st2, (i_) => (g__, st_) => {
+                  val g_ = goon_conj(gouter, g__)
+                  Flattened(Linear, guard,
+                           Unfold((k: A=>Expr[Unit]) => {
+                              cloop(k, Some(cde_of_goon(guard)), ((k: A => Expr[Unit]) => {
+                                 seq(if1('{!${in_inner.get}}, 
+                                       (seq( 
+                                          (step(x => seq(xres.update(x), 
+                                                         seq(i_, 
+                                                            in_inner.update(bool(true)))))),
+                                          (gref := cde_of_goon(g))))),
+                                    if1(in_inner.get, 
+                                       if_(cde_of_goon(g_), st_(k), in_inner.update(bool(false)))))
+                              }))
+                           })
+                  )
+               })
+               })
+               })
+               })
+         }
+      }
 
-   // def linearize[A: Type](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
-   //    def nestedp(stt: StreamShape[A]): Boolean = {
-   //       stt match {
-   //          case Initializer(ILet(i, t), sk) => nestedp(sk('{???})) 
-   //          // TODO: extract common behavior for scrutinizing IVar
-   //          case Initializer(IVar(i, t), sk) => {
-   //             var ret = false
-   //             val _ = 
-   //                Var(i)(z => {
-   //                   ret = nestedp(sk(z)) 
-   //                   '{()}
-   //                })(t, summon[Type[Unit]], ctx)
-   //             ret
-   //          }
-   //          case Break(_, st) => nestedp(st)
-   //          case Nested(_,_,_) => true
-   //          case _ => false
-   //       }
-   //    }
+      def split_init[A: Type, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => (Goon, Emit[A]) => StreamShape[W])): StreamShape[W] = 
+         st match{
+            case Initializer(ILet(i, t), sk) => 
+               def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
+                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
+                     split_init(seq(init, zres.update(i)), sk(zres.get), k)
+                  })
+               }
+               applyLet(i, sk)(t)
+            case Initializer(IVar(i, t), sk) => 
+               def applyLet[B : Type](i: Expr[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
+                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
+                     split_init(seq(init, zres.update(i)), sk(zres), k)
+                  })
+               }
+               applyLet(i, sk)(t)
+            case Flattened(Filtered(_),_,_) | Flattened(_,_,For(_)) => assert(false)
+            case Flattened(_,g,Unfold(step)) => k(init)(g, step)
+            case Nested(_, _, _, _) => throw new Exception("Inner stream must be linearized first")
+         }
 
-   //    def loopnn[A: Type](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] = {
-   //       stt match {
-   //          case Initializer(init, sk) => 
-   //             Initializer(init, z => loopnn(bp)(sk(z)))
-   //          case Linear(st) => 
-   //             Linear(st)
-   //          case Break(g, st) =>
-   //             Break(g, loopnn(Some(foldOpt(&&, g, bp)))(st))
-   //          case Filtered(pr, Unfold(s)) =>
-   //             Linear(Unfold(k =>
-   //                Var(bool(true))(again => 
-   //                   while_(foldOpt(&&, again.get, bp)) // condition
-   //                         (s((x: A) => {                  // loop body
-   //                            cond(pr(x), 
-   //                               seq(again.update(bool(false)), k(x)), 
-   //                               '{()})
-   //                            }))) 
-   //             ))
-   //          case Stuttered(Unfold(s)) =>
-   //             Linear(Unfold(k => 
-   //                Var(bool(true))(again => {
-   //                   while_(foldOpt(&&, again.get, bp))
-   //                         (s((x: Option[A]) => 
-   //                            x match {
-   //                               case None => '{()}
-   //                               case Some(e) => seq(again.update(bool(false)), k(e))
-   //                            }  
-   //                   ))
-   //                })
-   //             ))
-   //          // TOFIX: compiler reports warning: StreamShape.Filtered(_, Producer.For(_)), StreamShape.Stuttered(Producer.For(_))
-   //          // case Nested(_, _, _) => assert(false)
-   //          case _ => assert(false)
-            
-   //       }
-   //    }
+      def mmain[A: Type](unn: Boolean, st: StreamShape[A]): StreamShape[A] = {
+         st match {
+            case Initializer(init, sk)                      => Initializer(init, x => (mmain(unn, sk(x))))
+            case Flattened(sf@(_, _, For(_)))               => mmain(unn, for_unfold(sf))
+            // case Flattened(sf)                              => if (unn) then Flattened(normalizeFlat(sf)) else loopnn(sf)
+            // case Nested (g, sf@(_, _, For(_)), t, next) =>
+            //    mmain(unn, guard(g, flatMapRaw(next, for_unfold(sf))))
+            // case Nested(g, sf@Filtered(_, _,_), t, next) =>
+            //    mmain(unn, Nested(g, normalizeFlat(sf), t, next))
+            // case Nested(g, sf, t, next) => nested(g, next, sf)
+         }
+      }
 
-   //    // Note: WIP
-   //    def nested[A: Type](bp: Option[Goon])(stt: StreamShape[A]): StreamShape[A] ={
-   //       stt match { 
-   //          case Initializer(init, sk) => 
-   //             Initializer(init, z => nested(bp)(sk(z)))
-   //          case Break(g, st) => 
-   //             nested(Some(foldOpt(&&, g, bp)))(st)
-   //          case Filtered(_, _) | Stuttered(_) | Linear(_) => assert(false)
-   //          case Nested(Initializer(i, sk), t, last) => 
-   //             Initializer(i, z => nested(bp)(Nested(sk(z), t, last)))
-   //          case Nested(Break(g, st), t, last) => 
-   //             nested(bp)(Break(g, Nested(st, t, last)))
-   //          case Nested(Nested(st, t1, next), t2, last) => 
-   //             nested(bp)(Nested(st, t1, x => Nested(next(x), t2, last)))
-   //          case Nested(Linear(For(_)), _, _) |
-   //               Nested(Filtered(_, For(_)), _, _) |
-   //               Nested(Stuttered(For(_)), _, _) =>  assert(false)
-   //          case Nested(st, t, last) => 
-   //             def applyNested[B: Type](st: StreamShape[Expr[B]], last: (Expr[B] => StreamShape[A])): StreamShape[A] = {
-   //                mkInitVar(bool(false), in_inner => {
-   //                   val guard = bp match {
-   //                      case None => '{ true }
-   //                      case Some(g) => ||(g, in_inner.get)
-   //                   }
+      mmain(false, st) 
+   }
 
-   //                   val newShape: StreamShape[A] = 
-   //                      mkInitVar[B, A](default(summon[Type[B]]), xres => {
-   //                         val st2 = linearize(last(xres.get))
-   //                         split_init('{()}, st2, (i_) => (st_) => {
-   //                            Linear(Unfold((k: A=>Expr[Unit]) => {
-   //                               cloop(k, Some(guard), ((k: A => Expr[Unit]) => {
-   //                                  seq(if1('{!${in_inner.get}}, 
-   //                                        consume_outer(st, x => seq(xres.update(x), seq(i_, in_inner.update(bool(true)))))),
-   //                                     if1(in_inner.get, 
-   //                                        consume_inner(None, st_, k, in_inner.update(bool(false)))))
-   //                               }))
-   //                            }))
-   //                         })
-   //                      })
-
-   //                   Break(guard, newShape)
-   //                })
-   //             }
-   //             applyNested(st, last)(t)
-   //       }
-   //    }
-
-   //    def split_init[A: Type, W](init: Expr[Unit], st: StreamShape[A], k: (Expr[Unit] => StreamShape[A] => StreamShape[W])): StreamShape[W] = 
-   //       st match{
-   //          case Initializer(ILet(i, t), sk) => 
-   //             def applyLet[B : Type](i: Expr[B], sk: (Expr[B] => StreamShape[A])): StreamShape[W] = {
-   //                mkInitVar[B, W](default(summon[Type[B]]), { zres => 
-   //                   split_init(seq(init, zres.update(i)), sk(zres.get), k)
-   //                })
-   //             }
-   //             applyLet(i, sk)(t)
-   //          case Initializer(IVar(i, t), sk) => 
-   //             def applyLet[B : Type](i: Expr[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
-   //                mkInitVar[B, W](default(summon[Type[B]]), { zres => 
-   //                   split_init(seq(init, zres.update(i)), sk(zres), k)
-   //                })
-   //             }
-   //             applyLet(i, sk)(t)
-   //          case Break (g, st) => 
-   //             split_init(init, st, (i => st => k(i)(Break (g, st))))
-   //          case Linear(_) | Filtered(_, _) | Stuttered(_)  => k(init)(st)
-   //          case Nested(Initializer(i, sk), t, last) => 
-   //             split_init(init, (Initializer (i, (z => Nested (sk(z), t, last)))), k)
-   //          case Nested(Break(g, st), t, last) => 
-   //             split_init(init, (Break (g, Nested (st, t, last))), k)
-   //          case Nested(Nested(st, t, next), _t, last) => 
-   //             split_init(init, (Nested (st, t, (y => Nested (next(y), _t, last)))), k)
-   //          case Nested(_, _, _) => k(init)(st)
-   //       }
-   //    def consume_outer[A](st: StreamShape[Expr[A]], consumer: (Expr[A] => Expr[Unit])): Expr[Unit] = 
-   //       st match {
-   //          case Linear(Unfold(step)) => step(consumer)
-   //          case Filtered (cnd, Unfold(step)) => step (x => if1(cnd(x), consumer(x)))
-   //          case Stuttered (Unfold(step)) => step { x =>
-   //             x match {
-   //                case None => '{()}
-   //                case Some(x) => consumer(x)
-   //             }
-   //          } 
-   //          case _ => assert(false)
-   //       }
-   //    def consume_inner[A](bp: Option[Goon], st: StreamShape[A], consumer: A => Expr[Unit], ondone: Expr[Unit]): Expr[Unit] = 
-   //       st match {
-   //          case Initializer (_, _) => throw new Exception("All Init should have been split") 
-   //          case Break(g, st) => 
-   //             consume_inner(Some(foldOpt(&&, g, bp)), st, consumer, ondone)
-   //          case Linear(For(_)) | Filtered(_, For(_)) | Stuttered(For(_)) => assert(false)
-   //          case Linear(Unfold(step)) => 
-   //             bp match {
-   //                case None => step(consumer)
-   //                case Some(g) => cond(g, step(consumer), ondone)
-   //             }
-   //          case _ => throw new Exception("Inner stream must be linearized first")
-   //       }
-
-   //    if nestedp(st) 
-   //    then nested(None)(for_unfold_deep(st))
-   //    else loopnn(None)(for_unfold_deep(st))
-   // }
-
-   // def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
-   //    st match {
-   //       case Initializer(ILet(i, t), sk) => linearize_score(sk('{???})) 
-   //       case Initializer(IVar(i, t), sk) => {
-   //          var score = 0
-   //          val _ = 
-   //             Var(i)(z => {
-   //                score = linearize_score(sk(z)) 
-   //                '{()}
-   //             })(t, summon[Type[Unit]], ctx)
-   //          score
-   //       }
-   //       case Linear(_) => 0
-   //       case Filtered(_, _) | Stuttered(_) => 3
-   //       case Nested(s, _, sk) => 
-   //          5 + linearize_score(s) + linearize_score(sk('{???}))
-   //       case Break(_, st) => linearize_score(st)
-   //    }
-   // }
+   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
+      st match {
+         case Initializer(ILet(i, t), sk) => linearize_score(sk('{???})) 
+         case Initializer(IVar(i, t), sk) => {
+            var score = 0
+            val _ = 
+               Var(i)(z => {
+                  score = linearize_score(sk(z)) 
+                  '{()}
+               })(t, summon[Type[Unit]], ctx)
+            score
+         }
+         case Flattened(Linear, _, _) => 0
+         case Flattened(_)            => 3
+         case Nested(_, s, _, sk) => 
+            5 + linearize_score(Flattened(s)) + linearize_score(sk('{???}))
+      }
+   }
 
    def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
       def swap[A, B](st: StreamShape[(A, B)]) = {
@@ -440,10 +322,10 @@ object StreamRaw {
          case (_, Flattened(Linear,_,_)) => 
             swap(zipRaw(st2, st1))
          /* If both streams are non-linear, make at least on of them linear */
-         // case (st1, st2) => 
-         //    if linearize_score(st2) > linearize_score(st1)
-         //    then zipRaw (linearize(st1), st2)
-         //    else zipRaw (st1, linearize(st2))
+         case (st1, st2) => 
+            if linearize_score(st2) > linearize_score(st1)
+            then zipRaw (linearize(st1), st2)
+            else zipRaw (st1, linearize(st2))
       } 
    }
 }

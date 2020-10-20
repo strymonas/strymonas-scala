@@ -29,7 +29,16 @@ def goon_conj(g1: Goon, g2: Goon)(using QuoteContext): Goon =
       case (Goon.GExp(g1), Goon.GExp(g2)) => Goon.GExp(g1 && g2)
       case (Goon.GRef(g1), Goon.GRef(g2)) => Goon.GExp(dref(g1) && dref(g2))
       case (Goon.GRef(g1), Goon.GExp(g2)) => Goon.GExp(dref(g1) && g2)
-      case (Goon.GExp(g1), Goon.GRef(g2)) => Goon.GExp(g1 && dref(g2))
+      case (Goon.GExp(g1), Goon.GRef(g2)) => Goon.GExp(dref(g2) && g1)
+   }
+
+def goon_disj(g1: Goon, g2: Goon)(using QuoteContext): Goon = 
+   (g1, g2) match {
+      case (Goon.GTrue, _) | (_, Goon.GTrue) => Goon.GTrue
+      case (Goon.GExp(g1), Goon.GExp(g2)) => Goon.GExp(g1 || g2)
+      case (Goon.GRef(g1), Goon.GRef(g2)) => Goon.GExp(dref(g1) || dref(g2))
+      case (Goon.GRef(g1), Goon.GExp(g2)) => Goon.GExp(dref(g1) || g2)
+      case (Goon.GExp(g1), Goon.GRef(g2)) => Goon.GExp(dref(g2) || g1)
    }
 
 trait PullArray[A] {
