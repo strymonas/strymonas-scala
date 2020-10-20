@@ -43,7 +43,16 @@ object StreamRaw {
    
    def infinite[A](step: Emit[A]): StreamShape[A] = {
       Flattened(Linear, GTrue, Unfold(step))
-   }   
+   }
+
+   def guard[A](g: Goon, st: StreamShape[A])(using QuoteContext): StreamShape[A] = {
+      st match {
+         case Initializer(init,sk)    => Initializer(init, x => guard(g, sk(x)))
+         case Flattened(m, g2, p)     => Flattened(m, goon_conj(g2, g), p)
+         case Nested(g2, st, t, next) => Nested(goon_conj(g2, g), st, t, next)
+      }
+   }
+
 
    def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
       value match {
@@ -95,28 +104,15 @@ object StreamRaw {
                consume(g, newConsumer, prod)
             case Flattened(_, g, prod) =>
                consume(g, consumer, prod)
-            // case Filtered(cnd, producer) => 
-            //    val newConsumer = (x: A) => cond(cnd(x), consumer(x), '{()})
-            //    consume(bp, newConsumer, producer)
-            // case Stuttered(producer) => 
-            //    val newConsumer =  (x: Option[A]) => {
-            //       x match {
-            //          case None => '{ () }
-            //          case Some(xx) => consumer(xx)
-            //       }
-            //    }
-            //    consume(bp, newConsumer, producer)
-            // case Nested(st, t, last) =>
-            //    def applyNested[B : Type](
-            //          bp: Option[Goon], 
-            //          consumer: A => Expr[Unit], 
-            //          st: StreamShape[Expr[B]], 
-            //          last: Expr[B] => StreamShape[A]) : Expr[Unit] = {
-            //       loop[Expr[B]](bp, (x => loop[A](bp, consumer, last(x))), st)
-            //    }
-            //    applyNested(bp, consumer, st, last)(t)
-            // case Break(g, shape) => 
-            //    loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](&&, g, bp)), consumer, shape)
+            case Nested(g, sf, t, last) =>
+               def applyNested[B : Type](
+                     g: Goon, 
+                     consumer: A => Expr[Unit], 
+                     sf: Flat[Expr[B]], 
+                     last: Expr[B] => StreamShape[A]) : Expr[Unit] = {
+                  loop[Expr[B]]((x => loop[A](consumer, guard(g, last(x)))), guard(g, Flattened(sf)))
+               }
+               applyNested(g, consumer, sf, last)(t)
          }
       }
 
@@ -133,35 +129,34 @@ object StreamRaw {
    //       }
    //    }
 
-   def map_prod[A, B](tr: A => Emit[B], s: Producer[A]): Producer[B] = {
-      s match {
-         case For(pa)    => For(fMap(tr, pa))
-         case Unfold(st) => Unfold(fMap(tr, st))
-      }
-   }
+   // def normalizeFlat[A](fl: Flat[A])(using QuoteContext): Flat[A] = {
+   //    fl match {
+   //       case Flattened(Filtered(pred), g, p) =>
+   //          (NonLinear, g, mkMapProducer(((x: A) => (k: A => Expr[Unit]) => if1(pred(x), k(x))), p))
+   //       case x => x
+   //    }
+   // }
 
-   def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+   def mapRaw_CPS[A, B](tr: A => Emit[B], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       s match {
          case Initializer(init, sk) => 
             Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
+         // case Flattened(Filtered(pred), g, p) =>
+         //    mapRaw_CPS(tr, Flattened(normalizeFlat(Filtered(pred), g, p)))
          case Flattened(Linear, g, p) =>
-            Flattened(Linear, g, map_prod(tr, p))
-         // case Linear(s) => 
-         //    Linear(mkMapProducer(tr, s))
-         // case Filtered(cnd, s) => 
-         //    mapRaw_CPS(tr, Stuttered(filter_to_stutter(cnd, s)))
-         // case Stuttered(s) => 
-         //    Stuttered(mkMapProducer(mkfmapOption_CPS[A, B, Expr[Unit]](tr), s))
-         // case Nested(st, t, last) =>
-         //    Nested(st, t, x => mapRaw_CPS(tr, last(x)))
-         // case Break(g, st) => 
-         //    Break(g, mapRaw_CPS(tr, st))
+            Flattened(Linear, g, mkMapProducer(tr, p))
+         case Nested(g, sf, t, next) =>
+            Nested(g, sf, t, x => mapRaw_CPS(tr, next(x)))
       }
    }
 
-   // def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
-   //    Nested(s, t, last)
-   // }
+   def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
+      s match {
+         case Initializer(init, sk) => Initializer(init, x => flatMapRaw(last, sk(x)))
+         case Flattened(sf) => Nested(Goon.GTrue, sf, t, last)
+         case Nested(g, sf, t, last2) => Nested(g, sf, t, x => flatMapRaw(last, last2(x)))
+      }
+   }
 
    // /**
    //  * Transforms a map raw operation from CPS to direct style
@@ -184,12 +179,10 @@ object StreamRaw {
       s match { 
          case Initializer(init, sk) => 
             Initializer(init,  z => filterRaw(pred, sk(z)))
+         case Flattened(Filtered(pred2), g, p) =>
+            Flattened(Filtered((x: A) => pred2(x) && pred(x)), g, p)
          case Flattened(Linear, g, p) =>
             Flattened(Filtered(pred), g, p)
-         // case Linear(s) => 
-         //    Filtered(pred, s)
-         // case Filtered(cnd, s) => 
-         //    Filtered((x: A) => &&(cnd(x))((pred(x))), s)
          // case Stuttered(s) =>
          //    def f[B: Type](x: Option[A])(k: Option[A] => Expr[B]): Expr[B] = x match {
          //       case None => k(None)

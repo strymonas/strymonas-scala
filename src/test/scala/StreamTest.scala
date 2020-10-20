@@ -53,18 +53,18 @@ class StreamTest {
    //    assert(t(Array(1, 2, 3, 4)) == 20)
    // }
 
-   // @Test def cart(): Unit = {
-   //    def s(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
-   //       ${ Stream.of('{vHi})
-   //       .flatMap((d) => Stream.of('{vLo}).map((dp) => d * dp))
-   //       .fold(int(0), (_+_)) }
-   //    }
+   @Test def cart(): Unit = {
+      def s(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
+         ${ Stream.of('{vHi})
+         .flatMap((d) => Stream.of('{vLo}).map((dp) => d * dp))
+         .fold(int(0), (_+_)) }
+      }
 
-   //    val t = run { s }
+      val t = run { s }
    
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 36)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 100)
-   // }
+      assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 36)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 100)
+   }
 
    @Test def onefilter(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) => 
@@ -79,21 +79,21 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4)) == 6)
    }
 
-   // @Test def manyFilters(): Unit = {
-   //    def s(using QuoteContext) = '{ (array: Array[Int]) => 
-   //       ${ Stream.of('{array})
-   //       .filter(_ > int(0))
-   //       .filter(_ > int(1))
-   //       .filter(_ > int(2))
+   @Test def manyFilters(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) => 
+         ${ Stream.of('{array})
+         .filter(_ > int(0))
+         .filter(_ > int(1))
+         .filter(_ > int(2))
 
-   //       .fold(int(0), (_+_)) }
-   //    }
+         .fold(int(0), (_+_)) }
+      }
 
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3)) == 3)
-   //    assert(t(Array(1, 2, 3, 4)) == 7)
-   // }
+      assert(t(Array(1, 2, 3)) == 3)
+      assert(t(Array(1, 2, 3, 4)) == 7)
+   }
 
    // @Test def take(): Unit = {
    //    def s(using QuoteContext) = { '{ (array: Array[Int]) => 
@@ -191,33 +191,33 @@ class StreamTest {
    //    withQuoteContext(s)
    // }
 
-   // @Test def testDefault(): Unit = {
-   //    def s(using QuoteContext) = 
-   //       import strymonas.StreamRaw._
+   @Test def testDefault(): Unit = {
+      def s(using QuoteContext) = 
+         import strymonas.StreamRaw._
          
-   //       assert(default('[Int]) match {
-   //          case '{0} => true
-   //          case _ => false
-   //       })
-   //       assert(default('[Boolean]) match {
-   //          case '{false} => true
-   //          case _ => false
-   //       })
-   //       assert(default('[String]) match {
-   //          case '{null} => true
-   //          case _ => false
-   //       })
-   //       assert(default('[Char]) match {
-   //          case '{0 : Char} => true
-   //          case _ => false
-   //       })
-   //       assert(default('[Byte]) match {
-   //          case '{0 : Byte} => true
-   //          case _ => false
-   //       })
+         assert(default('[Int]) match {
+            case '{0} => true
+            case _ => false
+         })
+         assert(default('[Boolean]) match {
+            case '{false} => true
+            case _ => false
+         })
+         assert(default('[String]) match {
+            case '{null} => true
+            case _ => false
+         })
+         assert(default('[Char]) match {
+            case '{0 : Char} => true
+            case _ => false
+         })
+         assert(default('[Byte]) match {
+            case '{0 : Byte} => true
+            case _ => false
+         })
          
-   //    withQuoteContext(s)
-   // }
+      withQuoteContext(s)
+   }
 
 
    // @Test def flatMap_after_zip(): Unit = {
