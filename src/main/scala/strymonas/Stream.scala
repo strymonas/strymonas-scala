@@ -31,11 +31,11 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
       Stream[B](newShape)
    }
 
-   // def filter(f: Expr[A] => Expr[Boolean])(using QuoteContext): Stream[A] = {
-   //    val newShape = filterRaw[Expr[A]](f, stream)
+   def filter(f: Expr[A] => Expr[Boolean])(using QuoteContext): Stream[A] = {
+      val newShape = filterRaw[Expr[A]](f, stream)
 
-   //    Stream[A](newShape)
-   // }
+      Stream[A](newShape)
+   }
 
    // def zipWith[B: Type, C: Type](f: Expr[A] => Expr[B] => Expr[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
    //    val newShape = mapRaw_Direct[(Expr[A], Expr[B]), Expr[C]](p => f(p._1)(p._2), zipRaw[Expr[A], Expr[B]](stream, str2.stream))

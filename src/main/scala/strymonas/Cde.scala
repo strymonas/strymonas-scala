@@ -129,7 +129,7 @@ object Cde {
       if(${cnd}) then ${bt} else ${bf}
    }
 
-   def if_[A: Type](cnd: Expr[Boolean], bt: Expr[Unit], bf: Expr[Unit]): E[Unit] = '{
+   def if_(cnd: Expr[Boolean], bt: Expr[Unit], bf: Expr[Unit]): E[Unit] = '{
       if(${cnd}) then ${bt} else ${bf}
    }
 

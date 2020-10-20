@@ -66,18 +66,18 @@ class StreamTest {
    //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 100)
    // }
 
-   // @Test def onefilter(): Unit = {
-   //    def s(using QuoteContext) = '{ (array: Array[Int]) => 
-   //       ${ Stream.of('{array})
-   //       .filter((d) => (d mod int(2)) === int(0))
-   //       .fold(int(0), (_+_)) }
-   //    }
+   @Test def onefilter(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) => 
+         ${ Stream.of('{array})
+         .filter((d) => (d mod int(2)) === int(0))
+         .fold(int(0), (_+_)) }
+      }
 
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3)) == 2)
-   //    assert(t(Array(1, 2, 3, 4)) == 6)
-   // }
+      assert(t(Array(1, 2, 3)) == 2)
+      assert(t(Array(1, 2, 3, 4)) == 6)
+   }
 
    // @Test def manyFilters(): Unit = {
    //    def s(using QuoteContext) = '{ (array: Array[Int]) => 

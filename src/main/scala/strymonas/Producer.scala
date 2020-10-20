@@ -41,10 +41,10 @@ trait PullArray[A] {
  * Nonlinear when a stream is nested and 
  * Filtered with the list of predicates (for fusion)
  * */
-enum Linearity[+A] {
+enum Linearity[-A] {
    case Linear
    case NonLinear
-   case Filtered(pred: List[A => Expr[Boolean]])
+   case Filtered(pred: A => Expr[Boolean])
 }
 
 enum Init[A] {

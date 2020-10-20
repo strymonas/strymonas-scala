@@ -90,10 +90,11 @@ object StreamRaw {
                letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]])
             case Initializer(IVar(i, t), sk) => 
                Var(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
-            case Flattened(_, g, st) =>
-               consume(g, consumer, st)
-            // case Linear(producer) => 
-            //    consume(bp, consumer, producer)
+            case Flattened(Filtered(pred), g, prod) =>
+               val newConsumer = (x: A) => if1(pred(x), consumer(x))
+               consume(g, newConsumer, prod)
+            case Flattened(_, g, prod) =>
+               consume(g, consumer, prod)
             // case Filtered(cnd, producer) => 
             //    val newConsumer = (x: A) => cond(cnd(x), consumer(x), '{()})
             //    consume(bp, newConsumer, producer)
@@ -179,26 +180,28 @@ object StreamRaw {
    //    }, s)
    // }
 
-   // def filterRaw[A](pred: A => Expr[Boolean], s: StreamShape[A])(using QuoteContext): StreamShape[A] = {
-   //    s match { 
-   //       case Initializer(init, sk) => 
-   //          Initializer(init,  z => filterRaw(pred, sk(z)))
-   //       case Linear(s) => 
-   //          Filtered(pred, s)
-   //       case Filtered(cnd, s) => 
-   //          Filtered((x: A) => &&(cnd(x))((pred(x))), s)
-   //       case Stuttered(s) =>
-   //          def f[B: Type](x: Option[A])(k: Option[A] => Expr[B]): Expr[B] = x match {
-   //             case None => k(None)
-   //             case Some(x) => cond(pred(x), k(Some(x)), k(None))
-   //          }
-   //          Stuttered(mkMapProducer(f, s))
-   //       case Nested(s, t, last) => 
-   //          Nested(s, t, x => filterRaw(pred, last(x)))
-   //       case Break(g, st) => 
-   //          Break(g, filterRaw(pred, st))
-   //    }
-   // }
+   def filterRaw[A](pred: A => Expr[Boolean], s: StreamShape[A])(using QuoteContext): StreamShape[A] = {
+      s match { 
+         case Initializer(init, sk) => 
+            Initializer(init,  z => filterRaw(pred, sk(z)))
+         case Flattened(Linear, g, p) =>
+            Flattened(Filtered(pred), g, p)
+         // case Linear(s) => 
+         //    Filtered(pred, s)
+         // case Filtered(cnd, s) => 
+         //    Filtered((x: A) => &&(cnd(x))((pred(x))), s)
+         // case Stuttered(s) =>
+         //    def f[B: Type](x: Option[A])(k: Option[A] => Expr[B]): Expr[B] = x match {
+         //       case None => k(None)
+         //       case Some(x) => cond(pred(x), k(Some(x)), k(None))
+         //    }
+         //    Stuttered(mkMapProducer(f, s))
+         // case Nested(s, t, last) => 
+         //    Nested(s, t, x => filterRaw(pred, last(x)))
+         // case Break(g, st) => 
+         //    Break(g, filterRaw(pred, st))
+      }
+   }
 
    // def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Expr[Unit]) => {
    //    // Emit[(A, B)] ~> (A, B) => Expr[Unit] => Expr[Unit]
