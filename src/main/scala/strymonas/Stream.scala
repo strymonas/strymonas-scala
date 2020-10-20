@@ -37,22 +37,22 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
       Stream[A](newShape)
    }
 
-   // def zipWith[B: Type, C: Type](f: Expr[A] => Expr[B] => Expr[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
-   //    val newShape = mapRaw_Direct[(Expr[A], Expr[B]), Expr[C]](p => f(p._1)(p._2), zipRaw[Expr[A], Expr[B]](stream, str2.stream))
+   def zipWith[B: Type, C: Type](f: Expr[A] => Expr[B] => Expr[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
+      val newShape = mapRaw_Direct[(Expr[A], Expr[B]), Expr[C]](p => f(p._1)(p._2), zipRaw[Expr[A], Expr[B]](stream, str2.stream))
 
-   //    Stream[C](newShape)
-   // }
+      Stream[C](newShape)
+   }
 
-   // def take(n: Expr[Int])(using QuoteContext): Stream[A] = {
-   //    val shape: StreamShape[Expr[A]] = 
-   //       mkInit('{$n - 1}, i => {
-   //          var vsSt: StreamShape[Expr[Unit]] = 
-   //             mkPullArray[Expr[Unit]](i, i => k => k('{()}))
-   //          val zipSt: StreamShape[(Expr[Unit], Expr[A])] = zipRaw(vsSt, stream)
-   //          mapRaw_Direct[(Expr[Unit], Expr[A]), Expr[A]](_._2, zipSt)
-   //       })
-   //    Stream(shape)
-   // }
+   def take(n: Expr[Int])(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Expr[A]] = 
+         mkInit('{$n - 1}, i => {
+            var vsSt: StreamShape[Expr[Unit]] = 
+               mkPullArray[Expr[Unit]](i, i => k => k('{()}))
+            val zipSt: StreamShape[(Expr[Unit], Expr[A])] = zipRaw(vsSt, stream)
+            mapRaw_Direct[(Expr[Unit], Expr[A]), Expr[A]](_._2, zipSt)
+         })
+      Stream(shape)
+   }
 }
 
 object Stream {

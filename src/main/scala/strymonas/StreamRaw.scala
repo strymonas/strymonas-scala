@@ -61,24 +61,21 @@ object StreamRaw {
       }
    }  
 
-   // def for_unfold[A](sf: Flat[A])(using QuoteContext): StreamShape[A] = {
-   //    sf match {
-   //       case (_, _, Unfold(_))  => Flattened(sf)
-   //       case (m, g, For(array)) =>
-   //          mkInitVar(int(0), (i) =>
-   //             Flattened(m,)
-   //                            Unfold(k =>
-   //                               ))
-   //    }
-   //    Initializer(
-   //       IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
-   //          Break('{ ${ i.get } <= ${ pull.upb() }}, 
-   //             Linear(Unfold((k: A => Expr[Unit]) => 
-   //                pull.index(i.get)((a: A) => seq(
-   //                   i.update('{ ${i.get} + 1}),
-   //                   k(a)
-   //                )))))})
-   // }
+   def for_unfold[A](sf: Flat[A])(using QuoteContext): StreamShape[A] = {
+      sf match {
+         case (_, _, Unfold(_))  => Flattened(sf)
+         case (m, g, For(array)) =>
+            mkInitVar(int(0), (i) =>
+               Flattened(m, goon_conj(g, GExp(dref(i) <= array.upb())),
+                        Unfold((k: A => Expr[Unit]) => 
+                           array.index(dref(i))((a: A) =>
+                              seq(incr(i),k(a))
+                           )
+                        )
+               )
+            )
+      }
+   }
 
    def foldRaw[A: Type](consumer: A => Expr[Unit], st: StreamShape[A]): E[Unit] = {
 
@@ -168,13 +165,6 @@ object StreamRaw {
       mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
    }
 
-   // private def filter_to_stutter[A](cnd: A => Expr[Boolean], s: Producer[A])(using QuoteContext): Producer[Option[A]] = {
-   //    // (A => Emit[Option[A]]) => Producer[A] => Producer[Option[A]]
-   //    mkMapProducer((x: A) => (k: Option[A] => Expr[Unit]) => {
-   //       cond(cnd(x), k(Some(x)), k(None))
-   //    }, s)
-   // }
-
    def filterRaw[A](pred: A => Expr[Boolean], s: StreamShape[A])(using QuoteContext): StreamShape[A] = {
       s match { 
          case Initializer(init, sk) => 
@@ -196,21 +186,21 @@ object StreamRaw {
       }
    }
 
-   // def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Expr[Unit]) => {
-   //    // Emit[(A, B)] ~> (A, B) => Expr[Unit] => Expr[Unit]
-   //    i1(x => i2(y => k((x, y))))
-   // }
+   def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Expr[Unit]) => {
+      // Emit[(A, B)] ~> (A, B) => Expr[Unit] => Expr[Unit]
+      i1(x => i2(y => k((x, y))))
+   }
 
-   // def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
-   //    new PullArray[(A, B)] {
-   //       def upb(): Expr[Int] = {
-   //          imin(p1.upb())(p2.upb())
-   //       }
-   //       def index(i: Expr[Int]): Emit[(A, B)] = {
-   //          zipEmit(p1.index(i), p2.index(i))
-   //       }
-   //    }
-   // }
+   def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
+      new PullArray[(A, B)] {
+         def upb(): Expr[Int] = {
+            imin(p1.upb())(p2.upb())
+         }
+         def index(i: Expr[Int]): Emit[(A, B)] = {
+            zipEmit(p1.index(i), p2.index(i))
+         }
+      }
+   }
 
    // def for_unfold_deep[A](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
    //    st match {
@@ -425,53 +415,35 @@ object StreamRaw {
    //    }
    // }
 
-   // def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
-   //    def swap[A, B](st: StreamShape[(A, B)]) = {
-   //       mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
-   //    }
+   def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
+      def swap[A, B](st: StreamShape[(A, B)]) = {
+         mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
+      }
 
-   //    (st1, st2) match {
-   //       case (Initializer(init, sk), st2) => 
-   //          Initializer(init, z => zipRaw(sk(z), st2))
-   //       case (st1, Initializer(init, sk)) => 
-   //          Initializer(init, z => zipRaw(st1, sk(z)))
-   //       /* Early termination detection */
-   //       case (Break(g1, st1), Break(g2, st2)) => 
-   //          (st1, st2) match {
-   //             case (Stuttered(_), Stuttered(_)) | 
-   //                  (Stuttered(_), Filtered(_, _))  |
-   //                  (Filtered(_, _), Stuttered(_))  |
-   //                  (Filtered(_, _), Filtered(_, _)) =>
-   //                if(linearize_score(st2) > linearize_score(st1))
-   //                then Break(&&(g1)(g2), zipRaw(linearize(Break(g1, st1)), st2)) 
-   //                else Break(&&(g1)(g2), zipRaw(st1, linearize(Break(g2, st2)))) 
-   //             case _ => 
-   //                Break(&&(g1)(g2), zipRaw(st1, st2)) 
-   //          }
-         
-   //       case (Break(g1, st1), st2) => 
-   //          Break(g1, zipRaw(st1, st2))
-   //       case (st1, Break(g2, st2)) => 
-   //          Break(g2, zipRaw(st1, st2))
-   //       /* Zipping of two For is special; in other cases, convert For to While */
-   //       case (Linear(For(pa1)), Linear(For(pa2))) =>
-   //          Linear(For(mkZipPullArray[A, B](pa1, pa2))) 
-   //       case (Linear(For(pa1)), _) => 
-   //          zipRaw(for_unfold(pa1), st2)
-   //       case (_, Linear(For(_)))=> 
-   //          swap(zipRaw(st2, st1))
-   //       case (Linear(Unfold(s1)), Linear(Unfold(s2))) => 
-   //          Linear(Unfold(zipEmit(s1, s2)))
-   //       /* Zipping with a stream that is linear */
-   //       case (Linear(Unfold(s)), st2) =>
-   //          mapRaw_CPS[B, (A, B)]((y => k => s(x => k((x, y)))), st2)
-   //       case (_, Linear(Unfold(_))) => 
-   //          swap(zipRaw(st2, st1))
-   //       /* If both streams are non-linear, make at least on of them linear */
-   //       case (st1, st2) => 
-   //          if linearize_score(st2) > linearize_score(st1)
-   //          then zipRaw (linearize(st1), st2)
-   //          else zipRaw (st1, linearize(st2))
-   //    } 
-   // }
+      (st1, st2) match {
+         case (Initializer(init, sk), st2) => 
+            Initializer(init, z => zipRaw(sk(z), st2))
+         case (st1, Initializer(init, sk)) => 
+            Initializer(init, z => zipRaw(st1, sk(z)))
+         /* Zipping of two For is special; in other cases, convert For to While */
+         case (Flattened(Linear, g1, For(pa1)), Flattened(Linear, g2, For(pa2))) =>
+            Flattened(Linear, goon_conj(g1,g2), For(mkZipPullArray[A, B](pa1, pa2))) 
+         case (Flattened(Linear, g1, For(pa1)), _) =>
+            zipRaw(for_unfold(Linear, g1, For(pa1)), st2)
+         case (_, Flattened(Linear, g2, For(pa2))) =>
+            swap(zipRaw(st2, st1))
+         case (Flattened(Linear, g1, Unfold(s1)), Flattened(Linear, g2, Unfold(s2))) =>
+            Flattened(Linear, goon_conj(g1, g2), Unfold(zipEmit(s1, s2)))
+         /* Zipping with a stream that is linear */
+         case (Flattened(Linear, g, Unfold(s)), _) =>
+            guard(g, mapRaw_CPS[B, (A, B)]((y => k => s(x => k((x, y)))), st2))
+         case (_, Flattened(Linear,_,_)) => 
+            swap(zipRaw(st2, st1))
+         /* If both streams are non-linear, make at least on of them linear */
+         // case (st1, st2) => 
+         //    if linearize_score(st2) > linearize_score(st1)
+         //    then zipRaw (linearize(st1), st2)
+         //    else zipRaw (st1, linearize(st2))
+      } 
+   }
 }
