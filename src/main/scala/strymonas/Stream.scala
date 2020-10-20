@@ -25,11 +25,11 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
    //    Stream(newShape)
    // }
    
-   // def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
-   //    val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => letl(f(a)), stream)
+   def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
+      val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => letl(f(a)), stream)
       
-   //    Stream[B](newShape)
-   // }
+      Stream[B](newShape)
+   }
 
    // def filter(f: Expr[A] => Expr[Boolean])(using QuoteContext): Stream[A] = {
    //    val newShape = filterRaw[Expr[A]](f, stream)

@@ -28,17 +28,17 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4)) == 10)
    }
 
-   // @Test def sumOfSquares(): Unit = {
-   //    def s(using QuoteContext) = '{ (array: Array[Int]) =>
-   //       ${ Stream.of('array)
-   //          .map[Int]((a) => a*a )
-   //          .fold(int(0), (_+_)) }}
+   @Test def sumOfSquares(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) =>
+         ${ Stream.of('array)
+            .map[Int]((a) => a*a )
+            .fold(int(0), (_+_)) }}
       
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3)) == 14)
-   //    assert(t(Array(1, 2, 3, 4)) == 30)
-   // }
+      assert(t(Array(1, 2, 3)) == 14)
+      assert(t(Array(1, 2, 3, 4)) == 30)
+   }
 
    // @Test def sumOfSquaresEven(): Unit = {
    //    def s(using QuoteContext) = '{ (array: Array[Int]) =>

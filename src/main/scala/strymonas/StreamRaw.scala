@@ -132,22 +132,31 @@ object StreamRaw {
    //       }
    //    }
 
-   // def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
-   //    s match {
-   //       case Initializer(init, sk) => 
-   //          Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
-   //       case Linear(s) => 
-   //          Linear(mkMapProducer(tr, s))
-   //       case Filtered(cnd, s) => 
-   //          mapRaw_CPS(tr, Stuttered(filter_to_stutter(cnd, s)))
-   //       case Stuttered(s) => 
-   //          Stuttered(mkMapProducer(mkfmapOption_CPS[A, B, Expr[Unit]](tr), s))
-   //       case Nested(st, t, last) =>
-   //          Nested(st, t, x => mapRaw_CPS(tr, last(x)))
-   //       case Break(g, st) => 
-   //          Break(g, mapRaw_CPS(tr, st))
-   //    }
-   // }
+   def map_prod[A, B](tr: A => Emit[B], s: Producer[A]): Producer[B] = {
+      s match {
+         case For(pa)    => For(fMap(tr, pa))
+         case Unfold(st) => Unfold(fMap(tr, st))
+      }
+   }
+
+   def mapRaw_CPS[A, B](tr: A => (B => Expr[Unit]) => Expr[Unit], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+      s match {
+         case Initializer(init, sk) => 
+            Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
+         case Flattened(Linear, g, p) =>
+            Flattened(Linear, g, map_prod(tr, p))
+         // case Linear(s) => 
+         //    Linear(mkMapProducer(tr, s))
+         // case Filtered(cnd, s) => 
+         //    mapRaw_CPS(tr, Stuttered(filter_to_stutter(cnd, s)))
+         // case Stuttered(s) => 
+         //    Stuttered(mkMapProducer(mkfmapOption_CPS[A, B, Expr[Unit]](tr), s))
+         // case Nested(st, t, last) =>
+         //    Nested(st, t, x => mapRaw_CPS(tr, last(x)))
+         // case Break(g, st) => 
+         //    Break(g, mapRaw_CPS(tr, st))
+      }
+   }
 
    // def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
    //    Nested(s, t, last)
@@ -159,9 +168,9 @@ object StreamRaw {
    //  * A => B ~> A => (B => Expr[Unit]) => Expr[Unit]
    //  * 
    //  */
-   // def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
-   //    mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
-   // }
+   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+      mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
+   }
 
    // private def filter_to_stutter[A](cnd: A => Expr[Boolean], s: Producer[A])(using QuoteContext): Producer[Option[A]] = {
    //    // (A => Emit[Option[A]]) => Producer[A] => Producer[Option[A]]
