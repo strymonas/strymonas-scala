@@ -3,6 +3,8 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
+import Cde._
+
 type E[T] = QuoteContext ?=> Expr[T]
 
 type Emit[A] = (A => Expr[Unit]) => Expr[Unit]
@@ -18,6 +20,16 @@ def cde_of_goon(g: Goon): E[Boolean] =
       case Goon.GTrue => '{ true } 
       case Goon.GExp(e) => e
       case Goon.GRef(e) => e.get
+   }
+
+def goon_conj(g1: Goon, g2: Goon)(using QuoteContext): Goon = 
+   (g1, g2) match {
+      case (Goon.GTrue, g) => g
+      case (g, Goon.GTrue) => g
+      case (Goon.GExp(g1), Goon.GExp(g2)) => Goon.GExp(g1 && g2)
+      case (Goon.GRef(g1), Goon.GRef(g2)) => Goon.GExp(dref(g1) && dref(g2))
+      case (Goon.GRef(g1), Goon.GExp(g2)) => Goon.GExp(dref(g1) && g2)
+      case (Goon.GExp(g1), Goon.GRef(g2)) => Goon.GExp(g1 && dref(g2))
    }
 
 trait PullArray[A] {

@@ -52,67 +52,74 @@ object StreamRaw {
       }
    }  
 
-   def for_unfold[A](pull: PullArray[A])(using QuoteContext): StreamShape[A] = {
-      Initializer(
-         IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
-            Break('{ ${ i.get } <= ${ pull.upb() }}, 
-               Linear(Unfold((k: A => Expr[Unit]) => 
-                  pull.index(i.get)((a: A) => seq(
-                     i.update('{ ${i.get} + 1}),
-                     k(a)
-                  )))))})
-   }
+   // def for_unfold[A](sf: Flat[A])(using QuoteContext): StreamShape[A] = {
+   //    sf match {
+   //       case (_, _, Unfold(_))  => Flattened(sf)
+   //       case (m, g, For(array)) =>
+   //          mkInitVar(int(0), (i) =>
+   //             Flattened(m,)
+   //                            Unfold(k =>
+   //                               ))
+   //    }
+   //    Initializer(
+   //       IVar('{0}, summon[Type[Int]]), (i: Var[Int]) => {
+   //          Break('{ ${ i.get } <= ${ pull.upb() }}, 
+   //             Linear(Unfold((k: A => Expr[Unit]) => 
+   //                pull.index(i.get)((a: A) => seq(
+   //                   i.update('{ ${i.get} + 1}),
+   //                   k(a)
+   //                )))))})
+   // }
 
    def foldRaw[A: Type](consumer: A => Expr[Unit], st: StreamShape[A]): E[Unit] = {
 
-      def consume[A: Type](bp: Option[Goon], consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
-         (bp, st) match {
-            case (None, For(pullArray)) => 
-               for_(pullArray.upb(), None, (i: Expr[Int]) => 
+      def consume[A: Type](g: Goon, consumer: A => Expr[Unit], st: Producer[A]): E[Unit] = {
+         st match {
+            case For(pullArray) =>
+               val bp = if(g == Goon.GTrue) then None else Some(cde_of_goon(g))
+               for_(pullArray.upb(), bp, (i: Expr[Int]) => 
                   pullArray.index(i)(consumer))
-            case (bp, For(pullArray)) => 
-               loop(bp, consumer, for_unfold(pullArray))
-            case (None, Unfold(step)) => 
-               while_(bool(true))(step(consumer))
-            case (Some(bp), Unfold(step)) => 
-               while_(bp)(step(consumer))      
+            case Unfold(step) => 
+               while_(cde_of_goon(g))(step(consumer))
          }
       }
 
-      def loop[A : Type](bp: Option[Goon], consumer: A => Expr[Unit], st: StreamShape[A])(using ctx: QuoteContext): Expr[Unit] = {
+      def loop[A : Type](consumer: A => Expr[Unit], st: StreamShape[A])(using ctx: QuoteContext): Expr[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk) =>
-               letl(i)(i => loop[A](bp, consumer, sk(i)))(t, summon[Type[Unit]])
+               letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]])
             case Initializer(IVar(i, t), sk) => 
-               Var(i)(z => loop[A](bp, consumer, sk(z)))(t, summon[Type[Unit]], ctx)
-            case Linear(producer) => 
-               consume(bp, consumer, producer)
-            case Filtered(cnd, producer) => 
-               val newConsumer = (x: A) => cond(cnd(x), consumer(x), '{()})
-               consume(bp, newConsumer, producer)
-            case Stuttered(producer) => 
-               val newConsumer =  (x: Option[A]) => {
-                  x match {
-                     case None => '{ () }
-                     case Some(xx) => consumer(xx)
-                  }
-               }
-               consume(bp, newConsumer, producer)
-            case Nested(st, t, last) =>
-               def applyNested[B : Type](
-                     bp: Option[Goon], 
-                     consumer: A => Expr[Unit], 
-                     st: StreamShape[Expr[B]], 
-                     last: Expr[B] => StreamShape[A]) : Expr[Unit] = {
-                  loop[Expr[B]](bp, (x => loop[A](bp, consumer, last(x))), st)
-               }
-               applyNested(bp, consumer, st, last)(t)
-            case Break(g, shape) => 
-               loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](&&, g, bp)), consumer, shape)
+               Var(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
+            case Flattened(_, g, st) =>
+               consume(g, consumer, st)
+            // case Linear(producer) => 
+            //    consume(bp, consumer, producer)
+            // case Filtered(cnd, producer) => 
+            //    val newConsumer = (x: A) => cond(cnd(x), consumer(x), '{()})
+            //    consume(bp, newConsumer, producer)
+            // case Stuttered(producer) => 
+            //    val newConsumer =  (x: Option[A]) => {
+            //       x match {
+            //          case None => '{ () }
+            //          case Some(xx) => consumer(xx)
+            //       }
+            //    }
+            //    consume(bp, newConsumer, producer)
+            // case Nested(st, t, last) =>
+            //    def applyNested[B : Type](
+            //          bp: Option[Goon], 
+            //          consumer: A => Expr[Unit], 
+            //          st: StreamShape[Expr[B]], 
+            //          last: Expr[B] => StreamShape[A]) : Expr[Unit] = {
+            //       loop[Expr[B]](bp, (x => loop[A](bp, consumer, last(x))), st)
+            //    }
+            //    applyNested(bp, consumer, st, last)(t)
+            // case Break(g, shape) => 
+            //    loop(Some(foldOpt[Expr[Boolean], Expr[Boolean]](&&, g, bp)), consumer, shape)
          }
       }
 
-      loop(None, consumer, st)
+      loop(consumer, st)
    }
 
    // def mkfmapOption_CPS[A, B, W](
