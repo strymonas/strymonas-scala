@@ -5,6 +5,7 @@ import scala.quoted.util._
 import scala.quoted.staging._
 
 import Cde._
+import Goon._
 
 class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
    import strymonas.StreamRaw._
@@ -51,6 +52,43 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
             val zipSt: StreamShape[(Expr[Unit], Expr[A])] = zipRaw(vsSt, stream)
             mapRaw_Direct[(Expr[Unit], Expr[A]), Expr[A]](_._2, zipSt)
          })
+      Stream(shape)
+   }
+
+   def takeWhile(f: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Expr[A]] =
+         mkInitVar(bool(true), zr =>
+            mapRaw_CPS((e: Expr[A]) => k => if_(f(e), k(e), zr := bool(false)), guard(GRef(zr), stream))
+         )
+      Stream(shape)
+   }
+    
+   def mapAccum[Z: Type, B: Type](
+      z: Expr[Z],
+      tr: (Expr[Z] =>  Expr[A] => (Expr[Z] => Expr[B] => Expr[Unit]) => Expr[Unit]))(using QuoteContext): Stream[B] = {
+         val shape: StreamShape[Expr[B]] =
+            mkInitVar(z, zr =>  
+            mapRaw_CPS((a: Expr[A]) => k => 
+            letl(dref(zr))(z =>
+               tr(z)(a)((z2: Expr[Z]) => (b: Expr[B]) =>
+               seq(zr := z2, k(b)))),
+            stream))
+         Stream(shape)
+   }
+
+   def drop(n: Expr[Int])(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Expr[A]] =
+         mkInitVar(n, z =>
+            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), stream)
+         )
+      Stream(shape)
+   }
+
+   def dropWhile(f: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Expr[A]] =
+         mkInitVar(bool(false), z =>
+            filterRaw ((e: Expr[A]) => dref(z) || seq(z := not(f(e)), dref(z)), stream)
+         )
       Stream(shape)
    }
 }
