@@ -40,18 +40,18 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4)) == 30)
    }
 
-   // @Test def sumOfSquaresEven(): Unit = {
-   //    def s(using QuoteContext) = '{ (array: Array[Int]) =>
-   //       ${ Stream.of('array)
-   //          .filter((d) => (d mod int(2)) === int(0))
-   //          .map[Int]((a) => a * a)
-   //          .fold(int(0), (_+_)) }}
+   @Test def sumOfSquaresEven(): Unit = {
+      def s(using QuoteContext) = '{ (array: Array[Int]) =>
+         ${ Stream.of('array)
+            .filter((d) => (d mod int(2)) === int(0))
+            .map[Int]((a) => a * a)
+            .fold(int(0), (_+_)) }}
 
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3)) == 4)
-   //    assert(t(Array(1, 2, 3, 4)) == 20)
-   // }
+      assert(t(Array(1, 2, 3)) == 4)
+      assert(t(Array(1, 2, 3, 4)) == 20)
+   }
 
    @Test def cart(): Unit = {
       def s(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
@@ -135,31 +135,31 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 20)
    }
 
-   // @Test def earlyTerminatingZipLeft(): Unit = {
-   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream
-   //          .of('{array1})
-   //          .filter((_ > int(2)))
-   //          .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}))
-   //          .fold(int(0), (_+_)) }
-   //    }
+   @Test def earlyTerminatingZipLeft(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .filter((_ > int(2)))
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}))
+            .fold(int(0), (_+_)) }
+      }
 
-   //    val t = run { s }
-   //    assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
-   // }
+      val t = run { s }
+      assert(t(Array(1, 2, 3), Array(4, 5, 6) ) == 7)
+   }
 
-   // @Test def earlyTerminatingZipRight(): Unit = {
-   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream
-   //          .of('{array1})
-   //          .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).filter(_ > int(5)))
-   //          .fold(int(0), (_+_)) }
-   //    }
+   @Test def earlyTerminatingZipRight(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).filter(_ > int(5)))
+            .fold(int(0), (_+_)) }
+      }
 
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
-   // }
+      assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
+   }
 
    // @Test def earlyTerminatingZipBoth(): Unit = {
    //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>

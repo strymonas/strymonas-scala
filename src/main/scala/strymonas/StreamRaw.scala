@@ -126,20 +126,20 @@ object StreamRaw {
    //       }
    //    }
 
-   // def normalizeFlat[A](fl: Flat[A])(using QuoteContext): Flat[A] = {
-   //    fl match {
-   //       case Flattened(Filtered(pred), g, p) =>
-   //          (NonLinear, g, mkMapProducer(((x: A) => (k: A => Expr[Unit]) => if1(pred(x), k(x))), p))
-   //       case x => x
-   //    }
-   // }
+   def normalizeFlat[A: Type](fl: Flat[A])(using QuoteContext): Flat[A] = {
+      fl match {
+         case (Filtered(pred), g, p) =>
+            (NonLinear, g, mkMapProducer(((x: A) => (k: A => Expr[Unit]) => if1(pred(x), k(x))), p))
+         case x => x
+      }
+   }
 
-   def mapRaw_CPS[A, B](tr: A => Emit[B], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+   def mapRaw_CPS[A: Type, B: Type](tr: A => Emit[B], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       s match {
          case Initializer(init, sk) => 
             Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
-         // case Flattened(Filtered(pred), g, p) =>
-         //    mapRaw_CPS(tr, Flattened(normalizeFlat(Filtered(pred), g, p)))
+         case Flattened(Filtered(pred), g, p) =>
+            mapRaw_CPS(tr, Flattened(normalizeFlat(Filtered(pred), g, p)))
          case Flattened(Linear, g, p) =>
             Flattened(Linear, g, mkMapProducer(tr, p))
          case Flattened(NonLinear, g, p) =>
@@ -149,7 +149,7 @@ object StreamRaw {
       }
    }
 
-   def flatMapRaw[A, B](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
+   def flatMapRaw[A, B: Type](last: Expr[A] => StreamShape[B], s: StreamShape[Expr[A]])(using t: Type[A]) : StreamShape[B] = {
       s match {
          case Initializer(init, sk) => Initializer(init, x => flatMapRaw(last, sk(x)))
          case Flattened(sf) => Nested(Goon.GTrue, sf, t, last)
@@ -163,7 +163,7 @@ object StreamRaw {
    //  * A => B ~> A => (B => Expr[Unit]) => Expr[Unit]
    //  * 
    //  */
-   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+   def mapRaw_Direct[A: Type, B: Type](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       mapRaw_CPS((e: A) => (k: B => Expr[Unit]) => k(f(e)), s)
    }
 
@@ -200,7 +200,7 @@ object StreamRaw {
       def loopnn[A: Type](stt: Flat[A]): StreamShape[A] = {
          stt match {
             case (Linear, _, _) => Flattened(stt)
-            // case (Filtered, _, _) =>  loopnn(normalizeFlat(sf))
+            case (Filtered, _, _) =>  loopnn(normalizeFlat(stt))
             case (NonLinear, g, For(_)) => assert(false)
             case (NonLinear, g, Unfold(s)) =>
                val bp = if (g == GTrue) then None else Some(cde_of_goon(g))
@@ -266,7 +266,7 @@ object StreamRaw {
          st match {
             case Initializer(init, sk)                      => Initializer(init, x => (mmain(unn, sk(x))))
             case Flattened(sf@(_, _, For(_)))               => mmain(unn, for_unfold(sf))
-            // case Flattened(sf)                              => if (unn) then Flattened(normalizeFlat(sf)) else loopnn(sf)
+            case Flattened(sf)                              => if (unn) then Flattened(normalizeFlat(sf)) else loopnn(sf)
             // case Nested (g, sf@(_, _, For(_)), t, next) =>
             //    mmain(unn, guard(g, flatMapRaw(next, for_unfold(sf))))
             // case Nested(g, sf@Filtered(_, _,_), t, next) =>
@@ -298,7 +298,7 @@ object StreamRaw {
    }
 
    def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
-      def swap[A, B](st: StreamShape[(A, B)]) = {
+      def swap[A: Type, B: Type](st: StreamShape[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
 
