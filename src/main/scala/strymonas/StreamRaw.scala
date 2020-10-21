@@ -200,7 +200,7 @@ object StreamRaw {
       def loopnn[A: Type](stt: Flat[A]): StreamShape[A] = {
          stt match {
             case (Linear, _, _) => Flattened(stt)
-            case (Filtered, _, _) =>  loopnn(normalizeFlat(stt))
+            case (Filtered(_), _, _) =>  loopnn(normalizeFlat(stt))
             case (NonLinear, g, For(_)) => assert(false)
             case (NonLinear, g, Unfold(s)) =>
                val bp = if (g == GTrue) then None else Some(cde_of_goon(g))
@@ -267,11 +267,32 @@ object StreamRaw {
             case Initializer(init, sk)                      => Initializer(init, x => (mmain(unn, sk(x))))
             case Flattened(sf@(_, _, For(_)))               => mmain(unn, for_unfold(sf))
             case Flattened(sf)                              => if (unn) then Flattened(normalizeFlat(sf)) else loopnn(sf)
-            // case Nested (g, sf@(_, _, For(_)), t, next) =>
-            //    mmain(unn, guard(g, flatMapRaw(next, for_unfold(sf))))
-            // case Nested(g, sf@Filtered(_, _,_), t, next) =>
-            //    mmain(unn, Nested(g, normalizeFlat(sf), t, next))
-            // case Nested(g, sf, t, next) => nested(g, next, sf)
+            case Nested (g, sf@(_, _, For(_)), t, next) =>
+               def applyNested[B : Type](
+                  g: Goon, 
+                  sf: Flat[Expr[B]], 
+                  next: Expr[B] => StreamShape[A]) : StreamShape[A] = {
+                  mmain[A](unn, guard(g, flatMapRaw(next, for_unfold(sf))))
+               }
+               applyNested(g, sf, next)(t)
+            case Nested(g, sf@(Filtered(_), _,_), t, next) =>
+               def applyNested[B : Type](
+                  g: Goon, 
+                  sf: Flat[Expr[B]], 
+                  t: Type[B],
+                  next: Expr[B] => StreamShape[A]) : StreamShape[A] = {
+                  mmain[A](unn, Nested(g, normalizeFlat(sf), t, next))
+               }
+               applyNested(g, sf, t, next)(t)
+            case Nested(g, sf, t, next) =>
+               def applyNested[B : Type](
+                  g: Goon, 
+                  sf: Flat[Expr[B]], 
+                  t: Type[B],
+                  next: Expr[B] => StreamShape[A]) : StreamShape[A] = {
+                  nested[A,B](g, next, sf)
+               }
+               applyNested(g, sf, t, next)(t)
          }
       }
 

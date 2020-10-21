@@ -161,19 +161,19 @@ class StreamTest {
       assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 7)
    }
 
-   // @Test def earlyTerminatingZipBoth(): Unit = {
-   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream
-   //          .of('{array1})
-   //          .filter(_ > int(1))
-   //          .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).filter(_ > int(5)))
-   //          .fold(int(0), (_+_)) } 
-   //    }
+   @Test def earlyTerminatingZipBoth(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream
+            .of('{array1})
+            .filter(_ > int(1))
+            .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).filter(_ > int(5)))
+            .fold(int(0), (_+_)) } 
+      }
       
-   //    val t = run { s }
+      val t = run { s }
 
-   //    assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 8)
-   // }
+      assert(t(Array(1, 2, 3), Array(4, 5, 6)) == 8)
+   }
 
    @Test def testlinearizeScore(): Unit = {
       def s(using QuoteContext) = 
@@ -242,18 +242,18 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
    }
 
-   // @Test def zip_flat_flat(): Unit = {
-   //    def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-   //       ${ Stream.of('{array1})
-   //       .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-   //       .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)))
-   //       .take(int(20000000))
-   //       .fold(int(0), (_+_)) }
-   //    }
-   //    val t = run { s }
-   //    assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
-   //    assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 160)
-   // }
+   @Test def zip_flat_flat(): Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+         ${ Stream.of('{array1})
+         .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
+         .zipWith((a: Expr[Int]) => (b: Expr[Int]) => a + b, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)))
+         .take(int(20000000))
+         .fold(int(0), (_+_)) }
+      }
+      val t = run { s }
+      assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
+      assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 160)
+   }
 
    @Test def infinite(): Unit = {
       def s(using QuoteContext) = '{ () =>
