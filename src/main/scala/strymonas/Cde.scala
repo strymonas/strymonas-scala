@@ -65,9 +65,9 @@ object Cde {
       }
    }
 
-
-   // Integers
+   // Numbers
    def int(c1: Int): E[Int] = Expr(c1)
+   def float(c1: Float): E[Float] = Expr(c1)
 
    // To do: rewrite by given
    implicit class IntCde(val c1: Expr[Int]) {
@@ -113,6 +113,7 @@ object Cde {
       }
    }
 
+   def truncate(c1: Expr[Float]): E[Int] = '{ ${c1}.toInt }
 
    def imin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
       //TODO: ported Oleg's, need to check perf
