@@ -45,6 +45,14 @@ class ZipDeepTest {
       assert(t == 10)
    }
 
+   /* TODO 2
+    let testz70 = zip_with C.pair
+   (from_to (C.int 1) (C.int 10) |> filter even)
+   (iota (C.int 1) |> filter C.(fun x -> x mod (int 3) = int 0))
+   |> collect
+   
+   */
+
    // @Test def testz70(): Unit = ???
    // @Test def testz7(): Unit = ???
    // @Test def testxx(): Unit = ???
