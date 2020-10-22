@@ -66,10 +66,8 @@ object Cde {
    }
 
    // Numbers
-   def int(c1: Int): E[Int] = Expr(c1)
-   def float(c1: Float): E[Float] = Expr(c1)
+   def inj[T: Liftable](c1: T): E[T] = Expr(c1)
 
-   // To do: rewrite by given
    implicit class IntCde(val c1: Expr[Int]) {
       def +(c2: Expr[Int]): E[Int] = '{
          ${c1} + ${c2}
@@ -91,7 +89,6 @@ object Cde {
          ${c1} % ${c2}
       }
 
-      // `=` is not available, original `==` has high priority
       def ===(c2: Expr[Int]): E[Boolean] = '{
          ${c1} == ${c2}
       }
@@ -112,6 +109,51 @@ object Cde {
          ${c1} >= ${c2}
       }
    }
+
+   // Until we have specialization
+   implicit class DoubleCde(val c1: Expr[Double]) {
+      def +(c2: Expr[Double]): E[Double] = '{
+         ${c1} + ${c2}
+      }
+
+      def -(c2: Expr[Double]): E[Double] = '{
+         ${c1} - ${c2}
+      }
+
+      def *(c2: Expr[Double]): E[Double] = '{
+         ${c1} * ${c2}
+      }
+
+      def /(c2: Expr[Double]): E[Double] = '{
+         ${c1} / ${c2}
+      }
+
+      def mod(c2: Expr[Double]): E[Double] = '{
+         ${c1} % ${c2}
+      }
+
+      // `=` is not available, original `==` has high priority
+      def ===(c2: Expr[Double]): E[Boolean] = '{
+         ${c1} == ${c2}
+      }
+
+      def <(c2: Expr[Double]): E[Boolean] = '{
+         ${c1} < ${c2}
+      }
+
+      def >(c2: Expr[Double]): E[Boolean] = '{
+         ${c1} > ${c2}
+      }
+
+      def <=(c2: Expr[Double]): E[Boolean] = '{
+         ${c1} <= ${c2}
+      }
+
+      def >=(c2: Expr[Double]): E[Boolean] = '{
+         ${c1} >= ${c2}
+      }
+   }
+
 
    def truncate(c1: Expr[Float]): E[Int] = '{ ${c1}.toInt }
 
@@ -185,10 +227,10 @@ object Cde {
    }
 
    def incr(i: Var[Int]): E[Unit] = {
-      i.update(dref(i) + int(1))
+      i.update(dref(i) + inj(1))
    }
    def decr(i: Var[Int]): E[Unit] = {
-      i.update(dref(i) - int(1))
+      i.update(dref(i) - inj(1))
    }
 
    // Arrays

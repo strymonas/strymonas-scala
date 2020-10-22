@@ -79,7 +79,7 @@ class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
    def drop(n: Expr[Int])(using QuoteContext): Stream[A] = {
       val shape: StreamShape[Expr[A]] =
          mkInitVar(n, z =>
-            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), stream)
+            filterRaw (e => (dref(z) <= inj(0)) || seq(decr(z), inj(false)), stream)
          )
       Stream(shape)
    }

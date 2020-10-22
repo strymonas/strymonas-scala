@@ -65,7 +65,7 @@ object StreamRaw {
       sf match {
          case (_, _, Unfold(_))  => Flattened(sf)
          case (m, g, For(array)) =>
-            mkInitVar(int(0), (i) =>
+            mkInitVar(inj(0), (i) =>
                Flattened(m, goon_conj(g, GExp(dref(i) <= array.upb())),
                         Unfold((k: A => Expr[Unit]) => 
                            array.index(dref(i))((a: A) =>
