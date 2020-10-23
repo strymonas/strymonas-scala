@@ -178,7 +178,7 @@ object StreamRaw {
    def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
       new PullArray[(A, B)] {
          def upb(): Cde[Int] = {
-            imin(p1.upb())(p2.upb())
+            imin(p1.upb(), p2.upb())
          }
          def index(i: Cde[Int]): Emit[(A, B)] = {
             zipEmit(p1.index(i), p2.index(i))

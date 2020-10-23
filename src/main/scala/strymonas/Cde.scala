@@ -26,8 +26,8 @@ trait Cde {
    // Numbers
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
    // def truncate(c1: Cde[Float])(using QuoteContext): Cde[Int]
-   def imin(c1: Cde[Int])(c2: Cde[Int])(using QuoteContext): Cde[Int]
-   def imax(c1: Cde[Int])(c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A]

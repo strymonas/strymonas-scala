@@ -159,12 +159,12 @@ object Code extends Cde {
 
    // def truncate(c1: Cde[Float]): Cde[Int] = '{ ${c1}.toInt }
 
-   def imin(c1: Cde[Int])(c2: Cde[Int])(using QuoteContext): Cde[Int] = {
+   def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
       //TODO: ported Oleg's, need to check perf
       cond('{ ${c1} < ${c2} }, c1, c2)
    }
 
-   def imax(c1: Cde[Int])(c2: Cde[Int])(using QuoteContext): Cde[Int] = {
+   def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
       //TODO: ported Oleg's, need to check perf
       cond('{ ${c1} > ${c2} }, c1, c2)
    }
