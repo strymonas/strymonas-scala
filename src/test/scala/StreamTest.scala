@@ -5,7 +5,6 @@ import org.junit.Test
 import org.junit.Assert._
 
 import Code._
-import scala.language.implicitConversions
 
 class StreamTest {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
@@ -126,7 +125,7 @@ class StreamTest {
    @Test def dotProduct(): Unit = {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream.of('{array1})
-         .zipWith(a => (b: Cde[Int]) => a + b, Stream.of('{array2}))
+         .zipWith(a => (b: Code.Cde[Int]) => a + b, Stream.of('{array2}))
          .fold(inj(0), (_+_)) }
       }
 
@@ -153,7 +152,7 @@ class StreamTest {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream
             .of('{array1})
-            .zipWith((a: Cde[Int]) => (b: Cde[Int]) => a + b, Stream.of('{array2}).filter(_ > inj(5)))
+            .zipWith((a: Code.Cde[Int]) => (b: Code.Cde[Int]) => a + b, Stream.of('{array2}).filter(_ > inj(5)))
             .fold(inj(0), (_+_)) }
       }
 
@@ -167,7 +166,7 @@ class StreamTest {
          ${ Stream
             .of('{array1})
             .filter(_ > inj(1))
-            .zipWith((a: Cde[Int]) => (b: Cde[Int]) => a + b, Stream.of('{array2}).filter(_ > inj(5)))
+            .zipWith((a: Code.Cde[Int]) => (b: Code.Cde[Int]) => a + b, Stream.of('{array2}).filter(_ > inj(5)))
             .fold(inj(0), (_+_)) } 
       }
       
@@ -224,7 +223,7 @@ class StreamTest {
    @Test def flatMap_after_zip(): Unit = {
       val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
          ${ Stream.of('{array1})
-         .zipWith((a: Cde[Int]) => (b: Cde[Int]) => a + b, Stream.of('{array1}))
+         .zipWith((a: Code.Cde[Int]) => (b: Code.Cde[Int]) => a + b, Stream.of('{array1}))
          .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
          .fold(inj(0), (_+_)) }
       }}
@@ -236,7 +235,7 @@ class StreamTest {
       val t = run { '{ (array1: Array[Int], array2: Array[Int]) =>
          ${ Stream.of('{array1})
          .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-         .zipWith((a: Cde[Int]) => (b: Cde[Int]) => a + b, Stream.of('{array1}) )
+         .zipWith((a: Code.Cde[Int]) => (b: Code.Cde[Int]) => a + b, Stream.of('{array1}) )
          .fold(inj(0), (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 15)
@@ -247,7 +246,7 @@ class StreamTest {
       def s(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
          ${ Stream.of('{array1})
          .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-         .zipWith((a: Cde[Int]) => (b: Cde[Int]) => a + b, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)))
+         .zipWith((a: Code.Cde[Int]) => (b: Code.Cde[Int]) => a + b, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)))
          .take(inj(20000000))
          .fold(inj(0), (_+_)) }
       }

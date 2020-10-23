@@ -12,8 +12,6 @@ import Code._
 import Goon._
 import Linearity._
 
-import scala.language.implicitConversions
-
 object StreamRaw {
    // type E[T] = QuoteContext ?=> Expr[T]
 

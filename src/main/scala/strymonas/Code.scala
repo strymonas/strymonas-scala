@@ -2,24 +2,14 @@ package strymonas
 
 import scala.quoted._
 import scala.quoted.util._
-import scala.language.implicitConversions
 
 /**
  * The Scala's code generator
  */
-// object Code extends BaseCde {
+object Code extends Cde {
+   type Cde[A] = Expr[A]
 
-class Code[A](val code: Expr[A]) extends Cde[A] {
-   def toCode(): Expr[A] = {
-      code
-   }
-}
-
-object Code extends CdeOp {
-   implicit def expr2cde[A](x: Expr[A]): Cde[A] = Code[A](x)
-   implicit def cde2expr[A](x: Cde[A]): Expr[A] = x.toCode()
-
-  // utils
+   // utils
    def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
       value match {
          case None => z
@@ -44,7 +34,6 @@ object Code extends CdeOp {
          case _ => '{null}
          }
       expr.asInstanceOf[Cde[A]]
-
 
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W] = '{
       val lv = ${x}

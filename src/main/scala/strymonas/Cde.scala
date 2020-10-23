@@ -3,11 +3,9 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
-trait Cde[A] {
-   def toCode(): Expr[A]
-}
+trait Cde {
+   type Cde[A]
 
-trait CdeOp {
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
    // Rename to newref
    def letVar[A: Type, W: Type](x: Cde[A])(k: (Var[A] => Cde[W]))(using QuoteContext): Cde[W]
