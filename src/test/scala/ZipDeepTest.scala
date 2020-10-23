@@ -16,14 +16,14 @@ class ZipDeepTest {
       def s(using QuoteContext) = '{ 
          (array1: Array[Double], array2: Array[Double])  => ${ 
             Stream.of('{array1})
-                  .take(inj(5))
+                  .take(int(5))
                   .zipWith[(Double, Int), (Double, (Double, Int))](pair, 
                      Stream.of('{array2})
-                           .take(inj(12))
+                           .take(int(12))
                            .zipWith[Int, (Double, Int)](pair, 
-                              Stream.iota(inj(1))
-                                    .flatMap(x => Stream.iota(x + inj(1))
-                                                        .take(inj(3)))))
+                              Stream.iota(int(1))
+                                    .flatMap(x => Stream.iota(x + int(1))
+                                                        .take(int(3)))))
                   .fold[List[(Double, (Double, Int))]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
       }}
 
@@ -35,11 +35,11 @@ class ZipDeepTest {
 
    @Test def testz6(): Unit = {
       def s(using QuoteContext) = 
-            Stream.of(inj(Array(0, 1, 2, 3, 4))).map(_ * inj(1)).zipWith[Int, Int](a => b => a * b, Stream.of(inj(Array(0, 1, 2, 3))))
-               .zipWith[Int, Int](a => b => a + b,
-            Stream.of(inj(Array(0, 1, 2, 3, 4))).map(_ * inj(2)).zipWith[Int, Int](a => b => a / b, Stream.of(inj(Array(1, 2, 3)))))
-            .map(_ + inj(1))
-            .fold(inj(0), _ + _)     
+            Stream.of(inj(Array(0, 1, 2, 3, 4))).map(_ * int(1)).zipWith[Int, Int](_*_, Stream.of(inj(Array(0, 1, 2, 3))))
+               .zipWith[Int, Int](_+_,
+            Stream.of(inj(Array(0, 1, 2, 3, 4))).map(_ * int(2)).zipWith[Int, Int](_/_, Stream.of(inj(Array(1, 2, 3)))))
+            .map(_ + int(1))
+            .fold(int(0), _ + _)     
 
       val t = run { s }
 

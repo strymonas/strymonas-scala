@@ -7,9 +7,9 @@ import scala.quoted.util._
 /**
  * The Scala's code generator wich uses partially-static optimaization
  */
-// object CodePs extends Cde {
-object CodePs {
+object CodePs extends Cde {
    type Code[A] = Code.Cde[A]
+   type Vari[A] = Code.Var[A]
 
    enum Annot[-A]  {
       case Sta(x: A)
@@ -18,6 +18,7 @@ object CodePs {
    }
 
    case class Cde[A](sta : Annot[A], dyn : Code[A])
+   case class Var[A](sta : Annot[A], dyn : Vari[A])
 
    def mapOpt[A, B](f: A => B, x: Option[A]): Option[B] = {
       x match {
@@ -27,7 +28,9 @@ object CodePs {
    }
 
    def inj[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk, x)
+   def injVar[A](x: Vari[A]): Var[A] = Var[A](Annot.Unk, x)
    def dyn[A](x: Cde[A]): Code[A] = x.dyn
+   def dynVar[A](x: Var[A]): Vari[A] = x.dyn
 
    def inj1[A, B](f: Code[A] => Code[B]): (Cde[A] => Cde[B]) = {
       (x: Cde[A]) =>
@@ -74,6 +77,10 @@ object CodePs {
       }
    }
 
+   def letVar[A: Type, W: Type](x: Cde[A])(k: Var[A] => Cde[W])(using qctx: QuoteContext): Cde[W] = {
+      inj(Code.letVar(dyn(x))(v => injVar(v) |> k |> dyn))
+   }
+
    def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using ctx: QuoteContext): Cde[A] = inj2[Unit, A, A](Code.seq)(c1, c2)
    def unit(using QuoteContext): Cde[Unit] = Cde(Annot.Sta(()), Code.unit)
 
@@ -108,9 +115,22 @@ object CodePs {
    }
 
    // Numbers
-   def num[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Cde(Annot.Sta(c1), Code.inj(c1))
-   def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.min(y))(num)(Code.imin)(c1, c2)
-   def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.max(y))(num)(Code.imax)(c1, c2)
+   def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), Code.inj(c1))
+   def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.min(y))(int)(Code.imin)(c1, c2)
+   def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.max(y))(int)(Code.imax)(c1, c2)
+
+   // cut corners
+   def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_+_)(int)(Code.add)(c1, c2)
+   def sub(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_-_)(int)(Code.sub)(c1, c2)
+   def mul(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_*_)(int)(Code.mul)(c1, c2)
+   def div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_/_)(int)(Code.div)(c1, c2)
+   def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2[Int, Int, Int](_%_)(int)(Code.modf)(c1, c2)
+
+   def  lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_<_)(bool)(Code.lt)(c1, c2)
+   def  gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_>_)(bool)(Code.gt)(c1, c2)
+   def leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_<=_)(bool)(Code.leq)(c1, c2)
+   def geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_>=_)(bool)(Code.geq)(c1, c2)
+   def eq_temp(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = lift2[Int, Int, Boolean](_==_)(bool)(Code.eq_temp)(c1, c2)
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A] = {
@@ -138,8 +158,8 @@ object CodePs {
          case Cde(Annot.Sta(x: Int),  _) if x < 0 => unit
          case Cde(Annot.Sta(0),       _)          =>
             guard match {
-               case None    => body(num(0))
-               case Some(g) => if1(g, body(num(0)))
+               case None    => body(int(0))
+               case Some(g) => if1(g, body(int(0)))
             }
          case _ => inj(Code.for_(dyn(upb), mapOpt[Cde[Boolean], Code[Boolean]](dyn, guard), i => inj(i) |> body |> dyn))
       }
@@ -150,25 +170,17 @@ object CodePs {
                       body: ((A => Cde[Unit]) => Cde[Unit]))(using QuoteContext): Cde[Unit] = {
       inj(Code.cloop((x: A) => k(x) |> dyn, mapOpt[Cde[Boolean], Code[Boolean]](dyn, bp), k => body(x => k(x) |> inj) |> dyn))
    }
-   
+
    def while_(goon: Cde[Boolean])(body: Cde[Unit])(using QuoteContext): Cde[Unit] = {
       inj(Code.while_(dyn(goon))(dyn(body)))
    }
 
-
-/*
    //  Reference cells?
-   def dref[A](x: Var[A])(using QuoteContext): Cde[A] = {
-         x.get
-   }
+   def assign[A](c1: Var[A], c2: Cde[A])(using QuoteContext): Cde[Unit] = inj(Code.assign(dynVar(c1), dyn(c2)))
+   def dref[A](x: Var[A])(using QuoteContext): Cde[A]    = inj(Code.dref(dynVar(x)))
+   def incr(i: Var[Int])(using QuoteContext):  Cde[Unit] = inj(Code.incr(dynVar(i)))
+   def decr(i: Var[Int])(using QuoteContext):  Cde[Unit] = inj(Code.decr(dynVar(i)))
 
-   def incr(i: Var[Int])(using QuoteContext): Cde[Unit] = {
-      i.update(dref(i) + inj(1))
-   }
-   def decr(i: Var[Int])(using QuoteContext): Cde[Unit] = {
-      i.update(dref(i) - inj(1))
-   }
-*/
    // Arrays
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])
                                   (i: Cde[Int])
@@ -176,9 +188,8 @@ object CodePs {
       inj(Code.array_get(dyn(arr))(dyn(i))(v => dyn(k(inj(v)))))
    }
 
-
    def array_len[A: Type](arr: Cde[Array[A]])(using QuoteContext): Cde[Int] = {
-      lift1((e: Array[A]) => e.length)(num)(Code.array_len)(arr)
+      lift1((e: Array[A]) => e.length)(int)(Code.array_len)(arr)
    }
 
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit] = {
@@ -186,11 +197,9 @@ object CodePs {
    }
 
    // Others
-   // def pair[A: Type, B: Type](x: Cde[A])(y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = 
-
+   def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](Code.pair)(x, y)
    def uninit[A: Type](using QuoteContext): Cde[A] = inj(Code.blackhole)
    def blackhole[A: Type](using QuoteContext): Cde[A] = inj(Code.blackhole)
-   
 
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = {
       c1 match {
