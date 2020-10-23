@@ -35,8 +35,8 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
       Stream[A](newShape)
    }
 
-   def zipWith[B: Type, C: Type](f: Cde[A] => Cde[B] => Cde[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
-      val newShape = mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1)(p._2), zipRaw[Cde[A], Cde[B]](stream, str2.stream))
+   def zipWith[B: Type, C: Type](f: (Cde[A], Cde[B]) => Cde[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
+      val newShape = mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](stream, str2.stream))
 
       Stream[C](newShape)
    }
@@ -76,7 +76,7 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
    def drop(n: Cde[Int])(using QuoteContext): Stream[A] = {
       val shape: StreamShape[Cde[A]] =
          mkInitVar(n, z =>
-            filterRaw (e => (dref(z) <= inj(0)) || seq(decr(z), inj(false)), stream)
+            filterRaw (e => (dref(z) <= inj(0)) || seq(decr(z), bool(false)), stream)
          )
       Stream(shape)
    }

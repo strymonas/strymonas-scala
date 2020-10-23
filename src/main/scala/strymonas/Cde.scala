@@ -5,6 +5,7 @@ import scala.quoted.util._
 
 trait Cde {
    type Cde[A]
+   type Var[A]
 
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
    // Rename to newref
@@ -24,8 +25,9 @@ trait Cde {
    }
 
    // Numbers
-   def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
+   
    // def truncate(c1: Cde[Float])(using QuoteContext): Cde[Int]
+   def int(c1: Int)(using QuoteContext): Cde[Int]
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
    def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
 
@@ -50,7 +52,7 @@ trait Cde {
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit]
 
    // Others
-   def pair[A: Type, B: Type](x: Cde[A])(y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]]
+   def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]]
    def uninit[A: Type](using QuoteContext): Cde[A]
    def blackhole[A: Type](using QuoteContext): Cde[A]
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean

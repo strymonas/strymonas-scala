@@ -8,6 +8,9 @@ import scala.quoted.util._
  */
 object Code extends Cde {
    type Cde[A] = Expr[A]
+   type Var[A] = scala.quoted.util.Var[A]
+
+   def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Expr(c1)
 
    // utils
    def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
@@ -68,7 +71,7 @@ object Code extends Cde {
 
 
    // Numbers
-   def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Expr(c1)
+   def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
 
    implicit class IntCde(val c1: Cde[Int]) {
       def +(c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
@@ -254,7 +257,7 @@ object Code extends Cde {
    }
 
    // Others
-   def pair[A: Type, B: Type](x: Cde[A])(y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = '{
+   def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = '{
       (${x}, ${y})
    }
 
