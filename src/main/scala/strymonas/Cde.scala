@@ -16,6 +16,12 @@ trait Cde {
    // Booleans
    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean]
    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def  lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   implicit class BoolCde(val c1: Cde[Boolean]) {
+      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = land(c1, c2)
+      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] =  lor(c1, c2)
+   }
 
    // Numbers
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]

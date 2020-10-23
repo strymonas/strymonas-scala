@@ -58,15 +58,14 @@ object Code extends Cde {
       ! ${c1}
    }
 
-   implicit class BoolCde(val c1: Cde[Boolean]) {
-      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} && ${c2}
-      }
-   
-      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} || ${c2}
-      }
+   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = '{
+      ${c1} && ${c2}
    }
+
+   def  lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = '{
+      ${c1} || ${c2}
+   }
+
 
    // Numbers
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Expr(c1)
