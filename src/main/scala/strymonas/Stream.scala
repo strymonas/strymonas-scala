@@ -112,24 +112,25 @@ object Stream {
             letl(dref(z))((v: Cde[Int]) => { seq(z := dref(z) + inj(1), k(v))}) 
          })
       })
-      
+
       Stream(shape)
    }
 
-// TODO 1
-// (* from_to ~step:n a b: from `a` up to and including `b` by `n` step,
-//                         negative step is used for descending when a > b
-// *)
-// let from_to : ?step:int -> int cde -> int cde -> int stream =
-//   fun ?(step=1) a b ->
-//   if step=1 then pull_array C.(b-a) C.(fun e k -> letl (e+a) k) else
-//   initializing_ref a @@ fun z ->
-//     guard (GExp (if step >= 0 then C.(dref z <= b) else C.(dref z >= b))) @@ 
-//       infinite @@ fun k -> 
-//         C.(letl (dref z) @@ fun v -> 
-//           seq (if Stdlib.(step = 1) then incr z
-//                else if Stdlib.(step = -1) then decr z else
-//                z := dref z + int step)
-//             (k v))
+   def fromTo(a: Cde[Int], b: Cde[Int], step: Int = 1)(using QuoteContext): Stream[Int] = {
+      val shape = 
+         if step == 1 then mkPullArray[Cde[Int]](b - a, (e => (k: Cde[Int] => Cde[Unit]) => letl(e+a)(k))) else
+         mkInitVar(a, z =>
+         guard[Cde[Int]](GExp(if (step >= 0) then (dref(z) <= b) else (dref(z) >= b)),
+            infinite(k => 
+               (letl(dref(z))(v => 
+               seq(if (step == 1) then incr(z)
+                   else if (step == -1) then decr(z) else
+                   z := dref(z) + inj(step),
+                   k(v))
+               ))
+            )
+         ))
+      Stream(shape)
+   }
 }
 
