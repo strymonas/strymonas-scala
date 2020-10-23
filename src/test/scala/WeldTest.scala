@@ -6,10 +6,10 @@ import org.junit.Assert._
 
 import Code._
 
-// class WeldTest {
-//    given Toolbox = Toolbox.make(getClass.getClassLoader)
+class WeldTest {
+   given Toolbox = Toolbox.make(getClass.getClassLoader)
    
-//    inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
+   inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
 
    //  https://www.vldb.org/pvldb/vol11/p1002-palkar.pdf
    // to port
@@ -66,4 +66,4 @@ import Code._
    //    // assert(t() == XX)
    // }
 
-// }
+}

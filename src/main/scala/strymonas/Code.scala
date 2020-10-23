@@ -8,10 +8,16 @@ import scala.language.implicitConversions
  * The Scala's code generator
  */
 // object Code extends BaseCde {
-object Code {
-   class Cde[A](val code: Expr[A])
-   implicit def expr2cde[A](x: Expr[A]): Cde[A] = Cde[A](x)
-   implicit def cde2expr[A](x: Cde[A]): Expr[A] = x.code
+
+class Code[A](val code: Expr[A]) extends Cde[A] {
+   def toCode(): Expr[A] = {
+      code
+   }
+}
+
+object Code extends CdeOp {
+   implicit def expr2cde[A](x: Expr[A]): Cde[A] = Code[A](x)
+   implicit def cde2expr[A](x: Cde[A]): Expr[A] = x.toCode()
 
   // utils
    def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
