@@ -263,11 +263,7 @@ object Code extends Cde {
    def blackhole[A: Type](using QuoteContext): Cde[A] = '{throw new Exception("BH")}
    // def blackhole[A: Type](using QuoteContext): Cde[A] = '{???}
 
-   def is_static[A: Type](c1: Cde[A])(using QuoteContext): Cde[Boolean] = '{
-      false
-   }
+   def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = false
 
-   def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Cde[Boolean] = '{
-      true
-   }
+   def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean = true
 }

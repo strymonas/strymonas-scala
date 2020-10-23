@@ -53,6 +53,6 @@ trait Cde {
    def pair[A: Type, B: Type](x: Cde[A])(y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]]
    def uninit[A: Type](using QuoteContext): Cde[A]
    def blackhole[A: Type](using QuoteContext): Cde[A]
-   def is_static[A: Type](c1: Cde[A])(using QuoteContext): Cde[Boolean]
-   def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Cde[Boolean]
+   def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean
+   def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean
 }
