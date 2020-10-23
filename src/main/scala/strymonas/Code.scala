@@ -73,46 +73,44 @@ object Code extends Cde {
    // Numbers
    def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
 
-   implicit class IntCde(val c1: Cde[Int]) {
-      def +(c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
-         ${c1} + ${c2}
-      }
+   def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
+      ${c1} + ${c2}
+   }
 
-      def -(c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
-         ${c1} - ${c2}
-      }
+   def sub(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
+      ${c1} - ${c2}
+   }
 
-      def *(c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
-         ${c1} * ${c2}
-      }
+   def mul(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
+      ${c1} * ${c2}
+   }
 
-      def /(c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
-         ${c1} / ${c2}
-      }
+   def div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
+      ${c1} / ${c2}
+   }
 
-      def mod(c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
-         ${c1} % ${c2}
-      }
+   def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
+      ${c1} % ${c2}
+   }
 
-      def ===(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} == ${c2}
-      }
+   def  lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} < ${c2}
+   }
 
-      def <(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} < ${c2}
-      }
+   def  gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} > ${c2}
+   }
 
-      def >(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} > ${c2}
-      }
+   def leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} <= ${c2}
+   }
 
-      def <=(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} <= ${c2}
-      }
+   def geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} >= ${c2}
+   }
 
-      def >=(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
-         ${c1} >= ${c2}
-      }
+   def eq_temp(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
+      ${c1} == ${c2}
    }
 
    // // Until we have specialization
@@ -224,15 +222,12 @@ object Code extends Cde {
    }
 
    //  Reference cells?
-   def dref[A](x: Var[A])(using QuoteContext): Cde[A] = {
-         x.get
+   def assign[A](c1: Var[A], c2: Cde[A])(using QuoteContext): Cde[Unit] = {
+      c1.update(c2)
    }
-   
-   // To do: rewrite by given
-   implicit class VarCde[A](val c1: Var[A]) {
-      def :=(c2: Cde[A])(using QuoteContext): Cde[Unit] = {
-         c1.update(c2)
-      }
+
+   def dref[A](x: Var[A])(using QuoteContext): Cde[A] = {
+      x.get
    }
 
    def incr(i: Var[Int])(using QuoteContext): Cde[Unit] = {
