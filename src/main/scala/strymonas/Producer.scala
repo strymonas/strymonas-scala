@@ -3,23 +3,21 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
-import Cde._
+import Code._
 
-type E[T] = QuoteContext ?=> Expr[T]
-
-type Emit[A] = (A => Expr[Unit]) => Expr[Unit]
+type Emit[A] = (A => Cde[Unit]) => Cde[Unit]
 
 enum Goon {
    case GTrue
-   case GExp(e: Expr[Boolean])
+   case GExp(e: Cde[Boolean])
    case GRef(e: Var[Boolean])
 } 
 
-def cde_of_goon(g: Goon): E[Boolean] = 
+def cde_of_goon(g: Goon)(using QuoteContext): Cde[Boolean] = 
    g match {
-      case Goon.GTrue => '{ true } 
+      case Goon.GTrue => bool(true)
       case Goon.GExp(e) => e
-      case Goon.GRef(e) => e.get
+      case Goon.GRef(e) => dref(e)
    }
 
 def goon_conj(g1: Goon, g2: Goon)(using QuoteContext): Goon = 
@@ -42,8 +40,8 @@ def goon_disj(g1: Goon, g2: Goon)(using QuoteContext): Goon =
    }
 
 trait PullArray[A] {
-   def upb(): Expr[Int]
-   def index(st: Expr[Int]): Emit[A]
+   def upb(): Cde[Int]
+   def index(st: Cde[Int]): Emit[A]
 }
 
 /* Linear is when a stream does not stutter (fails to produce at least one value while the state advances)
@@ -53,12 +51,12 @@ trait PullArray[A] {
 enum Linearity[-A] {
    case Linear
    case NonLinear
-   case Filtered(pred: A => Expr[Boolean])
+   case Filtered(pred: A => Cde[Boolean])
 }
 
 enum Init[A] {
-   case ILet(init: Expr[A], t: Type[A]) extends Init[Expr[A]]
-   case IVar(init: Expr[A], t: Type[A]) extends Init[Var[A]]
+   case ILet(init: Cde[A], t: Type[A]) extends Init[Cde[A]]
+   case IVar(init: Cde[A], t: Type[A]) extends Init[Var[A]]
 } 
 
 enum Producer[A] { 
@@ -67,17 +65,17 @@ enum Producer[A] {
 }
 
 /* TODO: refactor within a typeclass and an HKT for the src and ret streams */
-def fMap[A, B](f: A => Emit[B], s: Emit[A]): Emit[B] = (k: B => Expr[Unit]) => {
-   // (A => Expr[Unit]) => Expr[Unit] applied to (A => f(A)): Emit[B]
+def fMap[A, B](f: A => Emit[B], s: Emit[A]): Emit[B] = (k: B => Cde[Unit]) => {
+   // (A => Cde[Unit]) => Cde[Unit] applied to (A => f(A)): Emit[B]
    s(x => f(x)(k))
 }
 
 def fMap[A, B](f: A => Emit[B], s: PullArray[A]): PullArray[B] = {
    new PullArray[B] {
-      def upb(): Expr[Int] = {
+      def upb(): Cde[Int] = {
          s.upb()
       }
-      def index(i: Expr[Int]): Emit[B] = {
+      def index(i: Cde[Int]): Emit[B] = {
          fMap(f, s.index(i))
       }
    }

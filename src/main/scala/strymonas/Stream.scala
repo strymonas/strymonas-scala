@@ -4,90 +4,87 @@ import scala.quoted._
 import scala.quoted.util._
 import scala.quoted.staging._
 
-import Cde._
+import Code._
 import Goon._
 
-class Stream[A: Type](val stream: StreamShape[Expr[A]]) {
+class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
    import strymonas.StreamRaw._
 
-   def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {
-      Var(z) { s => 
-         '{
-            ${ foldRaw[Expr[A]]((a: Expr[A]) => s.update(f(s.get, a)), stream) }
-
-            ${ s.get }
-         }
+   def fold[W: Type](z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using QuoteContext): Cde[W] = {
+      letVar(z) { s => 
+         seq(foldRaw[Cde[A]]((a: Cde[A]) => s := f(dref(s), a), stream), dref(s))
       }
    }
+   
 
-   def flatMap[B: Type](f: Expr[A] => Stream[B])(using QuoteContext): Stream[B] = {
-      val newShape = flatMapRaw[A, Expr[B]](x => f(x).stream, stream)
+   def flatMap[B: Type](f: Cde[A] => Stream[B])(using QuoteContext): Stream[B] = {
+      val newShape = flatMapRaw[A, Cde[B]](x => f(x).stream, stream)
       
       Stream(newShape)
    }
    
-   def map[B: Type](f: Expr[A] => Expr[B])(using QuoteContext): Stream[B] = {
-      val newShape = mapRaw_CPS[Expr[A], Expr[B]](a => letl(f(a)), stream)
+   def map[B: Type](f: Cde[A] => Cde[B])(using QuoteContext): Stream[B] = {
+      val newShape = mapRaw_CPS[Cde[A], Cde[B]](a => letl(f(a)), stream)
       
       Stream[B](newShape)
    }
 
-   def filter(f: Expr[A] => Expr[Boolean])(using QuoteContext): Stream[A] = {
-      val newShape = filterRaw[Expr[A]](f, stream)
+   def filter(f: Cde[A] => Cde[Boolean])(using QuoteContext): Stream[A] = {
+      val newShape = filterRaw[Cde[A]](f, stream)
 
       Stream[A](newShape)
    }
 
-   def zipWith[B: Type, C: Type](f: Expr[A] => Expr[B] => Expr[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
-      val newShape = mapRaw_Direct[(Expr[A], Expr[B]), Expr[C]](p => f(p._1)(p._2), zipRaw[Expr[A], Expr[B]](stream, str2.stream))
+   def zipWith[B: Type, C: Type](f: Cde[A] => Cde[B] => Cde[C], str2: Stream[B])(using QuoteContext): Stream[C] = {
+      val newShape = mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1)(p._2), zipRaw[Cde[A], Cde[B]](stream, str2.stream))
 
       Stream[C](newShape)
    }
 
-   def take(n: Expr[Int])(using QuoteContext): Stream[A] = {
-      val shape: StreamShape[Expr[A]] = 
-         mkInit('{$n - 1}, i => {
-            var vsSt: StreamShape[Expr[Unit]] = 
-               mkPullArray[Expr[Unit]](i, i => k => k('{()}))
-            val zipSt: StreamShape[(Expr[Unit], Expr[A])] = zipRaw(vsSt, stream)
-            mapRaw_Direct[(Expr[Unit], Expr[A]), Expr[A]](_._2, zipSt)
+   def take(n: Cde[Int])(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Cde[A]] = 
+         mkInit(n - inj(1), i => {
+            var vsSt: StreamShape[Cde[Unit]] = 
+               mkPullArray[Cde[Unit]](i, i => k => k(unit))
+            val zipSt: StreamShape[(Cde[Unit], Cde[A])] = zipRaw(vsSt, stream)
+            mapRaw_Direct[(Cde[Unit], Cde[A]), Cde[A]](_._2, zipSt)
          })
       Stream(shape)
    }
 
-   def takeWhile(f: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
-      val shape: StreamShape[Expr[A]] =
+   def takeWhile(f: (Cde[A] => Cde[Boolean]))(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Cde[A]] =
          mkInitVar(bool(true), zr =>
-            mapRaw_CPS((e: Expr[A]) => k => if_(f(e), k(e), zr := bool(false)), guard(GRef(zr), stream))
+            mapRaw_CPS((e: Cde[A]) => k => if_(f(e), k(e), zr := bool(false)), guard(GRef(zr), stream))
          )
       Stream(shape)
    }
     
    def mapAccum[Z: Type, B: Type](
-      z: Expr[Z],
-      tr: (Expr[Z] =>  Expr[A] => (Expr[Z] => Expr[B] => Expr[Unit]) => Expr[Unit]))(using QuoteContext): Stream[B] = {
-         val shape: StreamShape[Expr[B]] =
+      z: Cde[Z],
+      tr: (Cde[Z] =>  Cde[A] => (Cde[Z] => Cde[B] => Cde[Unit]) => Cde[Unit]))(using QuoteContext): Stream[B] = {
+         val shape: StreamShape[Cde[B]] =
             mkInitVar(z, zr =>  
-            mapRaw_CPS((a: Expr[A]) => k => 
+            mapRaw_CPS((a: Cde[A]) => k => 
             letl(dref(zr))(z =>
-               tr(z)(a)((z2: Expr[Z]) => (b: Expr[B]) =>
+               tr(z)(a)((z2: Cde[Z]) => (b: Cde[B]) =>
                seq(zr := z2, k(b)))),
             stream))
          Stream(shape)
    }
 
-   def drop(n: Expr[Int])(using QuoteContext): Stream[A] = {
-      val shape: StreamShape[Expr[A]] =
+   def drop(n: Cde[Int])(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Cde[A]] =
          mkInitVar(n, z =>
             filterRaw (e => (dref(z) <= inj(0)) || seq(decr(z), inj(false)), stream)
          )
       Stream(shape)
    }
 
-   def dropWhile(f: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
-      val shape: StreamShape[Expr[A]] =
+   def dropWhile(f: (Cde[A] => Cde[Boolean]))(using QuoteContext): Stream[A] = {
+      val shape: StreamShape[Cde[A]] =
          mkInitVar(bool(false), z =>
-            filterRaw ((e: Expr[A]) => dref(z) || seq(z := not(f(e)), dref(z)), stream)
+            filterRaw ((e: Cde[A]) => dref(z) || seq(z := not(f(e)), dref(z)), stream)
          )
       Stream(shape)
    }
@@ -99,23 +96,20 @@ object Stream {
    import Producer._
    import strymonas.StreamRaw._
 
-   def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
+   def of[A: Type](arr: Cde[Array[A]])(using QuoteContext): Stream[A] = {
       val shape = 
-         mkInit(arr, (arr: Expr[Array[A]]) => // Initializer[Expr[Array[A]], A](ILet(arr), sk)
-            mkInit('{($arr).length - 1}, (len: Expr[Int]) => // Initializer[Expr[Int], A](ILet(arr), sk)
-               mkPullArray[Expr[A]](len, (i: Expr[Int]) => (k: Expr[A] => Expr[Unit]) => '{ 
-                  val el: A = ($arr).apply(${i})
-                  ${k('el)} 
-               }))
+         mkInit(arr, (arr: Cde[Array[A]]) => // Initializer[Cde[Array[A]], A](ILet(arr), sk)
+            mkInit(array_len(arr) - inj(1), (len: Cde[Int]) => // Initializer[Cde[Int], A](ILet(arr), sk)
+               mkPullArray[Cde[A]](len, array_get (arr)))
          )
 
       Stream(shape)
    }
 
-   def iota(n: Expr[Int])(using QuoteContext): Stream[Int] = {
+   def iota(n: Cde[Int])(using QuoteContext): Stream[Int] = {
       val shape = mkInitVar(n, z => {
-         infinite[Expr[Int]]((k: Expr[Int] => Expr[Unit]) => {
-            letl(z.get)((v: Expr[Int]) => { seq(z.update('{ ${z.get} + 1 }), k(v))}) 
+         infinite[Cde[Int]]((k: Cde[Int] => Cde[Unit]) => {
+            letl(dref(z))((v: Cde[Int]) => { seq(z := dref(z) + inj(1), k(v))}) 
          })
       })
       

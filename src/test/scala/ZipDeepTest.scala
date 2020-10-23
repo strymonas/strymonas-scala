@@ -4,7 +4,8 @@ import strymonas._
 import org.junit.Test
 import org.junit.Assert._
 
-import Cde._
+import Code._
+import scala.language.implicitConversions
 
 class ZipDeepTest {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
@@ -16,12 +17,12 @@ class ZipDeepTest {
          (array1: Array[Double], array2: Array[Double])  => ${ 
             Stream.of('{array1})
                   .take(inj(5))
-                  .zipWith[(Double, Int), (Double, (Double, Int))](Cde.pair, 
+                  .zipWith[(Double, Int), (Double, (Double, Int))](pair, 
                      Stream.of('{array2})
                            .take(inj(12))
-                           .zipWith[Int, (Double, Int)](Cde.pair, 
+                           .zipWith[Int, (Double, Int)](pair, 
                               Stream.iota(inj(1))
-                                    .flatMap(x => Stream.iota('{ ${x} + 1})
+                                    .flatMap(x => Stream.iota(x + inj(1))
                                                         .take(inj(3)))))
                   .fold[List[(Double, (Double, Int))]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
       }}
