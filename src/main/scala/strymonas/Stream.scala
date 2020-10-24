@@ -17,17 +17,17 @@ class Stream[A: Type](val stream: R.StreamShape[R.C.Cde[A]]) {
    import R.C._
 
 
-   // def fold[W: Type](z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using QuoteContext): Cde[W] = {
-   //    letVar(z) { s => 
-   //       seq(foldRaw[Cde[A]]((a: Cde[A]) => s := f(dref(s), a), stream), dref(s))
-   //    }
-   // }
+   def fold[W: Type](z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using ctx: QuoteContext)(using a: Type[Cde[A]]): Cde[W] = {
+      letVar(z) { s => 
+         seq(foldRaw[Cde[A]]((a: Cde[A]) => s := f(dref(s), a), stream)(a, ctx), dref(s))
+      }
+   }
 
-   // def flatMap[B: Type](f: Cde[A] => Stream[B])(using QuoteContext): Stream[B] = {
-   //    val newShape = flatMapRaw[A, Cde[B]](x => f(x).stream, stream)
+   def flatMap[B: Type](f: Cde[A] => Stream[B])(using QuoteContext)(using b: Type[Cde[B]]): Stream[B] = {
+      def newShape = flatMapRaw[A, Cde[B]](x => f(x).stream, stream)(b, summon[Type[A]])
 
-   //    Stream(newShape)
-   // }
+      Stream(newShape)
+   }
 
    // def map[B: Type](f: Cde[A] => Cde[B])(using QuoteContext): Stream[B] = {
    //    val newShape = mapRaw_CPS[Cde[A], Cde[B]](a => letl(f(a)), stream)
