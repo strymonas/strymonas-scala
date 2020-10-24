@@ -3,6 +3,7 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
+import scala.language.implicitConversions
 
 /**
  * The Scala's code generator wich uses partially-static optimaization
@@ -20,6 +21,8 @@ object CodePs extends Cde {
    case class Cde[A](sta : Annot[A], dyn : Code[A])
    case class Var[A](sta : Annot[A], dyn : Vari[A])
 
+   implicit def toExpr[A](x: Cde[A]): Expr[A] = x.dyn
+
    def mapOpt[A, B](f: A => B, x: Option[A]): Option[B] = {
       x match {
          case None    => None
@@ -27,7 +30,7 @@ object CodePs extends Cde {
       }
    }
 
-   def inj[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk, x)
+   def injCde[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk, x)
    def injVar[A](x: Vari[A]): Var[A] = Var[A](Annot.Unk, x)
    def dyn[A](x: Cde[A]): Code[A] = x.dyn
    def dynVar[A](x: Var[A]): Vari[A] = x.dyn
@@ -35,7 +38,7 @@ object CodePs extends Cde {
    def inj1[A, B](f: Code[A] => Code[B]): (Cde[A] => Cde[B]) = {
       (x: Cde[A]) =>
          x match {
-            case Cde(Annot.Unk, y) => inj[B](f(y))
+            case Cde(Annot.Unk, y) => injCde[B](f(y))
             case Cde(_, y)         => Cde[B](Annot.Global, f(y))
          }
    }
@@ -44,7 +47,7 @@ object CodePs extends Cde {
       (x: Cde[A], y: Cde[B]) =>
          val v = f (dyn(x), dyn(y))
          (x, y) match {
-            case (Cde(Annot.Unk, _), _) | (_, Cde(Annot.Unk, _)) => inj[C](v)
+            case (Cde(Annot.Unk, _), _) | (_, Cde(Annot.Unk, _)) => injCde[C](v)
             case _                                               => Cde[C](Annot.Global, v)
          }
    }
@@ -70,15 +73,18 @@ object CodePs extends Cde {
    }
 
 
+   def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Cde(Annot.Sta(c1), Code.inj(c1))
+
+
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W] = {
       x match {
          case Cde(Annot.Sta(_), _) => k(x)
-         case Cde(_,            v) => inj(Code.letl(v)((v: Code[A]) => dyn[W](k(inj[A](v)))))
+         case Cde(_,            v) => injCde(Code.letl(v)((v: Code[A]) => dyn[W](k(injCde[A](v)))))
       }
    }
 
    def letVar[A: Type, W: Type](x: Cde[A])(k: Var[A] => Cde[W])(using qctx: QuoteContext): Cde[W] = {
-      inj(Code.letVar(dyn(x))(v => injVar(v) |> k |> dyn))
+      injCde(Code.letVar(dyn(x))(v => injVar(v) |> k |> dyn))
    }
 
    def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using ctx: QuoteContext): Cde[A] = inj2[Unit, A, A](Code.seq)(c1, c2)
@@ -115,7 +121,7 @@ object CodePs extends Cde {
    }
 
    // Numbers
-   def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), Code.inj(c1))
+   def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), Code.int(c1))
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.min(y))(int)(Code.imin)(c1, c2)
    def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.max(y))(int)(Code.imax)(c1, c2)
 
@@ -137,7 +143,7 @@ object CodePs extends Cde {
       cnd match {
          case Cde(Annot.Sta(true),  _) => bt
          case Cde(Annot.Sta(false), _) => bf
-         case _                        => inj(Code.cond(dyn(cnd), dyn(bt), dyn(bf)))
+         case _                        => injCde(Code.cond(dyn(cnd), dyn(bt), dyn(bf)))
       }
    }
 
@@ -147,7 +153,7 @@ object CodePs extends Cde {
       cnd match {
          case Cde(Annot.Sta(true),  _) => bt
          case Cde(Annot.Sta(false), _) => unit
-         case _                        => inj(Code.if1(dyn(cnd), dyn(bt)))
+         case _                        => injCde(Code.if1(dyn(cnd), dyn(bt)))
       }
    }
    
@@ -161,31 +167,31 @@ object CodePs extends Cde {
                case None    => body(int(0))
                case Some(g) => if1(g, body(int(0)))
             }
-         case _ => inj(Code.for_(dyn(upb), mapOpt[Cde[Boolean], Code[Boolean]](dyn, guard), i => inj(i) |> body |> dyn))
+         case _ => injCde(Code.for_(dyn(upb), mapOpt[Cde[Boolean], Code[Boolean]](dyn, guard), i => injCde(i) |> body |> dyn))
       }
    }
    
    def cloop[A: Type](k: A => Cde[Unit],
                       bp: Option[Cde[Boolean]],
                       body: ((A => Cde[Unit]) => Cde[Unit]))(using QuoteContext): Cde[Unit] = {
-      inj(Code.cloop((x: A) => k(x) |> dyn, mapOpt[Cde[Boolean], Code[Boolean]](dyn, bp), k => body(x => k(x) |> inj) |> dyn))
+      injCde(Code.cloop((x: A) => k(x) |> dyn, mapOpt[Cde[Boolean], Code[Boolean]](dyn, bp), k => body(x => k(x) |> injCde) |> dyn))
    }
 
    def while_(goon: Cde[Boolean])(body: Cde[Unit])(using QuoteContext): Cde[Unit] = {
-      inj(Code.while_(dyn(goon))(dyn(body)))
+      injCde(Code.while_(dyn(goon))(dyn(body)))
    }
 
    //  Reference cells?
-   def assign[A](c1: Var[A], c2: Cde[A])(using QuoteContext): Cde[Unit] = inj(Code.assign(dynVar(c1), dyn(c2)))
-   def dref[A](x: Var[A])(using QuoteContext): Cde[A]    = inj(Code.dref(dynVar(x)))
-   def incr(i: Var[Int])(using QuoteContext):  Cde[Unit] = inj(Code.incr(dynVar(i)))
-   def decr(i: Var[Int])(using QuoteContext):  Cde[Unit] = inj(Code.decr(dynVar(i)))
+   def assign[A](c1: Var[A], c2: Cde[A])(using QuoteContext): Cde[Unit] = injCde(Code.assign(dynVar(c1), dyn(c2)))
+   def dref[A](x: Var[A])(using QuoteContext): Cde[A]    = injCde(Code.dref(dynVar(x)))
+   def incr(i: Var[Int])(using QuoteContext):  Cde[Unit] = injCde(Code.incr(dynVar(i)))
+   def decr(i: Var[Int])(using QuoteContext):  Cde[Unit] = injCde(Code.decr(dynVar(i)))
 
    // Arrays
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])
                                   (i: Cde[Int])
                                   (k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W] = {
-      inj(Code.array_get(dyn(arr))(dyn(i))(v => dyn(k(inj(v)))))
+      injCde(Code.array_get(dyn(arr))(dyn(i))(v => dyn(k(injCde(v)))))
    }
 
    def array_len[A: Type](arr: Cde[Array[A]])(using QuoteContext): Cde[Int] = {
@@ -193,13 +199,15 @@ object CodePs extends Cde {
    }
 
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit] = {
-      inj(Code.array_set(dyn(arr))(dyn(i))(dyn(v)))
+      injCde(Code.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
+
+   def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]] = Cde(Annot.Sta(arr), Code.int_array(arr))
 
    // Others
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](Code.pair)(x, y)
-   def uninit[A: Type](using QuoteContext): Cde[A] = inj(Code.blackhole)
-   def blackhole[A: Type](using QuoteContext): Cde[A] = inj(Code.blackhole)
+   def uninit[A: Type](using QuoteContext): Cde[A] = injCde(Code.blackhole)
+   def blackhole[A: Type](using QuoteContext): Cde[A] = injCde(Code.blackhole)
 
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = {
       c1 match {

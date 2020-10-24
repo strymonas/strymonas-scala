@@ -4,9 +4,9 @@ import scala.quoted._
 import scala.quoted.util._
 
 
-class StreamRaw(val C: Cde) {
-   import C._
-
+object StreamRaw {
+   import Code._
+   // import CodePs._
 
    enum Goon {
       case GTrue
@@ -192,15 +192,15 @@ class StreamRaw(val C: Cde) {
                consume(g, newConsumer, prod)
             case Flattened(_, g, prod) =>
                consume(g, consumer, prod)
-            // case Nested(g, sf, t, last) =>
-            //    def applyNested[B : Type](
-            //          g: Goon, 
-            //          consumer: A => Cde[Unit], 
-            //          sf: Flat[Cde[B]], 
-            //          last: Cde[B] => StreamShape[A]) : Cde[Unit] = {
-            //       loop[Cde[B]]((x => loop[A](consumer, guard(g, last(x)))), guard(g, Flattened(sf)))
-            //    }
-            //    applyNested(g, consumer, sf, last)(t)
+            case Nested(g, sf, t, last) =>
+               def applyNested[B : Type](
+                     g: Goon, 
+                     consumer: A => Cde[Unit], 
+                     sf: Flat[Cde[B]], 
+                     last: Cde[B] => StreamShape[A]) : Cde[Unit] = {
+                  loop[Cde[B]]((x => loop[A](consumer, guard(g, last(x)))), guard(g, Flattened(sf)))
+               }
+               applyNested(g, consumer, sf, last)(t)
          }
       }
 
@@ -356,15 +356,15 @@ class StreamRaw(val C: Cde) {
                   mmain[A](unn, guard(g, flatMapRaw(next, for_unfold(sf))))
                }
                applyNested(g, sf, next)(t)
-            // case Nested(g, sf@(Filtered(_), _,_), t, next) =>
-            //    def applyNested[B : Type](
-            //       g: Goon, 
-            //       sf: Flat[Cde[B]], 
-            //       t: Type[B],
-            //       next: Cde[B] => StreamShape[A]) : StreamShape[A] = {
-            //       mmain[A](unn, Nested(g, normalizeFlat(sf), t, next))
-            //    }
-            //    applyNested(g, sf, t, next)(t)
+            case Nested(g, sf@(Filtered(_), _,_), t, next) =>
+               def applyNested[B : Type](
+                  g: Goon, 
+                  sf: Flat[Cde[B]], 
+                  t: Type[B],
+                  next: Cde[B] => StreamShape[A]) : StreamShape[A] = {
+                  mmain[A](unn, Nested(g, normalizeFlat(sf), t, next))
+               }
+               applyNested(g, sf, t, next)(t)
             case Nested(g, sf, t, next) =>
                def applyNested[B : Type](
                   g: Goon, 

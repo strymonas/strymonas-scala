@@ -3,9 +3,16 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
+import scala.language.implicitConversions
+
 trait Cde {
    type Cde[A]
    type Var[A]
+
+   implicit def toExpr[A](x: Cde[A]): Expr[A]
+   // implicit def ofExpr[A](x: Expr[A]): Cde[A] ?
+
+   def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
 
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
    // Rename to newref?
@@ -78,6 +85,7 @@ trait Cde {
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])(i: Cde[Int])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
    def array_len[A: Type](arr: Cde[Array[A]])(using QuoteContext): Cde[Int]
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit]
+   def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]]
 
    // Others
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]]

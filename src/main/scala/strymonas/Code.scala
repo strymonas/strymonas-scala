@@ -3,12 +3,16 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
+import scala.language.implicitConversions
+
 /**
  * The Scala's code generator
  */
 object Code extends Cde {
    type Cde[A] = Expr[A]
    type Var[A] = scala.quoted.util.Var[A]
+
+   implicit def toExpr[A](x: Cde[A]): Expr[A] = x
 
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Expr(c1)
 
@@ -250,6 +254,8 @@ object Code extends Cde {
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit] = '{
       ${arr}{${i}} = ${v}
    }
+
+   def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]] = inj(arr)
 
    // Others
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = '{
