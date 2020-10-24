@@ -4,8 +4,8 @@ import scala.quoted._
 import scala.quoted.util._
 
 
-object StreamRaw {
-   import Code._
+class StreamRaw(val C: Cde) {
+   import C._
 
 
    enum Goon {
@@ -97,7 +97,6 @@ object StreamRaw {
    }
 
 
-
    type Flat[A] = (Linearity[A], Goon, Producer[A])
 
    enum StreamShape[A]  {
@@ -157,7 +156,7 @@ object StreamRaw {
       sf match {
          case (_, _, Unfold(_))  => Flattened(sf)
          case (m, g, For(array)) =>
-            mkInitVar(inj(0), (i) =>
+            mkInitVar(int(0), (i) =>
                Flattened(m, goon_conj(g, GExp(dref(i) <= array.upb())),
                         Unfold((k: A => Cde[Unit]) => 
                            array.index(dref(i))((a: A) =>
@@ -187,21 +186,21 @@ object StreamRaw {
             case Initializer(ILet(i, t), sk) =>
                letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]], ctx)
             case Initializer(IVar(i, t), sk) => 
-               Var(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
+               letVar(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
             case Flattened(Filtered(pred), g, prod) =>
                val newConsumer = (x: A) => if1(pred(x), consumer(x))
                consume(g, newConsumer, prod)
             case Flattened(_, g, prod) =>
                consume(g, consumer, prod)
-            case Nested(g, sf, t, last) =>
-               def applyNested[B : Type](
-                     g: Goon, 
-                     consumer: A => Cde[Unit], 
-                     sf: Flat[Cde[B]], 
-                     last: Cde[B] => StreamShape[A]) : Cde[Unit] = {
-                  loop[Cde[B]]((x => loop[A](consumer, guard(g, last(x)))), guard(g, Flattened(sf)))
-               }
-               applyNested(g, consumer, sf, last)(t)
+            // case Nested(g, sf, t, last) =>
+            //    def applyNested[B : Type](
+            //          g: Goon, 
+            //          consumer: A => Cde[Unit], 
+            //          sf: Flat[Cde[B]], 
+            //          last: Cde[B] => StreamShape[A]) : Cde[Unit] = {
+            //       loop[Cde[B]]((x => loop[A](consumer, guard(g, last(x)))), guard(g, Flattened(sf)))
+            //    }
+            //    applyNested(g, consumer, sf, last)(t)
          }
       }
 
@@ -290,7 +289,7 @@ object StreamRaw {
          }
       }
 
-      def nested[A: Type, B: Type](gouter: Goon, next : Cde[B] => StreamShape[A], stt: Flat[Cde[B]]): StreamShape[A] = {
+      def nested[A: Type, B: Type](gouter: Goon, next : Cde[B] => StreamShape[A], stt: Flat[Cde[B]])(using ctx: QuoteContext): StreamShape[A] = {
          stt match { 
             case (Filtered(_),_,_) | (_,_,For(_)) => assert(false)
             case (_, g1, Unfold(step)) =>
@@ -298,21 +297,21 @@ object StreamRaw {
                mkInitVar[Boolean, A](cde_of_goon(g), gref => {
                mkInitVar[Boolean, A](bool(false), in_inner => {
                val guard = goon_disj(GRef(gref), GRef(in_inner))
-               mkInitVar[B, A](default(summon[Type[B]]), xres => {
+               mkInitVar[B, A](uninit(summon[Type[B]], ctx), xres => {
                val st2 = mmain(true, next(dref(xres)))
                split_init(unit, st2, (i_) => (g__, st_) => {
                   val g_ = goon_conj(gouter, g__)
                   Flattened(Linear, guard,
                            Unfold((k: A=>Cde[Unit]) => {
                               cloop(k, Some(cde_of_goon(guard)), ((k: A => Cde[Unit]) => {
-                                 seq(if1('{!${dref(in_inner)}}, 
+                                 seq(if1(not(dref(in_inner)), 
                                        (seq( 
-                                          (step(x => seq(xres.update(x), 
+                                          (step(x => seq(xres := x, 
                                                          seq(i_, 
-                                                            in_inner.update(bool(true)))))),
+                                                            in_inner := bool(true))))),
                                           (gref := cde_of_goon(g))))),
                                     if1(dref(in_inner), 
-                                       if_(cde_of_goon(g_), st_(k), in_inner.update(bool(false)))))
+                                       if_(cde_of_goon(g_), st_(k), in_inner := bool(false))))
                               }))
                            })
                   )
@@ -323,19 +322,19 @@ object StreamRaw {
          }
       }
 
-      def split_init[A: Type, W](init: Cde[Unit], st: StreamShape[A], k: (Cde[Unit] => (Goon, Emit[A]) => StreamShape[W])): StreamShape[W] = 
+      def split_init[A: Type, W](init: Cde[Unit], st: StreamShape[A], k: (Cde[Unit] => (Goon, Emit[A]) => StreamShape[W]))(using ctx: QuoteContext): StreamShape[W] = 
          st match{
             case Initializer(ILet(i, t), sk) => 
                def applyLet[B : Type](i: Cde[B], sk: (Cde[B] => StreamShape[A])): StreamShape[W] = {
-                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
-                     split_init(seq(init, zres.update(i)), sk(dref(zres)), k)
+                  mkInitVar[B, W](uninit(summon[Type[B]], ctx), { zres => 
+                     split_init(seq(init, zres := i), sk(dref(zres)), k)
                   })
                }
                applyLet(i, sk)(t)
             case Initializer(IVar(i, t), sk) => 
                def applyLet[B : Type](i: Cde[B], sk: (Var[B] => StreamShape[A])): StreamShape[W] = {
-                  mkInitVar[B, W](default(summon[Type[B]]), { zres => 
-                     split_init(seq(init, zres.update(i)), sk(zres), k)
+                  mkInitVar[B, W](uninit(summon[Type[B]], ctx), { zres => 
+                     split_init(seq(init, zres := i), sk(zres), k)
                   })
                }
                applyLet(i, sk)(t)
@@ -357,15 +356,15 @@ object StreamRaw {
                   mmain[A](unn, guard(g, flatMapRaw(next, for_unfold(sf))))
                }
                applyNested(g, sf, next)(t)
-            case Nested(g, sf@(Filtered(_), _,_), t, next) =>
-               def applyNested[B : Type](
-                  g: Goon, 
-                  sf: Flat[Cde[B]], 
-                  t: Type[B],
-                  next: Cde[B] => StreamShape[A]) : StreamShape[A] = {
-                  mmain[A](unn, Nested(g, normalizeFlat(sf), t, next))
-               }
-               applyNested(g, sf, t, next)(t)
+            // case Nested(g, sf@(Filtered(_), _,_), t, next) =>
+            //    def applyNested[B : Type](
+            //       g: Goon, 
+            //       sf: Flat[Cde[B]], 
+            //       t: Type[B],
+            //       next: Cde[B] => StreamShape[A]) : StreamShape[A] = {
+            //       mmain[A](unn, Nested(g, normalizeFlat(sf), t, next))
+            //    }
+            //    applyNested(g, sf, t, next)(t)
             case Nested(g, sf, t, next) =>
                def applyNested[B : Type](
                   g: Goon, 
@@ -387,7 +386,7 @@ object StreamRaw {
          case Initializer(IVar(i, t), sk) => {
             var score = 0
             val _ = 
-               Var(i)(z => {
+               letVar(i)(z => {
                   score = linearize_score(sk(z)) 
                   unit
                })(t, summon[Type[Unit]], ctx)
