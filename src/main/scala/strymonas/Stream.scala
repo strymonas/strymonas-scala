@@ -4,28 +4,32 @@ import scala.quoted._
 import scala.quoted.util._
 import scala.quoted.staging._
 
+
 import Code._
+import strymonas.StreamRaw._
+
 import Goon._
+import Init._
+import Producer._
+import StreamShape._
+
 
 class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
-   import strymonas.StreamRaw._
-
    def fold[W: Type](z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using QuoteContext): Cde[W] = {
       letVar(z) { s => 
          seq(foldRaw[Cde[A]]((a: Cde[A]) => s := f(dref(s), a), stream), dref(s))
       }
    }
-   
 
    def flatMap[B: Type](f: Cde[A] => Stream[B])(using QuoteContext): Stream[B] = {
       val newShape = flatMapRaw[A, Cde[B]](x => f(x).stream, stream)
-      
+
       Stream(newShape)
    }
-   
+
    def map[B: Type](f: Cde[A] => Cde[B])(using QuoteContext): Stream[B] = {
       val newShape = mapRaw_CPS[Cde[A], Cde[B]](a => letl(f(a)), stream)
-      
+
       Stream[B](newShape)
    }
 
@@ -91,11 +95,6 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
 }
 
 object Stream {
-   import StreamShape._
-   import Init._
-   import Producer._
-   import strymonas.StreamRaw._
-
    def of[A: Type](arr: Cde[Array[A]])(using QuoteContext): Stream[A] = {
       val shape = 
          mkInit(arr, (arr: Cde[Array[A]]) => // Initializer[Cde[Array[A]], A](ILet(arr), sk)
