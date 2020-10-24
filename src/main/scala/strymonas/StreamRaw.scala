@@ -13,8 +13,6 @@ import Goon._
 import Linearity._
 
 object StreamRaw {
-   // type E[T] = QuoteContext ?=> Expr[T]
-
    /**
     * Introduces initialization for let insertion (or var)
     */
@@ -53,13 +51,6 @@ object StreamRaw {
       }
    }
 
-
-   def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
-      value match {
-         case None => z
-         case Some(x) => f(z)(x)
-      }
-   }  
 
    def for_unfold[A](sf: Flat[A])(using QuoteContext): StreamShape[A] = {
       sf match {

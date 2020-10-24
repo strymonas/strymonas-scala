@@ -5,7 +5,6 @@ import scala.quoted.util._
 
 import Code._
 
-type Emit[A] = (A => Cde[Unit]) => Cde[Unit]
 
 enum Goon {
    case GTrue
@@ -39,9 +38,17 @@ def goon_disj(g1: Goon, g2: Goon)(using QuoteContext): Goon =
       case (Goon.GExp(g1), Goon.GRef(g2)) => Goon.GExp(dref(g2) || g1)
    }
 
+
 trait PullArray[A] {
    def upb(): Cde[Int]
    def index(st: Cde[Int]): Emit[A]
+}
+
+type Emit[A] = (A => Cde[Unit]) => Cde[Unit]
+
+enum Init[A] {
+   case ILet(init: Cde[A], t: Type[A]) extends Init[Cde[A]]
+   case IVar(init: Cde[A], t: Type[A]) extends Init[Var[A]]
 }
 
 /* Linear is when a stream does not stutter (fails to produce at least one value while the state advances)
@@ -53,11 +60,6 @@ enum Linearity[-A] {
    case NonLinear
    case Filtered(pred: A => Cde[Boolean])
 }
-
-enum Init[A] {
-   case ILet(init: Cde[A], t: Type[A]) extends Init[Cde[A]]
-   case IVar(init: Cde[A], t: Type[A]) extends Init[Var[A]]
-} 
 
 enum Producer[A] { 
    case For(array: PullArray[A]) 

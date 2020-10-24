@@ -43,7 +43,7 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
 
    def take(n: Cde[Int])(using QuoteContext): Stream[A] = {
       val shape: StreamShape[Cde[A]] = 
-         mkInit(n - inj(1), i => {
+         mkInit(n - int(1), i => {
             var vsSt: StreamShape[Cde[Unit]] = 
                mkPullArray[Cde[Unit]](i, i => k => k(unit))
             val zipSt: StreamShape[(Cde[Unit], Cde[A])] = zipRaw(vsSt, stream)
@@ -76,7 +76,7 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
    def drop(n: Cde[Int])(using QuoteContext): Stream[A] = {
       val shape: StreamShape[Cde[A]] =
          mkInitVar(n, z =>
-            filterRaw (e => (dref(z) <= inj(0)) || seq(decr(z), bool(false)), stream)
+            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), stream)
          )
       Stream(shape)
    }
@@ -99,7 +99,7 @@ object Stream {
    def of[A: Type](arr: Cde[Array[A]])(using QuoteContext): Stream[A] = {
       val shape = 
          mkInit(arr, (arr: Cde[Array[A]]) => // Initializer[Cde[Array[A]], A](ILet(arr), sk)
-            mkInit(array_len(arr) - inj(1), (len: Cde[Int]) => // Initializer[Cde[Int], A](ILet(arr), sk)
+            mkInit(array_len(arr) - int(1), (len: Cde[Int]) => // Initializer[Cde[Int], A](ILet(arr), sk)
                mkPullArray[Cde[A]](len, array_get (arr)))
          )
 
@@ -109,7 +109,7 @@ object Stream {
    def iota(n: Cde[Int])(using QuoteContext): Stream[Int] = {
       val shape = mkInitVar(n, z => {
          infinite[Cde[Int]]((k: Cde[Int] => Cde[Unit]) => {
-            letl(dref(z))((v: Cde[Int]) => { seq(z := dref(z) + inj(1), k(v))}) 
+            letl(dref(z))((v: Cde[Int]) => { seq(z := dref(z) + int(1), k(v))}) 
          })
       })
 
@@ -125,7 +125,7 @@ object Stream {
                (letl(dref(z))(v => 
                seq(if (step == 1) then incr(z)
                    else if (step == -1) then decr(z) else
-                   z := dref(z) + inj(step),
+                   z := dref(z) + int(step),
                    k(v))
                ))
             )
