@@ -10,7 +10,7 @@ trait Cde {
    type Var[A]
 
    implicit def toExpr[A](x: Cde[A]): Expr[A]
-   // implicit def ofExpr[A](x: Expr[A]): Cde[A] ?
+   implicit def ofExpr[A](x: Expr[A]): Cde[A]
 
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
 

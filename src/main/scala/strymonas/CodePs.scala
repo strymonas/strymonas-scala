@@ -21,7 +21,8 @@ object CodePs extends Cde {
    case class Cde[A](sta : Annot[A], dyn : Code[A])
    case class Var[A](sta : Annot[A], dyn : Vari[A])
 
-   implicit def toExpr[A](x: Cde[A]): Expr[A] = x.dyn
+   implicit def toExpr[A](x:  Cde[A]): Expr[A] = x.dyn
+   implicit def ofExpr[A](x: Expr[A]):  Cde[A] = Cde(Annot.Unk, Code.ofExpr(x))
 
    def mapOpt[A, B](f: A => B, x: Option[A]): Option[B] = {
       x match {
@@ -206,7 +207,7 @@ object CodePs extends Cde {
 
    // Others
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](Code.pair)(x, y)
-   def uninit[A: Type](using QuoteContext): Cde[A] = injCde(Code.blackhole)
+   def uninit[A: Type](using QuoteContext): Cde[A] = injCde(Code.uninit)
    def blackhole[A: Type](using QuoteContext): Cde[A] = injCde(Code.blackhole)
 
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = {

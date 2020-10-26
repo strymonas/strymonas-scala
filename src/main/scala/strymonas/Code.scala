@@ -13,6 +13,7 @@ object Code extends Cde {
    type Var[A] = scala.quoted.util.Var[A]
 
    implicit def toExpr[A](x: Cde[A]): Expr[A] = x
+   implicit def ofExpr[A](x: Expr[A]): Cde[A] = x
 
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Expr(c1)
 

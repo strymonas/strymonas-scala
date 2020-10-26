@@ -10,9 +10,9 @@ class StreamTest {
    
    inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
 
-   import Code._
-   // import CodePs._
-   // import scala.language.implicitConversions
+   // import Code._
+   import CodePs._
+   import scala.language.implicitConversions
 
    /**
     *    Basic tests from:
@@ -34,7 +34,7 @@ class StreamTest {
    @Test def sumOfSquares(): Unit = {
       def s(using QuoteContext) = '{ (array: Array[Int]) =>
          ${ Stream.of('{array})
-            .map[Int]((a) => a*a )
+            .map[Int]((a) => a * a )
             .fold(int(0), (_+_)) }}
       
       val t = run { s }
