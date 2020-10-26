@@ -12,17 +12,17 @@ object CodePs extends Cde {
    type Code[A] = Code.Cde[A]
    type Vari[A] = Code.Var[A]
 
-   enum Annot[-A]  {
-      case Sta(x: A)
-      case Global
-      case Unk
+   enum Annot[A]  {
+      case Sta[A](x: A) extends Annot[A]
+      case Global[A]() extends Annot[A]
+      case Unk[A]() extends Annot[A]
    }
 
    case class Cde[A](sta : Annot[A], dyn : Code[A])
    case class Var[A](sta : Annot[A], dyn : Vari[A])
 
    implicit def toExpr[A](x:  Cde[A]): Expr[A] = x.dyn
-   implicit def ofExpr[A](x: Expr[A]):  Cde[A] = Cde(Annot.Unk, Code.ofExpr(x))
+   implicit def ofExpr[A](x: Expr[A]):  Cde[A] = Cde(Annot.Unk[A](), Code.ofExpr(x))
 
    def mapOpt[A, B](f: A => B, x: Option[A]): Option[B] = {
       x match {
@@ -31,8 +31,8 @@ object CodePs extends Cde {
       }
    }
 
-   def injCde[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk, x)
-   def injVar[A](x: Vari[A]): Var[A] = Var[A](Annot.Unk, x)
+   def injCde[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk(), x)
+   def injVar[A](x: Vari[A]): Var[A] = Var[A](Annot.Unk(), x)
    def dyn[A](x: Cde[A]): Code[A] = x.dyn
    def dynVar[A](x: Var[A]): Vari[A] = x.dyn
 
@@ -40,7 +40,7 @@ object CodePs extends Cde {
       (x: Cde[A]) =>
          x match {
             case Cde(Annot.Unk, y) => injCde[B](f(y))
-            case Cde(_, y)         => Cde[B](Annot.Global, f(y))
+            case Cde(_, y)         => Cde[B](Annot.Global(), f(y))
          }
    }
 
@@ -49,23 +49,23 @@ object CodePs extends Cde {
          val v = f (dyn(x), dyn(y))
          (x, y) match {
             case (Cde(Annot.Unk, _), _) | (_, Cde(Annot.Unk, _)) => injCde[C](v)
-            case _                                               => Cde[C](Annot.Global, v)
+            case _                                               => Cde[C](Annot.Global(), v)
          }
    }
 
    def lift1[A, B](fs: A => B)(lift: B => Cde[B])(fd: Code[A] => Code[B]): (Cde[A] => Cde[B]) = {
       (x: Cde[A]) =>
          x match {
-            case Cde(Annot.Sta(a: A), _) => lift(fs(a)) // Is there much better way of pattern-matching in Scala?
-            case _                       => inj1(fd)(x)
+            case Cde(Annot.Sta(a), _) => lift(fs(a)) 
+            case _                    => inj1(fd)(x)
          }
    }
 
    def lift2[A, B, C](fs: (A, B) => C)(lift: C => Cde[C])(fd: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
       (x: Cde[A], y: Cde[B]) =>
          (x, y) match {
-            case (Cde(Annot.Sta(a: A), _), Cde(Annot.Sta(b: B), _)) => lift(fs(a, b))
-            case _                                                  => inj2(fd)(x, y)
+            case (Cde(Annot.Sta(a), _), Cde(Annot.Sta(b), _)) => lift(fs(a, b))
+            case _                                            => inj2(fd)(x, y)
          }
    }
 
@@ -73,13 +73,11 @@ object CodePs extends Cde {
       def |>(f: A => B): B = f(x)
    }
 
-
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T] = Cde(Annot.Sta(c1), Code.inj(c1))
-
 
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W] = {
       x match {
-         case Cde(Annot.Sta(_), _) => k(x)
+         case Cde(Annot.Sta, _) => k(x)
          case Cde(_,            v) => injCde(Code.letl(v)((v: Code[A]) => dyn[W](k(injCde[A](v)))))
       }
    }
@@ -96,8 +94,8 @@ object CodePs extends Cde {
 
    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = {
       c1 match {
-         case Cde(Annot.Sta(b: Boolean), _) => bool(!b)
-         case _                             => Cde(c1.sta, Code.not(c1.dyn))
+         case Cde(Annot.Sta(b), _) => bool(!b)
+         case _                    => Cde(c1.sta, Code.not(c1.dyn))
       }
    }
 
@@ -133,8 +131,8 @@ object CodePs extends Cde {
    def div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_/_)(int)(Code.div)(c1, c2)
    def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2[Int, Int, Int](_%_)(int)(Code.modf)(c1, c2)
 
-   def  lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_<_)(bool)(Code.lt)(c1, c2)
-   def  gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_>_)(bool)(Code.gt)(c1, c2)
+   def lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):      Cde[Boolean] = lift2[Int, Int, Boolean](_<_)(bool)(Code.lt)(c1, c2)
+   def gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):      Cde[Boolean] = lift2[Int, Int, Boolean](_>_)(bool)(Code.gt)(c1, c2)
    def leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_<=_)(bool)(Code.leq)(c1, c2)
    def geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_>=_)(bool)(Code.geq)(c1, c2)
    def eq_temp(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = lift2[Int, Int, Boolean](_==_)(bool)(Code.eq_temp)(c1, c2)
@@ -162,7 +160,7 @@ object CodePs extends Cde {
             guard: Option[Cde[Boolean]],
             body: Cde[Int] => Cde[Unit])(using QuoteContext): Cde[Unit] = {
       upb match {
-         case Cde(Annot.Sta(x: Int),  _) if x < 0 => unit
+         case Cde(Annot.Sta(x),  _) if x < 0 => unit
          case Cde(Annot.Sta(0),       _)          =>
             guard match {
                case None    => body(int(0))
@@ -212,8 +210,8 @@ object CodePs extends Cde {
 
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = {
       c1 match {
-         case Cde(Annot.Sta(_), _) => true
-         case _                    => false
+         case Cde(Annot.Sta, _) => true
+         case _                 => false
       }
    }
 
