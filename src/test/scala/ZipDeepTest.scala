@@ -48,15 +48,21 @@ class ZipDeepTest {
       assert(t == 10)
    }
 
-   /* TODO 2
-    let testz70 = zip_with C.pair
-   (from_to (C.int 1) (C.int 10) |> filter even)
-   (iota (C.int 1) |> filter C.(fun x -> x mod (int 3) = int 0))
-   |> collect
-   
-   */
+   @Test def testz70(): Unit = {
+      def s(using QuoteContext) = 
+         Stream.fromTo(int(1), int(10))
+               .filter((d) => (d mod int(2)) === int(0))
+               .zipWith[Int, (Int, Int)](pair,
+                  Stream.iota(int(1))
+                        .filter((d) => (d mod int(3)) === int(0)))
+               .fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
 
-   // @Test def testz70(): Unit = ???
+      val t = run { s }
+
+      assert(t == List((10,15), (8,12), (6,9), (4,6), (2,3)))
+   }
+
+
    // @Test def testz7(): Unit = ???
    // @Test def testxx(): Unit = ???
    // @Test def testyy(): Unit = ???

@@ -91,6 +91,11 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
          )
       Stream(shape)
    }
+
+   // TODO
+   def collect()(using QuoteContext): List[A] = {
+      ???
+   }
 }
 
 
