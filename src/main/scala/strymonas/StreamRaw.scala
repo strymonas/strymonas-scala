@@ -159,8 +159,8 @@ object StreamRaw {
             mkInitVar(int(0), (i) =>
                Flattened(m, goon_conj(g, GExp(dref(i) <= array.upb())),
                         Unfold((k: A => Cde[Unit]) => 
-                           array.index(dref(i))((a: A) =>
-                              seq(incr(i),k(a))
+                           letl(dref(i))(v => 
+                              seq(incr(i), array.index(v)(k))
                            )
                         )
                )
@@ -309,9 +309,13 @@ object StreamRaw {
                                           (step(x => seq(xres := x, 
                                                          seq(i_, 
                                                             in_inner := bool(true))))),
-                                          (gref := cde_of_goon(g))))),
+                                          (gref := cde_of_goon(g))
+                                       ))
+                                    ),
                                     if1(dref(in_inner), 
-                                       if_(cde_of_goon(g_), st_(k), in_inner := bool(false))))
+                                       if_(cde_of_goon(g_), st_(k), in_inner := bool(false))
+                                    )
+                                 )
                               }))
                            })
                   )
