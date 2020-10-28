@@ -82,9 +82,34 @@ class ZipDeepTest {
       assert(t == 10)
    }
 
+   @Test def testxx(): Unit = {
+      def s(using QuoteContext) = {
+         Stream.of(inj(Array(0,1,2,3)))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .filter(x => (x mod int(2)) === inj(0))
+            .fold[List[Int]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
+      }
 
-   // @Test def testxx(): Unit = ???
-   // @Test def testyy(): Unit = ???
+      val t = run { s }
+
+      assert(t == List(4, 4, 4, 2, 2, 2, 2, 0))
+   }
+
+   @Test def testyy(): Unit = {
+      def s(using QuoteContext) = {
+         Stream.of(inj(Array(1,2,3)))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .filter(x => (x mod int(2)) === inj(0))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .fold[List[Int]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
+      }
+
+      val t = run { s }
+      assert(t == List(5, 4, 3, 2, 3, 2))
+   }
+
+
    // @Test def testzff1(): Unit = ???
    // @Test def testzff2(): Unit = ???
    // @Test def testzff3(): Unit = ???
@@ -92,5 +117,4 @@ class ZipDeepTest {
    // @Test def testzff5(): Unit = ???
    // @Test def testz8(): Unit = ???
    // @Test def testz81(): Unit = ???
-
 }

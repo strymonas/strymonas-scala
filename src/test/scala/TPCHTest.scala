@@ -34,7 +34,7 @@ class TPCHTests {
    // ---- TYPES
    // decimal
 
-      // https://github.com/apache/impala/blob/master/testdata/workloads/tpch/queries/tpch-q17.test
+   // https://github.com/apache/impala/blob/master/testdata/workloads/tpch/queries/tpch-q17.test
    // @Test def tpch_17(): Unit = {
       
    //    val f1 = part.filter(p => p.brand == "Brand#23" && p.container == "MED BOX")
