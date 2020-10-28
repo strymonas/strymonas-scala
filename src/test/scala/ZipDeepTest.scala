@@ -62,20 +62,6 @@ class ZipDeepTest {
       assert(t == List((10,15), (8,12), (6,9), (4,6), (2,3)))
    }
 
-      //  zip_with C.( + )
-      //   (zip_with C.( * )
-      //     (of_arr (C.int_array [|-1;0;-1;1;-1;2;3;4|])
-      //      |> filter C.(fun a -> a >= int 0))
-      //     (of_arr (C.int_array [|0;1;10;2;3|])
-      //      |> filter C.(fun a -> a < int 10)))
-      //   (zip_with C.( / )
-      //     (of_arr (C.int_array [|-1;-1;-1;0;1;-1;-1;2;3;4|])
-      //      |> map C.(fun a -> a * int 2)
-      //      |> filter C.(fun a -> a >= int 0))
-      //     (of_arr (C.int_array [|1;2;3|])))
-      //  |> map C.(fun a -> int 1 + a)
-      //  |> sum_int
-
    @Test def testz7(): Unit = {
       def s(using QuoteContext) = {
          val s1 = Stream.of(inj(Array(-1,0,-1,1,-1,2,3,4))).filter(_ >= int(0))
@@ -91,70 +77,9 @@ class ZipDeepTest {
            .fold(int(0), _ + _)
       }
 
-      // showGen { s }
-
       val t = run { s }
 
       assert(t == 10)
-
-      // {
-      //    var x: scala.Int = 0
-      //    val lv: scala.Array[scala.Int] = scala.Array.apply(-1, 0, -1, 1, -1, 2, 3, 4)
-      //    val `lv₂`: scala.Int = lv.length.-(1)
-      //    val `lv₃`: scala.Array[scala.Int] = scala.Array.apply(0, 1, 10, 2, 3)
-      //    val `lv₄`: scala.Int = `lv₃`.length.-(1)
-      //    var `x₂`: scala.Int = 0
-      //    val `lv₅`: scala.Array[scala.Int] = scala.Array.apply(-1, -1, -1, 0, 1, -1, -1, 2, 3, 4)
-      //    val `lv₆`: scala.Int = `lv₅`.length.-(1)
-      //    val `lv₇`: scala.Array[scala.Int] = scala.Array.apply(1, 2, 3)
-      //    val `lv₈`: scala.Int = `lv₇`.length.-(1)
-      //    var `x₃`: scala.Int = 0
-      //    var `x₄`: scala.Int = 0
-      //    var i: scala.Int = 0
-         
-      //    while (i.<=(`lv₂`).&&(`x₂`.<=(`lv₄`).&&(`x₃`.<=(`lv₈`).&&(`x₄`.<=(`lv₆`))))) {
-      //       println("level 1")
-
-      //       val `lv₉`: scala.Int = lv.apply(i)
-      //       if (`lv₉`.>=(0)) {
-      //          var `x₅`: scala.Boolean = true
-      //          while (`x₅`.&&(`x₂`.<=(`lv₄`))) {
-      //             println("level 2")
-
-      //             val `lv₁₀`: scala.Int = `lv₃`.apply(`x₂`)
-      //             `x₂` = `x₂`.+(1)
-      //             if (`lv₁₀`.<(10)) {
-      //                println("level 2: if")
-
-      //                `x₅` = false
-      //                var `x₆`: scala.Boolean = true
-      //                while (`x₆`.&&(`x₃`.<=(`lv₈`).&&(`x₄`.<=(`lv₆`)))) {
-      //                   println("level 3")
-
-      //                   val `lv₁₁`: scala.Int = `lv₅`.apply(`x₄`)
-      //                   val `lv₁₂`: scala.Int = `lv₁₁`.*(2)
-
-      //                   if (`lv₁₂`.>=(0)) {
-      //                      println("level 3: if")
-
-      //                      val `lv₁₃`: scala.Int = `lv₇`.apply(`x₃`)
-      //                      `x₃` = `x₃`.+(1)
-      //                      // `x₄` = `x₄`.+(1) // was initially here 
-      //                      `x₆` = false
-      //                      val `lv₁₄`: scala.Int = `lv₉`.*(`lv₁₀`).+(`lv₁₂`./(`lv₁₃`)).+(1)
-      //                      x = x.+(`lv₁₄`)
-      //                   } 
-
-      //                   `x₄` = `x₄`.+(1) // correct position
-
-      //                }
-      //             } 
-      //          }
-      //       } 
-      //       i = i.+(1)
-      //    }
-      //    assert(x == 10)
-      // }
    }
 
 
