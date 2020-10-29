@@ -12,7 +12,6 @@ import StreamRaw.Init._
 import StreamRaw.Producer._
 import StreamRaw.StreamShape._
 
-
 class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
    def fold[W: Type](z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using ctx: QuoteContext): Cde[W] = {
       letVar(z) { s => 
@@ -97,12 +96,11 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
    }
 }
 
-
 object Stream {
    def of[A: Type](arr: Cde[Array[A]])(using QuoteContext): Stream[A] = {
       val shape = 
-         mkInit(arr, (arr: Cde[Array[A]]) => // Initializer[Cde[Array[A]], A](ILet(arr), sk)
-            mkInit(array_len(arr) - int(1), (len: Cde[Int]) => // Initializer[Cde[Int], A](ILet(arr), sk)
+         mkInit(arr, (arr: Cde[Array[A]]) => 
+            mkInit(array_len(arr) - int(1), (len: Cde[Int]) => 
                mkPullArray[Cde[A]](len, array_get (arr)))
          )
 
