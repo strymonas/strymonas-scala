@@ -123,10 +123,130 @@ class ZipDeepTest {
       assert(t == List((31,142), (30,141), (24,140), (23,132), (22,131), (21,130), (20,122), (14,121), (13,120), (12,112), (11,111), (10,110)))
    }
 
-   // @Test def testzff2(): Unit = ???
-   // @Test def testzff3(): Unit = ???
-   // @Test def testzff4(): Unit = ???
-   // @Test def testzff5(): Unit = ???
-   // @Test def testz8(): Unit = ???
-   // @Test def testz81(): Unit = ???
+   @Test def testzfff1(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
+         val s2 = Stream.fromTo(int(10), int(40), 10).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2).take(inj(7))
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((21,130), (20,122), (14,121), (13,120), (12,112), (11,111), (10,110)))
+   }
+
+   @Test def testzff2(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
+         val s2 = Stream.of(inj(Array(10, 20, 30, 40))).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((31,142), (30,141), (24,140), (23,132), (22,131), (21,130), (20,122), (14,121), (13,120), (12,112), (11,111), (10,110)))
+   }
+
+   @Test def testzff3(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(10, 20, 30)))
+            .filter(x => (x mod int(2)) === inj(0))
+            .flatMap(e => Stream.iota(e).take(int(5)))
+         val s2 = Stream.of(inj(Array(10, 20, 30, 40)))
+            .flatMap(e => Stream.iota(int(100) + e)
+            .take(inj(3)))
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((31,142), (30,141), (24,140), (23,132), (22,131), (21,130), (20,122), (14,121), (13,120), (12,112), (11,111), (10,110)))
+   }
+
+   @Test def testzff4(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(10, 11, 20, 21, 30, 31)))
+            .filter(x => (x mod int(2)) === inj(0))
+            .flatMap(e => Stream.iota(e).take(int(5)).filter(x => (x mod int(3)) === inj(0)))
+         val s2 = Stream.fromTo(int(10), int(40), 10)
+            .flatMap(e => Stream.iota(int(100) + e)
+            .take(inj(3)))
+            .filter(x => (x mod int(2)) === inj(0))
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((33,130), (30,122), (24,120), (21,112), (12,110)))
+   }
+
+   @Test def testzff5(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(0,1,2,3)))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .filter(x => (x mod int(2)) === inj(0))
+         val s2 = Stream.fromTo(int(10), int(40), 10)
+            .flatMap(e => Stream.iota(int(100) + e)
+            .take(inj(3)))
+            .filter(x => (x mod int(2)) === inj(0))
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((4,142), (4,140), (4,132), (2,130), (2,122), (2,120), (2,112), (0,110)))
+   }
+
+   @Test def testz8(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(0,1,2,3)))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .filter(x => (x mod int(2)) === inj(0))
+         val s2 = Stream.of(inj(Array(1,2,3)))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+            .filter(x => (x mod int(2)) === inj(0))
+            .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((4,5), (2,4), (2,3), (2,2), (2,3), (0,2)))
+   }
+   
+   @Test def testz81(): Unit = {
+      def s(using QuoteContext) = {
+         val thisandnext: Cde[Int] => Stream[Int] = e => Stream.fromTo(int(0), int(1), 1).map(c => e + c)
+
+         val s1 = Stream.of(inj(Array(0,1,2,3)))
+            .flatMap(thisandnext)
+            .flatMap(thisandnext)
+            .filter(x => (x mod int(2)) === inj(0))
+         val s2 = Stream.of(inj(Array(1,2,3)))
+            .flatMap(thisandnext)
+            .filter(x => (x mod int(2)) === inj(0))
+            .flatMap(thisandnext)
+
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((4,5), (2,4), (2,3), (2,2), (2,3), (0,2)))   
+   }
 }
