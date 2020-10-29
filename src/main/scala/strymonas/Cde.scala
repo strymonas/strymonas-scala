@@ -93,4 +93,9 @@ trait Cde {
    def blackhole[A: Type](using QuoteContext): Cde[A]
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean
    def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean
+
+   // Lists
+   def nil[A: Type]()(using QuoteContext): Cde[List[A]] 
+   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]]
+   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] 
 }

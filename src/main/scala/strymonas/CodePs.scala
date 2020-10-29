@@ -221,4 +221,14 @@ object CodePs extends Cde {
          case _                 => false
       }
    }
+
+   def nil[A: Type]()(using QuoteContext): Cde[List[A]] = {
+      Cde(Annot.Sta(List()), Code.nil())
+   }
+   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = {
+      inj2[A, List[A], List[A]](Code.cons)(x, xs)
+   }
+   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = {
+      inj1[List[A], List[A]](Code.reverse)(xs)
+   }
 }

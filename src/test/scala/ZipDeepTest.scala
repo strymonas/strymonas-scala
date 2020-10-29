@@ -26,7 +26,7 @@ class ZipDeepTest {
                               Stream.iota(int(1))
                                     .flatMap(x => Stream.iota(x + int(1))
                                                         .take(int(3)))))
-                  .fold[List[(Double, (Double, Int))]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
+                  .collect()
       }}
 
       val t = run { s }
@@ -55,7 +55,7 @@ class ZipDeepTest {
                .zipWith[Int, (Int, Int)](pair,
                   Stream.iota(int(1))
                         .filter((d) => (d mod int(3)) === int(0)))
-               .fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
+               .collect()
 
       val t = run { s }
 
@@ -88,7 +88,7 @@ class ZipDeepTest {
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .filter(x => (x mod int(2)) === inj(0))
-            .fold[List[Int]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
+            .collect() 
       }
 
       val t = run { s }
@@ -102,7 +102,7 @@ class ZipDeepTest {
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .filter(x => (x mod int(2)) === inj(0))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
-            .fold[List[Int]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}}) 
+            .collect() 
       }
 
       val t = run { s }
@@ -114,9 +114,7 @@ class ZipDeepTest {
          val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
          val s2 = Stream.fromTo(int(10), int(40), 10).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).collect()
       }
 
       val t = run { s }
@@ -128,9 +126,7 @@ class ZipDeepTest {
          val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
          val s2 = Stream.fromTo(int(10), int(40), 10).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2).take(inj(7))
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).take(inj(7)).collect()    
       }
 
       val t = run { s }
@@ -142,9 +138,7 @@ class ZipDeepTest {
          val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
          val s2 = Stream.of(inj(Array(10, 20, 30, 40))).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).collect()
       }
 
       val t = run { s }
@@ -160,9 +154,7 @@ class ZipDeepTest {
             .flatMap(e => Stream.iota(int(100) + e)
             .take(inj(3)))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).collect()
       }
 
       val t = run { s }
@@ -179,9 +171,7 @@ class ZipDeepTest {
             .take(inj(3)))
             .filter(x => (x mod int(2)) === inj(0))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).collect()
       }
 
       val t = run { s }
@@ -199,9 +189,7 @@ class ZipDeepTest {
             .take(inj(3)))
             .filter(x => (x mod int(2)) === inj(0))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).collect()
       }
 
       val t = run { s }
@@ -219,9 +207,7 @@ class ZipDeepTest {
             .filter(x => (x mod int(2)) === inj(0))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
 
-         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
-         
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s1.zipWith[Int, (Int, Int)](pair, s2).collect()
       }
 
       val t = run { s }
@@ -243,7 +229,7 @@ class ZipDeepTest {
 
          val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
          
-         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+         s5.collect()
       }
 
       val t = run { s }

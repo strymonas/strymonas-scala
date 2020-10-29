@@ -271,4 +271,8 @@ object Code extends Cde {
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = false
 
    def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean = true
+
+   def nil[A: Type]()(using QuoteContext): Cde[List[A]] = '{ Nil }
+   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = '{ ${x} :: ${xs}}
+   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = '{ ${xs}.reverse }
 }

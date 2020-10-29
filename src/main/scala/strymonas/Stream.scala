@@ -92,9 +92,8 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
       Stream(shape)
    }
 
-   // TODO
-   def collect()(using QuoteContext): List[A] = {
-      ???
+   def collect()(using QuoteContext): Cde[List[A]] = {
+      this.fold(nil(), (xs, x) => cons(x, xs))
    }
 }
 
