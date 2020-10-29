@@ -3,197 +3,99 @@ package strymonas
 import scala.quoted._
 import scala.quoted.util._
 
-/**
- * The Scala's code generator
- */
-object Cde {
+import scala.language.implicitConversions
 
-  def foldOpt[Z, A](f: Z => A => Z, z: Z, value: Option[A]): Z  = {
-      value match {
-         case None => z
-         case Some(x) => f(z)(x)
-      }
+trait Cde {
+   type Cde[A]
+   type Var[A]
+
+   implicit def toExpr[A](x: Cde[A]): Expr[A]
+   implicit def ofExpr[A](x: Expr[A]): Cde[A]
+
+   def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
+
+   def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
+   // Rename to newref?
+   def letVar[A: Type, W: Type](x: Cde[A])(k: (Var[A] => Cde[W]))(using QuoteContext): Cde[W]
+
+   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using QuoteContext): Cde[A]
+   def unit(using QuoteContext): Cde[Unit]
+
+   // Booleans
+   def bool(c1: Boolean)(using QuoteContext): Cde[Boolean]
+   def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def  lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   implicit class BoolCde(val c1: Cde[Boolean]) {
+      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = land(c1, c2)
+      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] =  lor(c1, c2)
    }
 
-  // TODO: Extraneous check was removed in the compiler with this
-  // https://github.com/lampepfl/dotty/pull/9501/files
-  def default[A](t: Type[A])(using QuoteContext): Expr[A] = 
-    val expr: Expr[Any] = 
-        t match {
-          case '[Int] => '{0}
-          case '[Char] => '{0: Char}
-          case '[Byte] => '{0: Byte}
-          case '[Short] => '{0: Short}
-          case '[Long] => '{0L}
-          case '[Float] => '{0.0f}
-          case '[Double] => '{0.0d}
-          case '[Boolean] => '{false}
-          case '[Unit] => '{()}
-          case _ => '{null}
-        }
-    expr.asInstanceOf[Expr[A]]
+   // Numbers
+   // def truncate(c1: Cde[Float])(using QuoteContext): Cde[Int]
+   def int(c1: Int)(using QuoteContext): Cde[Int]
+   def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
 
-  def letVar[A: Type, W: Type](x: Expr[A])(k: (Var[A] => Expr[W])): E[W] =  
-      Var(x)(k)
-  
-  def letl[A: Type, W: Type](x: Expr[A])(k: (Expr[A] => Expr[W])): E[W] = '{
-      val lv = ${x}
-  
-      ${k('{lv})}
-  }
-  
-  def seq[A: Type](c1: Expr[Unit], c2: Expr[A]): E[A] = '{
-      ${c1}
-      ${c2}
-  }
+   def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int]
+   def sub(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int]
+   def mul(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int]
+   def div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int]
+   def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
 
-  val unit: E[Unit] = '{}
+   def  lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean]
+   def  gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean]
+   def leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean]
+   def geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean]
+   def eq_temp(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+   implicit class IntCde(val c1: Cde[Int]) {
+      def +(c2: Cde[Int])(using QuoteContext):   Cde[Int] = add(c1, c2)
+      def -(c2: Cde[Int])(using QuoteContext):   Cde[Int] = sub(c1, c2)
+      def *(c2: Cde[Int])(using QuoteContext):   Cde[Int] = mul(c1, c2)
+      def /(c2: Cde[Int])(using QuoteContext):   Cde[Int] = div(c1, c2)
+      def mod(c2: Cde[Int])(using QuoteContext): Cde[Int] = modf(c1, c2)
 
-  // Booleans
-  def bool(c1: Boolean): E[Boolean] = Expr(c1)
-
-  def not(c1: Expr[Boolean]): E[Boolean] = '{
-      ! ${c1}
-  }
-  
-  def &&(c1: Expr[Boolean])(c2: Expr[Boolean]): E[Boolean] = '{
-      ${c1} && ${c2}
-  }
-  
-  def ||(c1: Expr[Boolean], c2: Expr[Boolean]): E[Boolean] = '{
-      ${c1} || ${c2}
-  }
-  
-  // Integers
-  def int(c1: Int): E[Int] = Expr(c1)
-
-  implicit class IntCde(val c1: Expr[Int]) {
-    def +(c2: Expr[Int]): E[Int] = '{
-        ${c1} + ${c2}
-    }
-  
-    def -(c2: Expr[Int]): E[Int] = '{
-        ${c1} - ${c2}
-    }
-
-    def *(c2: Expr[Int]): E[Int] = '{
-        ${c1} * ${c2}
-    }
-
-    def /(c2: Expr[Int]): E[Int] = '{
-        ${c1} / ${c2}
-    }
-
-    def mod(c2: Expr[Int]): E[Int] = '{
-        ${c1} % ${c2}
-    }
-  
-    // `=` is not available, original `==` has high priority
-    def ===(c2: Expr[Int]): E[Boolean] = '{
-        ${c1} == ${c2}
-    }
-  
-    def <(c2: Expr[Int]): E[Boolean] = '{
-        ${c1} < ${c2}
-    }
-  
-    def >(c2: Expr[Int]): E[Boolean] = '{
-        ${c1} > ${c2}
-    }
-  
-    def <=(c2: Expr[Int]): E[Boolean] = '{
-        ${c1} <= ${c2}
-    }
-  
-    def >=(c2: Expr[Int]): E[Boolean] = '{
-        ${c1} >= ${c2}
-    }
-  }
+      def <(c2: Cde[Int])(using QuoteContext):   Cde[Boolean] =  lt(c1 ,c2)
+      def >(c2: Cde[Int])(using QuoteContext):   Cde[Boolean] =  gt(c1 ,c2)
+      def <=(c2: Cde[Int])(using QuoteContext):  Cde[Boolean] = leq(c1, c2)
+      def >=(c2: Cde[Int])(using QuoteContext):  Cde[Boolean] = geq(c1, c2)
+      def ===(c2: Cde[Int])(using QuoteContext): Cde[Boolean] =  eq_temp(c1, c2)
+   }
 
 
-  def imin(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
-      //TODO: ported Oleg's, need to check perf
-      cond('{ ${c1} < ${c2} }, c1, c2)
-  }
+   // Control operators
+   def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A]
+   def if_(cnd: Cde[Boolean], bt: Cde[Unit], bf: Cde[Unit])(using QuoteContext): Cde[Unit]
+   def if1(cnd: Cde[Boolean], bt: Cde[Unit])(using QuoteContext): Cde[Unit]
+   def for_(upb: Cde[Int], guard: Option[Cde[Boolean]], body: Cde[Int] => Cde[Unit])(using QuoteContext): Cde[Unit]
+   def cloop[A: Type](k: A => Cde[Unit], bp: Option[Cde[Boolean]], body: ((A => Cde[Unit]) => Cde[Unit]))(using QuoteContext): Cde[Unit]
+   def while_(goon: Cde[Boolean])(body: Cde[Unit])(using QuoteContext): Cde[Unit]
 
-  def imax(c1: Expr[Int])(c2: Expr[Int]): E[Int] = {
-      //TODO: ported Oleg's, need to check perf
-      cond('{ ${c1} > ${c2} }, c1, c2)
-  }
-  
-  // Control operators
-  def cond[A: Type](cnd: Expr[Boolean], bt: Expr[A], bf: Expr[A]): E[A] = '{
-      if(${cnd}) then ${bt} else ${bf}
-  }
-  
-  def if_[A: Type](cnd: Expr[Boolean], bt: Expr[Unit], bf: Expr[Unit]): E[Unit] = '{
-      if(${cnd}) then ${bt} else ${bf}
-  }
+   //  Reference cells?
+   def assign[A](c1: Var[A], c2: Cde[A])(using QuoteContext): Cde[Unit]
+   def dref[A](x: Var[A])(using QuoteContext): Cde[A]
+   def incr(i: Var[Int])(using QuoteContext): Cde[Unit]
+   def decr(i: Var[Int])(using QuoteContext): Cde[Unit]
 
-  def if1(cnd: Expr[Boolean], bt: Expr[Unit]): E[Unit] = '{
-      if(${cnd}) then ${bt}
-  }
+   implicit class VarCde[A](val c1: Var[A]) {
+      def :=(c2: Cde[A])(using QuoteContext): Cde[Unit] = assign[A](c1, c2)
+   }
 
-  def for_(upb: Expr[Int], guard: Option[Expr[Boolean]], body: Expr[Int] => Expr[Unit]): E[Unit] = {
-    guard match {
-      case Some(g) =>
-        '{
-          var i = 0
-          while(i <= ${upb} && ${g}) {
-              ${body('i)}
-              i = i + 1
-          }
-        }
-      case None => // for-loop is emittable
-          '{
-            var i = 0
-            while(i <= ${upb}) {
-                ${body('i)}
-                i = i + 1
-            }
-          }
-    }
-  }
+   // Arrays
+   def array_get[A: Type, W: Type](arr: Cde[Array[A]])(i: Cde[Int])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
+   def array_len[A: Type](arr: Cde[Array[A]])(using QuoteContext): Cde[Int]
+   def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit]
+   def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]]
 
-  def cloop[A: Type](k: A => Expr[Unit], bp: Option[Expr[Boolean]], body: ((A => Expr[Unit]) => Expr[Unit])): E[Unit] = {
-      Var(bool(true)) { again => 
-        while_(foldOpt[Expr[Boolean], Expr[Boolean]](x => z => '{ ${x} && ${z}}, again.get, bp))(
-                body(x => seq(again.update(bool(false)), k(x))))
-      }
-  }
-  
-  def while_(goon: Expr[Boolean])(body: Expr[Unit]): E[Unit] = '{
-      while(${goon}) {
-        ${body}
-      }
-  }
+   // Others
+   def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]]
+   def uninit[A: Type](using QuoteContext): Cde[A]
+   def blackhole[A: Type](using QuoteContext): Cde[A]
+   def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean
+   def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean
 
-  // Arrays
-  def array_get[A: Type, W: Type](arr: Expr[Array[A]])(i: Expr[Int])(k: (Expr[A] => Expr[W])): E[W] =
-    letl('{${arr}.apply{${i}}})(k)
-
-  def array_len[A: Type](arr: Expr[Array[A]]): E[Int] = '{
-    ${arr}.length
-  }
-
-  def array_set[A: Type](arr: Expr[Array[A]])(i: Expr[Int])(v: Expr[A]): E[Unit] = '{
-    ${arr}{${i}} = ${v}
-  }
-
-  // Others
-  def pair[A: Type, B: Type](x: Expr[A])(y: Expr[B]): E[Tuple2[A,B]] = '{
-      (${x}, ${y})
-  }
-
-  def uninit[A: Type]: E[A] = default(summon[Type[A]])
-
-  def blackhole[A: Type]: E[A] = '{throw new Exception("BH")}
-
-  def is_static[A: Type](c1: Expr[A]): E[Boolean] = '{
-      false
-  }
-
-  def is_fully_dynamic[A: Type](c1: Expr[A]): E[Boolean] = '{
-      true
-  }
+   // Lists
+   def nil[A: Type]()(using QuoteContext): Cde[List[A]] 
+   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]]
+   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] 
 }
