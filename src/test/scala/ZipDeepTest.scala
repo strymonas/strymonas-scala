@@ -109,8 +109,20 @@ class ZipDeepTest {
       assert(t == List(5, 4, 3, 2, 3, 2))
    }
 
+   @Test def testzff1(): Unit = {
+      def s(using QuoteContext) = {
+         val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
+         val s2 = Stream.fromTo(int(10), int(40), 10).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
-   // @Test def testzff1(): Unit = ???
+         val s5 = s1.zipWith[Int, (Int, Int)](pair, s2)
+         
+         s5.fold[List[(Int, Int)]]('{ Nil }, (xs, x) => '{ ${x} :: ${xs}})
+      }
+
+      val t = run { s }
+      assert(t == List((31,142), (30,141), (24,140), (23,132), (22,131), (21,130), (20,122), (14,121), (13,120), (12,112), (11,111), (10,110)))
+   }
+
    // @Test def testzff2(): Unit = ???
    // @Test def testzff3(): Unit = ???
    // @Test def testzff4(): Unit = ???
