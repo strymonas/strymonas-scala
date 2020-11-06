@@ -59,7 +59,7 @@ object StreamRaw {
    enum Linearity[-A] {
       case Linear
       case NonLinear
-      case Filtered(pred: A => Cde[Boolean])
+      case Filtered(preds: List[A => Cde[Boolean]])
    }
    
    enum Producer[A] { 
@@ -94,6 +94,10 @@ object StreamRaw {
          case For(pa) => For(fMap(tr, pa))
          case Unfold(step) =>  Unfold(fMap(tr, step))
       }
+   }
+
+   def predsConj[A](preds: List[A => Cde[Boolean]])(using QuoteContext): (A => Cde[Boolean]) = {
+      x => preds.map(pred => pred(x)).reduceRight((a,b) => a && b)
    }
 
 
@@ -187,7 +191,8 @@ object StreamRaw {
                letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]], ctx)
             case Initializer(IVar(i, t), sk) => 
                letVar(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
-            case Flattened(Filtered(pred), g, prod) =>
+            case Flattened(Filtered(preds), g, prod) =>
+               val pred = predsConj(preds)
                val newConsumer = (x: A) => if1(pred(x), consumer(x))
                consume(g, newConsumer, prod)
             case Flattened(_, g, prod) =>
@@ -209,7 +214,8 @@ object StreamRaw {
 
    def normalizeFlat[A: Type](fl: Flat[A])(using QuoteContext): Flat[A] = {
       fl match {
-         case (Filtered(pred), g, p) =>
+         case (Filtered(preds), g, p) =>
+            val pred = predsConj(preds)
             (NonLinear, g, mkMapProducer(((x: A) => (k: A => Cde[Unit]) => if1(pred(x), k(x))), p))
          case x => x
       }
@@ -253,9 +259,9 @@ object StreamRaw {
          case Initializer(init, sk) => 
             Initializer(init,  z => filterRaw(pred, sk(z)))
          case Flattened(Filtered(pred2), g, p) =>
-            Flattened(Filtered((x: A) => pred2(x) && pred(x)), g, p)
+            Flattened(Filtered(pred2 ++ List(pred)), g, p)
          case Flattened(_, g, p) =>
-            Flattened(Filtered(pred), g, p)
+            Flattened(Filtered(List(pred)), g, p)
          case Nested(g, s, t, last) => 
             Nested(g, s, t, x => filterRaw(pred, last(x)))
       }
