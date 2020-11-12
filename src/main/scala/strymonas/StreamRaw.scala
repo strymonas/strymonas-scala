@@ -221,18 +221,18 @@ object StreamRaw {
       }
    }
 
-   def mapRaw_CPS[A, B](tr: A => Emit[B], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+   def mapRaw_CPS[A: Type, B: Type](tr: A => Emit[B], s: StreamShape[A], linear: Boolean = true)(using QuoteContext): StreamShape[B] = {
       s match {
          case Initializer(init, sk) => 
-            Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
+            Initializer(init,  z => mapRaw_CPS(tr, sk(z), linear))
          case Flattened(Filtered(pred), g, p) =>
-            mapRaw_CPS(tr, Flattened(normalizeFlat(Filtered(pred), g, p)))
+            mapRaw_CPS(tr, Flattened(normalizeFlat(Filtered(pred), g, p)), linear)
          case Flattened(Linear, g, p) =>
-            Flattened(Linear, g, mkMapProducer(tr, p))
+            Flattened(if(linear) then Linear else NonLinear, g, mkMapProducer(tr, p))
          case Flattened(NonLinear, g, p) =>
             Flattened(NonLinear, g, mkMapProducer(tr, p))
          case Nested(g, sf, t, next) =>
-            Nested(g, sf, t, x => mapRaw_CPS(tr, next(x)))
+            Nested(g, sf, t, x => mapRaw_CPS(tr, next(x), linear))
       }
    }
 
