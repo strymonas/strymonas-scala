@@ -2,6 +2,7 @@ package strymonas
 
 import scala.quoted._
 import scala.quoted.util._
+import scala.reflect.ClassTag
 
 import scala.language.implicitConversions
 
@@ -225,13 +226,18 @@ object CodePs extends Cde {
       injCde(Code.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
 
+   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
+   
+   // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
+
    def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]] = Cde(Annot.Sta(arr), Code.int_array(arr))
 
    // Others
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](Code.pair)(x, y)
    def uninit[A: Type](using QuoteContext): Cde[A] = injCde(Code.uninit)
    def blackhole[A: Type](using QuoteContext): Cde[A] = injCde(Code.blackhole)
-
+   def blackhole_arr[A: Type](using QuoteContext): Cde[Array[A]] = injCde(Code.blackhole_arr)
+   
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = {
       c1 match {
          case Cde(Annot.Sta, _) => true

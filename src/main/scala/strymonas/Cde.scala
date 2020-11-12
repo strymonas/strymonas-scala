@@ -2,6 +2,7 @@ package strymonas
 
 import scala.quoted._
 import scala.quoted.util._
+import scala.reflect.ClassTag
 
 import scala.language.implicitConversions
 
@@ -115,11 +116,15 @@ trait Cde {
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])(i: Cde[Int])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
    def array_len[A: Type](arr: Cde[Array[A]])(using QuoteContext): Cde[Int]
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit]
+   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W]
+   // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W]
+
    def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]]
 
    // Others
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]]
    def uninit[A: Type](using QuoteContext): Cde[A]
+   def blackhole_arr[A: Type](using QuoteContext): Cde[Array[A]]
    def blackhole[A: Type](using QuoteContext): Cde[A]
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean
    def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean

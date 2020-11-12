@@ -268,6 +268,39 @@ object Code extends Cde {
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit] = '{
       ${arr}{${i}} = ${v}
    }
+   import scala.reflect.ClassTag
+
+   implicit def LiftedClassTag[T: Type: ClassTag] (using QuoteContext): Expr[ClassTag[T]] = {
+      '{ ClassTag(${Expr(summon[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]])}) }
+   }
+   
+   def foo[A]()(using t: Type[A], c: ClassTag[A])(using l: Liftable[A])(using QuoteContext): Expr[Unit] = '{
+      val array: Array[A] = new Array[A](1)(${implicitly[Expr[ClassTag[A]]]})
+
+      ()
+   }
+
+   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = '{
+      // val array: Array[A] = ??? // new Array[A](1) //new Array[A](${Expr(i.length)})
+
+      // ${initArray(i, '{array})}
+
+      // ${k('{array})}
+
+      ???
+   }
+
+   private def initArray[T: Type: ClassTag](arr: Array[Expr[T]], array: Expr[Array[T]])(using QuoteContext): Expr[Array[T]] = {
+    UnrolledExpr.block(
+      arr.zipWithIndex.map {
+        case (x, i) => '{ $array(${Expr(i)}) = ${x} }
+      }.toList,
+      array)
+  }
+   
+   // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = {
+   //    new_array(Array.fill(n)(i))(k)
+   // }
 
    def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]] = inj(arr)
 
@@ -278,6 +311,7 @@ object Code extends Cde {
 
    def uninit[A: Type](using QuoteContext): Cde[A] = default(summon[Type[A]])
 
+   def blackhole_arr[A: Type](using QuoteContext): Cde[Array[A]] = '{throw new Exception("BH")}
    def blackhole[A: Type](using QuoteContext): Cde[A] = '{throw new Exception("BH")}
    // def blackhole[A: Type](using QuoteContext): Cde[A] = '{???}
 
