@@ -48,6 +48,8 @@ object StreamRaw {
    enum Init[A] {
       case ILet(init: Cde[A], t: Type[A]) extends Init[Cde[A]]
       case IVar(init: Cde[A], t: Type[A]) extends Init[Var[A]]
+      case IArr(init: Array[Cde[A]], t: Type[A]) extends Init[Cde[Array[A]]]
+      // case IUArr(size: Int, init: Cde[A], t: Type[Array[A]]) extends Init[Cde[Array[A]]]
    }
    
    /* Linear is when a stream does not stutter (fails to produce at least one value while the state advances)
@@ -126,6 +128,14 @@ object StreamRaw {
       Initializer[Var[Z], A](IVar(init, t), sk)
    }
 
+   def mkInitArr[Z, A](init: Array[Cde[Z]], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
+      Initializer[Cde[Array[Z]], A](IArr(init, t), sk)
+   }
+
+   // def mkInitUArr[Z, A](size: Int, init: Cde[Z], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Array[Z]]): StreamShape[A] = {
+   //    Initializer[Cde[Array[Z]], A](IUArr(size, init, t), sk)
+   // }
+
    /**
     * Make a new pull array from an upper bound and an indexing function in CPS
     */
@@ -189,11 +199,15 @@ object StreamRaw {
                letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]], ctx)
             case Initializer(IVar(i, t), sk) => 
                letVar(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
+            case Initializer(IArr(a, t), sk) => 
+               new_array(a)(a => loop[A](consumer, sk(a)))(t, summon[Type[Unit]], ctx)
+            // case Initializer(IUArr(n, i, t), sk) => 
+            //    new_uarray(n, i)(a => loop[A](consumer, sk(a)))(t, summon[Type[Unit]], ctx)
             case Flattened(Filtered(preds), g, prod) =>
                val pred = predsConj(preds)
                val newConsumer = (x: A) => if1(pred(x), consumer(x))
                consume(g, newConsumer, prod)
-            case Flattened(_, g, prod) =>
+            case Flattened(_, g, prod) => 
                consume(g, consumer, prod)
             case Nested(g, sf, t, last) =>
                def applyNested[B : Type](
@@ -290,6 +304,8 @@ object StreamRaw {
                })(t, summon[Type[Unit]], ctx)
             score
          }
+         case Initializer(IArr(_, t), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
+         // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
          case Flattened(Linear, _, _) => 0
          case Flattened(_)            => 3
          case Nested(_, s, t, sk) => 
@@ -362,6 +378,11 @@ object StreamRaw {
                   })
                }
                applyLet(i, sk)(t)
+               
+            // case Initializer(IArr(a, t), sk) if (a.length == 0) => ??? 
+            // case Initializer(IArr(a, t), sk) => ??? 
+            // case Initializer(IUArr(n, a, t), sk) => ??? 
+               
             case Flattened(Filtered(_),_,_) | Flattened(_,_,For(_)) => assert(false)
             case Flattened(_,g,Unfold(step)) => k(init)(g, step)
             case Nested(_, _, _, _) => throw new Exception("Inner stream must be linearized first")

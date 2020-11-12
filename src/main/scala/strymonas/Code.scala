@@ -244,6 +244,39 @@ object Code extends CdeSpec[Cde] {
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using Quotes): Cde[Unit] = {
       injCde(CodeRaw.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
+   import scala.reflect.ClassTag
+
+   implicit def LiftedClassTag[T: Type: ClassTag] (using Quotes): Expr[ClassTag[T]] = {
+      '{ ClassTag(${Expr(summon[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]])}) }
+   }
+   
+   def foo[A]()(using t: Type[A], c: ClassTag[A])(using l: Liftable[A])(using Quotes): Expr[Unit] = '{
+      val array: Array[A] = new Array[A](1)(${implicitly[Expr[ClassTag[A]]]})
+
+      ()
+   }
+
+   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] = '{
+      // val array: Array[A] = ??? // new Array[A](1) //new Array[A](${Expr(i.length)})
+
+      // ${initArray(i, '{array})}
+
+      // ${k('{array})}
+
+      ???
+   }
+
+   private def initArray[T: Type: ClassTag](arr: Array[Expr[T]], array: Expr[Array[T]])(using Quotes): Expr[Array[T]] = {
+    UnrolledExpr.block(
+      arr.zipWithIndex.map {
+        case (x, i) => '{ $array(${Expr(i)}) = ${x} }
+      }.toList,
+      array)
+  }
+   
+   // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] = {
+   //    new_array(Array.fill(n)(i))(k)
+   // }
 
    def int_array[A: Type](arr: Array[Int])(using Quotes): Cde[Array[Int]] = Cde(Annot.Sta(arr), CodeRaw.int_array(arr))
 
@@ -258,9 +291,13 @@ object Code extends CdeSpec[Cde] {
       inj1[List[A], List[A]](CodeRaw.reverse)(xs)
    }
 
-   def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using Quotes): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](CodeRaw.pair)(x, y)
-   def uninit[A: Type](using Quotes): Cde[A] = injCde(CodeRaw.uninit)
-   def blackhole[A: Type](using Quotes): Cde[A] = injCde(CodeRaw.blackhole)
+   def uninit[A: Type](using Quotes): Cde[A] = default(summon[Type[A]])
+
+   def blackhole_arr[A: Type](using Quotes): Cde[Array[A]] = '{throw new Exception("BH")}
+   def blackhole[A: Type](using Quotes): Cde[A] = '{throw new Exception("BH")}
+   // def blackhole[A: Type](using Quotes): Cde[A] = '{???}
+
+   def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = false
 
    def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = {
       c1 match {
