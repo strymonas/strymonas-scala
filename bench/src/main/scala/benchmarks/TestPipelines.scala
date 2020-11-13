@@ -36,6 +36,30 @@ object TestPipelines {
       .fold(int(0), _+_) }
    }
 
+   def mapsMegamorphicPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+      ${ Stream.of('{array})
+         .map((a) => a * int(1))
+         .map((a) => a * int(2))
+         .map((a) => a * int(3))
+         .map((a) => a * int(4))
+         .map((a) => a * int(5))
+         .map((a) => a * int(6))
+         .map((a) => a * int(7))
+         .fold(int(0), _+_) }
+   }
+
+   def filtersMegamorphicPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+      ${ Stream.of('{array})
+         .filter((a) => a > int(1))
+         .filter((a) => a > int(2))
+         .filter((a) => a > int(3))
+         .filter((a) => a > int(4))
+         .filter((a) => a > int(5))
+         .filter((a) => a > int(6))
+         .filter((a) => a > int(7))
+         .fold(int(0), _+_) }
+   }
+
    def filterPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
       ${ Stream.of('{array})
       .filter(d => (d mod int(2)) === int(0))
@@ -80,6 +104,12 @@ object TestPipelines {
       .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
       .zipWith[Int, Int](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)) )
       .take(int(20000000))
+      .fold(int(0), _+_) }
+   }
+
+   def zipFilterFilterPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
+      ${ Stream.of('{array1}).filter((d) => x > int(7))
+      .zipWith[Int, Int](_+_,  Stream.of('{array1}).filter((d) => x > int(5)))
       .fold(int(0), _+_) }
    }
 }

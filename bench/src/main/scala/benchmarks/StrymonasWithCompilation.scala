@@ -38,22 +38,28 @@ class StrymonasWithCompilation {
       sumOfSquaresS = run(sumOfSquaresPipeline)
       sumOfSquaresEvenS = run(sumOfSquaresEvenPipeline)
       cartS = run(cartPipeline)
+      mapsMegamorphicS = run(mapsMegamorphicPipeline)
+      filtersMegamorphicS = run(filtersMegamorphicPipeline)
       dotProductS = run(dotProductPipeline)
       flatMapTakeS = run(flatMapTakePipeline)
       flatMapAfterZipS = run(flatMapAfterZipPipeline)
       zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
       zipFlatFlatS = run(zipFlatFlatPipeline)
+      zipFilterFilterS = run(zipFilterFilterPipeline)
    }
 
    var sumS                 : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var sumOfSquaresS        : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var sumOfSquaresEvenS    : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var cartS                : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var mapsMegamorphicS     : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
+   var filtersMegamorphicS  : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var dotProductS          : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var flatMapTakeS        : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var flatMapAfterZipS   : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipAfterFlatMapS   : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipFlatFlatS       : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var flatMapTakeS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var flatMapAfterZipS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipAfterFlatMapS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipFlatFlatS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipFilterFilterS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
 
    @Benchmark
    def sumStagedWithInit(): Int = {
@@ -149,6 +155,54 @@ class StrymonasWithCompilation {
    def cartStagedInitFreshCompiler(): Unit = {
       given Toolbox = Toolbox.make(getClass.getClassLoader)
       run(cartPipeline)
+   }
+
+   @Benchmark
+   def mapsMegamorphicStagedWithInit(): Int = {
+      val mapsMegamorphicS = run(mapsMegamorphicPipeline)
+      val res: Int = mapsMegamorphicS(v)
+      res
+   }
+
+   @Benchmark
+   def mapsMegamorphicMacroExpanded(): Int = {
+      val res: Int = mapsMegamorphicMacro(v)
+      res
+   }
+
+   @Benchmark
+   def mapsMegamorphicStagedInit(): Unit = {
+      run(mapsMegamorphicPipeline)
+   }
+
+   @Benchmark
+   def mapsMegamorphicStagedInitFreshCompiler(): Unit = {
+      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      run(mapsMegamorphicPipeline)
+   }
+
+   @Benchmark
+   def filtersMegamorphicStagedWithInit(): Int = {
+      val filtersMegamorphicS = run(filtersMegamorphicPipeline)
+      val res: Int = filtersMegamorphicS(v)
+      res
+   }
+
+   @Benchmark
+   def filtersMegamorphicMacroExpanded(): Int = {
+      val res: Int = filtersMegamorphicMacro(v)
+      res
+   }
+
+   @Benchmark
+   def filtersMegamorphicStagedInit(): Unit = {
+      run(filtersMegamorphicPipeline)
+   }
+
+   @Benchmark
+   def filtersMegamorphicStagedInitFreshCompiler(): Unit = {
+      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      run(filtersMegamorphicPipeline)
    }
 
    @Benchmark
@@ -270,6 +324,30 @@ class StrymonasWithCompilation {
       given Toolbox = Toolbox.make(getClass.getClassLoader)
       run(zipFlatFlatPipeline)
    }
+
+   @Benchmark
+   def zipFilterFilterMacroExpanded(): Int = {
+      val res: Int = zipFilterFilterMacro(v, vHi)
+      res
+   }
+
+   @Benchmark
+   def zipFilterFilterStagedWithInit(): Int = {
+      val zipFilterFilterS = run(zipFilterFilterPipeline)
+      val res: Int = zipFilterFilterS(v, vHi)
+      res
+   }
+
+   @Benchmark
+   def zipFilterFilterStagedInit(): Unit = {
+      run(zipFilterFilterPipeline)
+   }
+
+   @Benchmark
+   def zipFilterFilterStagedInitFreshCompiler(): Unit = {
+      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      run(zipFilterFilterPipeline)
+   }
 }
 
 object StrymonasWithCompilation {
@@ -277,9 +355,12 @@ object StrymonasWithCompilation {
   inline def sumOfSquaresMacro: Array[Int] => Int = ${TestPipelines.sumOfSquaresPipeline}
   inline def sumOfSquaresEvenMacro: Array[Int] => Int = ${TestPipelines.sumOfSquaresEvenPipeline}
   inline def cartMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.cartPipeline}
+  inline def mapsMegamorphicMacro: Array[Int] => Int = ${TestPipelines.mapsMegamorphicPipeline}
+  inline def filtersMegamorphicMacro: Array[Int] => Int = ${TestPipelines.filtersMegamorphicPipeline}
   inline def dotProductMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.dotProductPipeline}
   inline def flatMapAfterZipMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.flatMapAfterZipPipeline}
   inline def zipAfterFlatMapMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipAfterFlatMapPipeline}
   inline def flatMapTakeMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.flatMapTakePipeline}
   inline def zipFlatFlatMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipFlatFlatPipeline}
-}
+  inline def zipFilterFilterMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipFlatFlatPipeline}
+} 

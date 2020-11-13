@@ -37,22 +37,29 @@ class Strymonas {
       sumOfSquaresS = run(sumOfSquaresPipeline)
       sumOfSquaresEvenS = run(sumOfSquaresEvenPipeline)
       cartS = run(cartPipeline)
+      mapsMegamorphicS = run(mapsMegamorphicPipeline)
+      filtersMegamorphicS = run(filtersMegamorphicPipeline)
       dotProductS = run(dotProductPipeline)
       flatMapTakeS = run(flatMapTakePipeline)
       flatMapAfterZipS = run(flatMapAfterZipPipeline)
       zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
       zipFlatFlatS = run(zipFlatFlatPipeline)
+      zipFilterFilterS = run(zipFilterFilterPipeline)
+
    }
 
    var sumS                 : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var sumOfSquaresS        : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var sumOfSquaresEvenS    : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var cartS                : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var mapsMegamorphicS     : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
+   var filtersMegamorphicS  : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
    var dotProductS          : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var flatMapTakeS        : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var flatMapAfterZipS   : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipAfterFlatMapS   : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipFlatFlatS       : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var flatMapTakeS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var flatMapAfterZipS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipAfterFlatMapS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipFlatFlatS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipFilterFilterS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
 
    @Benchmark
    def sum(): Int = {
@@ -75,6 +82,18 @@ class Strymonas {
    @Benchmark
    def cart(): Int = {
       val res: Int = cartS(vHi, vLo)
+      res
+   }
+
+   @Benchmark
+   def mapsMegamorphic(): Int = {
+      val res: Int = mapsMegamorphicS(v)
+      res
+   }
+
+   @Benchmark
+   def filtersMegamorphic(): Int = {
+      val res: Int = filtersMegamorphicS(v)
       res
    }
 
@@ -105,6 +124,12 @@ class Strymonas {
    @Benchmark
    def zipFlatFlat(): Int = {
       val res: Int = zipFlatFlatS(v, vLo)
+      res
+   }
+
+   @Benchmark
+   def zipFilterFilter(): Int = {
+      val res: Int = zipFilterFilterS(v, vHi)
       res
    }
 }
