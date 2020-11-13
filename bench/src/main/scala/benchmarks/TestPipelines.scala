@@ -58,7 +58,7 @@ object TestPipelines {
          .filter((a) => a > int(6))
          .filter((a) => a > int(7))
          .fold(int(0), _+_) }
-   }
+   } 
 
    def filterPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
       ${ Stream.of('{array})
@@ -108,8 +108,8 @@ object TestPipelines {
    }
 
    def zipFilterFilterPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1}).filter((d) => x > int(7))
-      .zipWith[Int, Int](_+_,  Stream.of('{array1}).filter((d) => x > int(5)))
-      .fold(int(0), _+_) }
+      ${ Stream.of('{array1}).filter((d) => d > int(7))
+      .zipWith[Int, Int](_+_,  Stream.of('{array1}).filter((d) => d > int(5)))
+      .fold(int(0), _+_) } 
    }
 }
