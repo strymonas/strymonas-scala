@@ -63,73 +63,73 @@ class ScalaStrymonas {
 
    @Benchmark
    def sum(): Int = {
-      val res: Int = sumS(v)
-      res
+      val ret: Int = sumS(v)
+      ret
    }
 
    @Benchmark
    def sumOfSquares(): Int = {
-      val res: Int = sumOfSquaresS(v)
-      res
+      val ret: Int = sumOfSquaresS(v)
+      ret
    }
 
    @Benchmark
    def sumOfSquaresEven(): Int = {
-      val res: Int = sumOfSquaresEvenS(v)
-      res
+      val ret: Int = sumOfSquaresEvenS(v)
+      ret
    }
 
    @Benchmark
    def cart(): Int = {
-      val res: Int = cartS(vHi, vLo)
-      res
+      val ret: Int = cartS(vHi, vLo)
+      ret
    }
 
    @Benchmark
    def mapsMegamorphic(): Int = {
-      val res: Int = mapsMegamorphicS(v)
-      res
+      val ret: Int = mapsMegamorphicS(v)
+      ret
    }
 
    @Benchmark
    def filtersMegamorphic(): Int = {
-      val res: Int = filtersMegamorphicS(v)
-      res
+      val ret: Int = filtersMegamorphicS(v)
+      ret
    }
 
    @Benchmark
    def dotProduct(): Int = {
-      val res: Int = dotProductS(vHi, vHi)
-      res
+      val ret: Int = dotProductS(vHi, vHi)
+      ret
    }
 
    @Benchmark
    def flatMapAfterZip(): Int = {
-      val res: Int = flatMapAfterZipS(vFaZ, vFaZ)
-      res
+      val ret: Int = flatMapAfterZipS(vFaZ, vFaZ)
+      ret
    }
 
    @Benchmark
    def zipAfterFlatMap(): Int = {
-      val res: Int = zipAfterFlatMapS(vZaF, vZaF)
-      res
+      val ret: Int = zipAfterFlatMapS(vZaF, vZaF)
+      ret
    }
 
    @Benchmark
    def flatMapTake(): Int = {
-      val res: Int = flatMapTakeS(v, vLo)
-      res
+      val ret: Int = flatMapTakeS(v, vLo)
+      ret
    }
 
    @Benchmark
    def zipFlatFlat(): Int = {
-      val res: Int = zipFlatFlatS(v, vLo)
-      res
+      val ret: Int = zipFlatFlatS(v, vLo)
+      ret
    }
 
    @Benchmark
    def zipFilterFilter(): Int = {
-      val res: Int = zipFilterFilterS(v, vHi)
-      res
+      val ret: Int = zipFilterFilterS(v, vHi)
+      ret
    }
 }

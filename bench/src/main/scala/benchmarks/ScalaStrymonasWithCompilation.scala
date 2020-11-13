@@ -64,14 +64,14 @@ class ScalaStrymonasWithCompilation {
    @Benchmark
    def sumStagedWithInit(): Int = {
       val sumS = run(sumPipeline)
-      val res: Int = sumS(v)
-      res
+      val ret: Int = sumS(v)
+      ret
    }
 
    @Benchmark
    def sumMacroExpanded(): Int = {
-      val res: Int = sumMacro(v)
-      res
+      val ret: Int = sumMacro(v)
+      ret
    }
 
    @Benchmark
@@ -83,19 +83,19 @@ class ScalaStrymonasWithCompilation {
    def sumStagedInitFreshCompiler(): Unit = {
       given Toolbox = Toolbox.make(getClass.getClassLoader)
       run(sumPipeline)
-   }
+   } 
 
    @Benchmark
    def sumOfSquaresMacroExpanded(): Int = {
-      val res: Int = sumOfSquaresMacro(v)
-      res
+      val ret: Int = sumOfSquaresMacro(v)
+      ret
    }
 
    @Benchmark
    def sumOfSquaresStagedWithInit(): Int = {
       val sumOfSquaresS = run(sumOfSquaresPipeline)
-      val res: Int = sumOfSquaresS(v)
-      res
+      val ret: Int = sumOfSquaresS(v)
+      ret
    }
 
    @Benchmark
@@ -111,15 +111,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def sumOfSquaresEvenMacroExpanded(): Int = {
-      val res: Int = sumOfSquaresEvenMacro(v)
-      res
+      val ret: Int = sumOfSquaresEvenMacro(v)
+      ret
    }
 
    @Benchmark
    def sumOfSquaresEvenStagedWithInit(): Int = {
       val sumOfSquaresEvenS = run(sumOfSquaresEvenPipeline)
-      val res: Int = sumOfSquaresEvenS(v)
-      res
+      val ret: Int = sumOfSquaresEvenS(v)
+      ret
    }
 
    @Benchmark
@@ -135,15 +135,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def cart_stagedMacroExpanded(): Int = {
-      val res: Int = cartMacro(vHi, vLo)
-      res
+      val ret: Int = cartMacro(vHi, vLo)
+      ret
    }
 
    @Benchmark
    def cartStagedWithInit(): Int = {
       val cartS = run(cartPipeline)
-      val res: Int = cartS(vHi, vLo)
-      res
+      val ret: Int = cartS(vHi, vLo)
+      ret
    }
 
    @Benchmark
@@ -160,14 +160,14 @@ class ScalaStrymonasWithCompilation {
    @Benchmark
    def mapsMegamorphicStagedWithInit(): Int = {
       val mapsMegamorphicS = run(mapsMegamorphicPipeline)
-      val res: Int = mapsMegamorphicS(v)
-      res
+      val ret: Int = mapsMegamorphicS(v)
+      ret
    }
 
    @Benchmark
    def mapsMegamorphicMacroExpanded(): Int = {
-      val res: Int = mapsMegamorphicMacro(v)
-      res
+      val ret: Int = mapsMegamorphicMacro(v)
+      ret
    }
 
    @Benchmark
@@ -184,14 +184,14 @@ class ScalaStrymonasWithCompilation {
    @Benchmark
    def filtersMegamorphicStagedWithInit(): Int = {
       val filtersMegamorphicS = run(filtersMegamorphicPipeline)
-      val res: Int = filtersMegamorphicS(v)
-      res
+      val ret: Int = filtersMegamorphicS(v)
+      ret
    }
 
    @Benchmark
    def filtersMegamorphicMacroExpanded(): Int = {
-      val res: Int = filtersMegamorphicMacro(v)
-      res
+      val ret: Int = filtersMegamorphicMacro(v)
+      ret
    }
 
    @Benchmark
@@ -207,15 +207,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def dotProductMacroExpanded(): Int = {
-      val res: Int = dotProductMacro(vHi, vHi)
-      res
+      val ret: Int = dotProductMacro(vHi, vHi)
+      ret
    }
 
    @Benchmark
    def dotProductStagedWithInit(): Int = {
       val dotProductS = run(dotProductPipeline)
-      val res: Int = dotProductS(vHi, vHi)
-      res
+      val ret: Int = dotProductS(vHi, vHi)
+      ret
    }
 
    @Benchmark
@@ -231,15 +231,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def flatMapAfterZipMacroExpanded(): Int = {
-      val res: Int = flatMapAfterZipMacro(vFaZ, vFaZ)
-      res
+      val ret: Int = flatMapAfterZipMacro(vFaZ, vFaZ)
+      ret
    }
 
    @Benchmark
    def flatMapAfterZipStagedWithInit(): Int = {
       val flatMapAfterZipS = run(flatMapAfterZipPipeline)
-      val res: Int = flatMapAfterZipS(vFaZ, vFaZ)
-      res
+      val ret: Int = flatMapAfterZipS(vFaZ, vFaZ)
+      ret
    }
 
    @Benchmark
@@ -255,15 +255,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def zipAfterFlatMapMacroExpanded(): Int = {
-      val res: Int = zipAfterFlatMapMacro(vZaF, vZaF)
-      res
+      val ret: Int = zipAfterFlatMapMacro(vZaF, vZaF)
+      ret
    }
 
    @Benchmark
    def zipAfterFlatMapStagedWithInit(): Int = {
       val zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
-      val res: Int = zipAfterFlatMapS(vZaF, vZaF)
-      res
+      val ret: Int = zipAfterFlatMapS(vZaF, vZaF)
+      ret
    }
 
    @Benchmark
@@ -279,15 +279,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def flatMapTakeMacroExpanded(): Int = {
-      val res: Int = flatMapTakeMacro(v, vLo)
-      res
+      val ret: Int = flatMapTakeMacro(v, vLo)
+      ret
    }
 
    @Benchmark
    def flatMapTakeStagedWithInit(): Int = {
       val flatMapTakeS = run(flatMapTakePipeline)
-      val res: Int = flatMapTakeS(v, vLo)
-      res
+      val ret: Int = flatMapTakeS(v, vLo)
+      ret
    }
 
    @Benchmark
@@ -303,15 +303,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def zipFlatFlatMacroExpanded(): Int = {
-      val res: Int = zipFlatFlatMacro(v, vLo)
-      res
+      val ret: Int = zipFlatFlatMacro(v, vLo)
+      ret
    }
 
    @Benchmark
    def zipFlatFlatStagedWithInit(): Int = {
       val zipFlatFlatS = run(zipFlatFlatPipeline)
-      val res: Int = zipFlatFlatS(v, vLo)
-      res
+      val ret: Int = zipFlatFlatS(v, vLo)
+      ret
    }
 
    @Benchmark
@@ -327,15 +327,15 @@ class ScalaStrymonasWithCompilation {
 
    @Benchmark
    def zipFilterFilterMacroExpanded(): Int = {
-      val res: Int = zipFilterFilterMacro(v, vHi)
-      res
+      val ret: Int = zipFilterFilterMacro(v, vHi)
+      ret
    }
 
    @Benchmark
    def zipFilterFilterStagedWithInit(): Int = {
       val zipFilterFilterS = run(zipFilterFilterPipeline)
-      val res: Int = zipFilterFilterS(v, vHi)
-      res
+      val ret: Int = zipFilterFilterS(v, vHi)
+      ret
    }
 
    @Benchmark

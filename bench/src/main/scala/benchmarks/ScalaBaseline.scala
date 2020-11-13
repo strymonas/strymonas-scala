@@ -36,106 +36,106 @@ class ScalaBaseline {
    @Benchmark
    def sum () : Int = {
       var i=0
-      var sum=0
+      var ret=0
       while (i < v.length) {
-         sum += v(i)
+         ret += v(i)
          i += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def sumOfSquarses () : Int = {
       var i=0
-      var sum=0
+      var ret=0
       while (i < v.length) {
-         sum += v(i) * v(i)
+         ret += v(i) * v(i)
          i += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def sumOfSquaresEven () : Int = {
       var i=0
-      var sum=0
+      var ret=0
       while (i < v.length) {
          if (v(i) % 2 == 0)
-         sum += v(i) * v(i)
+         ret += v(i) * v(i)
          i += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def cart () : Int = {
       var d, dp=0
-      var sum=0
+      var ret=0
       while (d < vHi.length) {
          dp = 0
          while (dp < vLo.length) {
-            sum += vHi(d) * vLo(dp)
+            ret += vHi(d) * vLo(dp)
             dp +=1
          }
          d += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def filtersMegamorphic () : Int = {
       var i=0
-      var sum=0
+      var ret=0
       while (i < v.length) {
          if (v(i) > 1 && v(i) > 2 && v(i) > 3 && v(i) > 4 && v(i) > 5 && v(i) > 6 && v(i) > 7)
-         sum += v(i)
+         ret += v(i)
          i += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def mapsMegamorphic () : Int = {
       var i=0
-      var sum=0
+      var ret=0
       while (i < v.length) {
-         sum += v(i) * 1*2*3*4*5*6*7
+         ret += v(i) * 1*2*3*4*5*6*7
          i += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def dotProduct () : Int = {
       var counter = 0
-      var sum = 0
+      var ret = 0
       while (counter < vHi.length) {
-         sum += vHi(counter) * vHi(counter)
+         ret += vHi(counter) * vHi(counter)
          counter += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def flatMapAfterZipWith () : Int = {
       var counter1 = 0
-      var sum = 0
+      var ret = 0
       while (counter1 < vFaZ.length) {
          val item1 = vFaZ(counter1) + vFaZ(counter1)
          var counter2 = 0
          while (counter2 < vFaZ.length) {
             val item2 = vFaZ(counter2)
-            sum +=  item2 + item1
+            ret +=  item2 + item1
             counter2 += 1
          }
          counter1 += 1
       }
-      sum
+      ret
    }
 
    @Benchmark
    def zipWithAfterFlatMap () : Int = {
-      var sum = 0
+      var ret = 0
       var index1 =  0
       var index2 =  0
       var flag1 = (index1 <= vZaF.length - 1)
@@ -149,17 +149,17 @@ class ScalaBaseline {
             var elz =  vZaF(index1)
             index1 += 1
             flag1 = (index1 <= vZaF.length - 1);
-            sum = sum + elz + el1 + el2
+            ret = ret + elz + el1 + el2
          }
       }
-      sum
+      ret
    }
 
    @Benchmark
    def flatMapTake () : Int = {
       var counter1 = 0
       var counter2 = 0
-      var sum = 0
+      var ret = 0
       var n = 0
       var flag = true
       val size1 = v.length
@@ -168,7 +168,7 @@ class ScalaBaseline {
          val item1 = v(counter1)
          while (counter2 < size2 && flag) {
            val item2 = vLo(counter2)
-           sum = sum + item1 * item2
+           ret = ret + item1 * item2
            counter2 += 1
            n += 1
            if (n == 20000000)
@@ -177,7 +177,7 @@ class ScalaBaseline {
          counter2 = 0
          counter1 += 1
       }
-      sum
+      ret
    }
 
    // @Benchmark
