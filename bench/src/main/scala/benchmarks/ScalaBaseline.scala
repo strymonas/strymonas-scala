@@ -35,7 +35,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def sum () : Int = {
+   def sum(): Int = {
       var i=0
       var ret=0
       while (i < v.length) {
@@ -46,7 +46,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def sumOfSquarses () : Int = {
+   def sumOfSquarses(): Int = {
       var i=0
       var ret=0
       while (i < v.length) {
@@ -57,7 +57,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def sumOfSquaresEven () : Int = {
+   def sumOfSquaresEven(): Int = {
       var i=0
       var ret=0
       while (i < v.length) {
@@ -69,7 +69,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def cart () : Int = {
+   def cart(): Int = {
       var d, dp=0
       var ret=0
       while (d < vHi.length) {
@@ -84,7 +84,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def filtersMegamorphic () : Int = {
+   def filtersMegamorphic(): Int = {
       var i=0
       var ret=0
       while (i < v.length) {
@@ -96,7 +96,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def mapsMegamorphic () : Int = {
+   def mapsMegamorphic(): Int = {
       var i=0
       var ret=0
       while (i < v.length) {
@@ -107,7 +107,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def dotProduct () : Int = {
+   def dotProduct(): Int = {
       var counter = 0
       var ret = 0
       while (counter < vHi.length) {
@@ -118,7 +118,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def flatMapAfterZipWith () : Int = {
+   def flatMapAfterZip(): Int = {
       var counter1 = 0
       var ret = 0
       while (counter1 < vFaZ.length) {
@@ -135,7 +135,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def zipWithAfterFlatMap () : Int = {
+   def zipAfterFlatMap(): Int = {
       var ret = 0
       var index1 =  0
       var index2 =  0
@@ -157,7 +157,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def flatMapTake () : Int = {
+   def flatMapTake(): Int = {
       var counter1 = 0
       var counter2 = 0
       var ret = 0
@@ -182,12 +182,12 @@ class ScalaBaseline {
    }
 
    // @Benchmark
-   // def zipFlatMapFlatMap () : Int = {
+   // def zipFlatMapFlatMap(): Int = {
    //    ??? // TODO
    // }
 
    // @Benchmark
-   // def zipFilterFilter () : Int = {
+   // def zipFilterFilter(): Int = {
    //    ??? // TODO
    // }
 }
