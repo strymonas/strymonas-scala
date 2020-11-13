@@ -1,4 +1,4 @@
-package microbenchmarks
+package benchmarks
 
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.Scope
@@ -15,22 +15,23 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Thread)
 @Fork(1)
 class ScalaBaseline {
+   import Settings._
 
-   var N : Int = _
-   var v : Array[Int] = _
-   var vHi : Array[Int] = _
-   var vLo : Array[Int] = _
-   var vFaZ : Array[Int] = _
-   var vZaF : Array[Int] = _
+   var v      : Array[Int] = _
+   var vHi    : Array[Int] = _
+   var vLo    : Array[Int] = _
+   var vFaZ   : Array[Int] = _
+   var vZaF   : Array[Int] = _
+   var vLimit : Int = _ 
 
    @Setup
    def prepare() : Unit = {
-      N = 100000000
-      v          = Array.tabulate(N)(i => i.toInt % 10)
-      vHi        = Array.tabulate(10000000)(i => i.toInt % 10)
-      vLo        = Array.tabulate(10)(i => i.toInt % 10)
-      vFaZ       = Array.tabulate(10000)(_.toInt)
-      vZaF       = Array.tabulate(10000000)(_.toInt)
+      v          = Array.tabulate(v_s)(i => i.toInt % 10)
+      vHi        = Array.tabulate(vHi_s)(i => i.toInt % 10)
+      vLo        = Array.tabulate(vLo_s)(i => i.toInt % 10)
+      vFaZ       = Array.tabulate(vFaZ_s)(_.toInt)
+      vZaF       = Array.tabulate(vZaF_s)(_.toInt)
+      vLimit     = vLimit_s
    }
 
    @Benchmark
@@ -171,7 +172,7 @@ class ScalaBaseline {
            ret = ret + item1 * item2
            counter2 += 1
            n += 1
-           if (n == 20000000)
+           if (n == vLimit_s)
              flag = false
          }
          counter2 = 0

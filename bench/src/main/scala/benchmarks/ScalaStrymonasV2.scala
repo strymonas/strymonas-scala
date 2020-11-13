@@ -13,25 +13,26 @@ import scala.collection.mutable.ArrayBuffer
 @Measurement(iterations = 30)
 @Warmup(30)
 @Fork(3)
-class ScalaStrymonas {
+class ScalaStrymonasV2 {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
    import TestPipelines._
+   import Settings._
 
-   var N: Int = 100000000
-
-   var v: Array[Int] = _
-   var vHi: Array[Int] = _
-   var vLo: Array[Int] = _
-   var vFaZ: Array[Int] = _
-   var vZaF: Array[Int] = _
+   var v      : Array[Int] = _
+   var vHi    : Array[Int] = _
+   var vLo    : Array[Int] = _
+   var vFaZ   : Array[Int] = _
+   var vZaF   : Array[Int] = _
+   var vLimit : Int = _ 
 
    @Setup(Level.Trial)
    def prepare(): Unit = {
-      v          = Array.tabulate(N)(i => i.toInt % 10)
-      vHi        = Array.tabulate(10000000)(i => i.toInt % 10)
-      vLo        = Array.tabulate(10)(i => i.toInt % 10)
-      vFaZ       = Array.tabulate(10000)(_.toInt)
-      vZaF       = Array.tabulate(10000000)(_.toInt)
+      v          = Array.tabulate(v_s)(i => i.toInt % 10)
+      vHi        = Array.tabulate(vHi_s)(i => i.toInt % 10)
+      vLo        = Array.tabulate(vLo_s)(i => i.toInt % 10)
+      vFaZ       = Array.tabulate(vFaZ_s)(_.toInt)
+      vZaF       = Array.tabulate(vZaF_s)(_.toInt)
+      vLimit     = vLimit_s
 
       sumS = run(sumPipeline)
       sumOfSquaresS = run(sumOfSquaresPipeline)
@@ -45,7 +46,6 @@ class ScalaStrymonas {
       zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
       zipFlatFlatS = run(zipFlatFlatPipeline)
       zipFilterFilterS = run(zipFilterFilterPipeline)
-
    }
 
    var sumS                 : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]

@@ -7,6 +7,7 @@ import strymonas._
 
 object TestPipelines {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
+   import Settings._
 
    // import strymonas.Code._
    import strymonas.CodePs._
@@ -75,7 +76,7 @@ object TestPipelines {
    def flatMapTakePipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}))
-      .take(int(20000000))
+      .take(int(vLimit_s))
       .fold(int(0), _+_) }
    }
 
@@ -103,7 +104,7 @@ object TestPipelines {
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
       .zipWith[Int, Int](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)) )
-      .take(int(20000000))
+      .take(int(vLimit_s))
       .fold(int(0), _+_) }
    }
 
