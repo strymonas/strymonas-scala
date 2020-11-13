@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 @Measurement(iterations = 30)
 @Warmup(30)
 @Fork(3)
-class Strymonas {
+class ScalaStrymonas {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
    import TestPipelines._
 

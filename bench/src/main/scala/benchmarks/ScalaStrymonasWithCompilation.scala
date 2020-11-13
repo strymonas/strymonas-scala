@@ -13,10 +13,10 @@ import scala.collection.mutable.ArrayBuffer
 @Measurement(iterations = 30)
 @Warmup(30)
 @Fork(3)
-class StrymonasWithCompilation {
+class ScalaStrymonasWithCompilation {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
    import TestPipelines._
-   import StrymonasWithCompilation._
+   import ScalaStrymonasWithCompilation._
 
    var N: Int = 100000000
 
@@ -350,7 +350,7 @@ class StrymonasWithCompilation {
    }
 }
 
-object StrymonasWithCompilation {
+object ScalaStrymonasWithCompilation {
   inline def sumMacro: Array[Int] => Int = ${TestPipelines.sumPipeline }
   inline def sumOfSquaresMacro: Array[Int] => Int = ${TestPipelines.sumOfSquaresPipeline}
   inline def sumOfSquaresEvenMacro: Array[Int] => Int = ${TestPipelines.sumOfSquaresEvenPipeline}
