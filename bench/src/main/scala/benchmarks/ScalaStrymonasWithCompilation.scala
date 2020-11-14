@@ -45,7 +45,7 @@ class ScalaStrymonasWithCompilation {
       flatMapTakeS = run(flatMapTakePipeline)
       flatMapAfterZipS = run(flatMapAfterZipPipeline)
       zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
-      zipFlatFlatS = run(zipFlatFlatPipeline)
+      zipFlatMapFlatMapS = run(zipFlatMapFlatMapPipeline)
       zipFilterFilterS = run(zipFilterFilterPipeline)
    }
 
@@ -59,7 +59,7 @@ class ScalaStrymonasWithCompilation {
    var flatMapTakeS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
    var flatMapAfterZipS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
    var zipAfterFlatMapS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipFlatFlatS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var zipFlatMapFlatMapS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
    var zipFilterFilterS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
 
    @Benchmark
@@ -303,27 +303,27 @@ class ScalaStrymonasWithCompilation {
    }
 
    @Benchmark
-   def zipFlatFlatMacroExpanded(): Int = {
-      val ret: Int = zipFlatFlatMacro(v, vLo)
+   def zipFlatMapFlatMapMacroExpanded(): Int = {
+      val ret: Int = zipFlatMapFlatMapMacro(v, vLo)
       ret
    }
 
    @Benchmark
-   def zipFlatFlatStagedWithInit(): Int = {
-      val zipFlatFlatS = run(zipFlatFlatPipeline)
-      val ret: Int = zipFlatFlatS(v, vLo)
+   def zipFlatMapFlatMapStagedWithInit(): Int = {
+      val zipFlatMapFlatMapS = run(zipFlatMapFlatMapPipeline)
+      val ret: Int = zipFlatMapFlatMapS(v, vLo)
       ret
    }
 
    @Benchmark
-   def zipFlatFlatStagedInit(): Unit = {
-      run(zipFlatFlatPipeline)
+   def zipFlatMapFlatMapStagedInit(): Unit = {
+      run(zipFlatMapFlatMapPipeline)
    }
 
    @Benchmark
-   def zipFlatFlatStagedInitFreshCompiler(): Unit = {
+   def zipFlatMapFlatMapStagedInitFreshCompiler(): Unit = {
       given Toolbox = Toolbox.make(getClass.getClassLoader)
-      run(zipFlatFlatPipeline)
+      run(zipFlatMapFlatMapPipeline)
    }
 
    @Benchmark
@@ -362,6 +362,6 @@ object ScalaStrymonasWithCompilation {
   inline def flatMapAfterZipMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.flatMapAfterZipPipeline}
   inline def zipAfterFlatMapMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipAfterFlatMapPipeline}
   inline def flatMapTakeMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.flatMapTakePipeline}
-  inline def zipFlatFlatMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipFlatFlatPipeline}
-  inline def zipFilterFilterMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipFlatFlatPipeline}
+  inline def zipFlatMapFlatMapMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipFlatMapFlatMapPipeline}
+  inline def zipFilterFilterMacro: (Array[Int], Array[Int]) => Int = ${TestPipelines.zipFlatMapFlatMapPipeline}
 } 

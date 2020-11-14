@@ -100,7 +100,7 @@ object TestPipelines {
       .fold(int(0), _+_) }
    }
 
-   def zipFlatFlatPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
+   def zipFlatMapFlatMapPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
       .zipWith[Int, Int](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)) )
