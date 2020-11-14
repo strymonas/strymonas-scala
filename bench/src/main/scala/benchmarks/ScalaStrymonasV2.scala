@@ -44,7 +44,7 @@ class ScalaStrymonasV2 {
       flatMapTakeS = run(flatMapTakePipeline)
       flatMapAfterZipS = run(flatMapAfterZipPipeline)
       zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
-      zipFlatFlatS = run(zipFlatFlatPipeline)
+      zipFlatFlatS = run(zipFlatMapFlatMapPipeline)
       zipFilterFilterS = run(zipFilterFilterPipeline)
    }
 
@@ -122,7 +122,7 @@ class ScalaStrymonasV2 {
    }
 
    @Benchmark
-   def zipFlatFlat(): Int = {
+   def zipFlatMapFlatMap(): Int = {
       val ret: Int = zipFlatFlatS(v, vLo)
       ret
    }

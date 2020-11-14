@@ -181,13 +181,65 @@ class ScalaBaseline {
       ret
    }
 
-   // @Benchmark
-   // def zipFlatMapFlatMap(): Int = {
-   //    ??? // TODO
-   // }
+   @Benchmark
+   def zipFlatMapFlatMap(): Int = {
+      val arr1 = v
+      val arr2 = vLo
+      var index11 = 0
+      var index12 = 0
+      var index21 = 0
+      var index22 = 0
+      var ret = 0
+      var taken = 0
+      val toTake = vLimit
+      val size1 = arr1.length
+      val size2 = arr2.length
+      var goon = true
+      while(index11 < size1 && taken < toTake && goon) {
+         index12 = 0
+         while(index12 < size2 && taken < toTake && goon) {
+            val el1 = arr1(index11) * arr2(index12)
+            if(index22 > size1) {
+               index21 += 1 
+               index22 = 0
+            }
+            if(index21 >= size2) {
+               goon = false
+            }
+            else {
+               if(index22 < size1){
+                  ret = ret + el1 + arr2(index21) - arr1(index22);
+                  taken += 1 
+                  index22 += 1 
+               }
+            }
+            index12 += 1 
+         }
+         index11 += 1 
+      }
+      ret
+   }
 
-   // @Benchmark
-   // def zipFilterFilter(): Int = {
-   //    ??? // TODO
-   // }
+   @Benchmark
+   def zipFilterFilter(): Int = {
+      var ret = 0
+      var counter1 = 0
+      var counter2 = 0
+      val arr1 = v
+      val arr2 = vHi
+      while (counter1 < arr1.length && counter2 < arr2.length) {
+         while(!(arr1(counter1) > 7 && arr1(counter1) < arr1.length)) {
+            counter1 += 1
+         }
+         if(counter1 < arr1.length){
+            val item2 = arr2(counter2)
+            if(item2 > 5) {
+               ret = ret + arr1(counter1) + item2
+               counter1 += 1
+            }
+            counter2 += 1
+         }
+      }
+      ret
+   }
 }
