@@ -75,10 +75,10 @@ class Stream[A: Type](val stream: StreamShape[Cde[A]]) {
          Stream(shape)
    }
 
-   def drop(n: Cde[Int])(using QuoteContext): Stream[A] = {
+   def drop(n: Cde[Long])(using QuoteContext): Stream[A] = {
       val shape: StreamShape[Cde[A]] =
          mkInitVar(n, z =>
-            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), stream)
+            filterRaw (e => (dref(z) <= long(0)) || seq(long_decr(z), bool(false)), stream)
          )
       Stream(shape)
    }
@@ -119,7 +119,7 @@ object Stream {
 
    def fromTo(a: Cde[Int], b: Cde[Int], step: Int = 1)(using QuoteContext): Stream[Int] = {
       val shape = 
-         if step == 1 then mkPullArray[Cde[Int]](b - a, (e => (k: Cde[Int] => Cde[Unit]) => letl(e+a)(k))) else
+         if step == 1 then mkPullArray[Cde[Int]](b - a, (e => (k: Cde[Int] => Cde[Unit]) => letl(e + a)(k))) else
          mkInitVar[Int, Cde[Int]](a, z =>
          guard[Cde[Int]](GExp(if (step >= 0) then (dref(z) <= b) else (dref(z) >= b)),
             infinite(k => 

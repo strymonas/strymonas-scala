@@ -119,12 +119,11 @@ object CodePs extends Cde {
       }
    }
 
-   // Numbers
+   // Int
    def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), Code.int(c1))
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.min(y))(int)(Code.imin)(c1, c2)
    def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2((x: Int, y: Int) => x.max(y))(int)(Code.imax)(c1, c2)
 
-   // cut corners
    def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_+_)(int)(Code.add)(c1, c2)
    def sub(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_-_)(int)(Code.sub)(c1, c2)
    def mul(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_*_)(int)(Code.mul)(c1, c2)
@@ -136,6 +135,23 @@ object CodePs extends Cde {
    def leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_<=_)(bool)(Code.leq)(c1, c2)
    def geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = lift2[Int, Int, Boolean](_>=_)(bool)(Code.geq)(c1, c2)
    def eq_temp(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = lift2[Int, Int, Boolean](_==_)(bool)(Code.eq_temp)(c1, c2)
+
+   // Long
+   def long(c1: Long)(using QuoteContext): Cde[Long] = Cde(Annot.Sta(c1), Code.long(c1))
+   def long_imin(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = lift2((x: Long, y: Long) => x.min(y))(long)(Code.long_imin)(c1, c2)
+   def long_imax(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = lift2((x: Long, y: Long) => x.max(y))(long)(Code.long_imax)(c1, c2)
+
+   def long_add(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_+_)(long)(Code.long_add)(c1, c2)
+   def long_sub(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_-_)(long)(Code.long_sub)(c1, c2)
+   def long_mul(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_*_)(long)(Code.long_mul)(c1, c2)
+   def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_/_)(long)(Code.long_div)(c1, c2)
+   def long_modf(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = lift2[Long, Long, Long](_%_)(long)(Code.long_modf)(c1, c2)
+
+   def long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):      Cde[Boolean] = lift2[Long, Long, Boolean](_<_)(bool)(Code.long_lt)(c1, c2)
+   def long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):      Cde[Boolean] = lift2[Long, Long, Boolean](_>_)(bool)(Code.long_gt)(c1, c2)
+   def long_leq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = lift2[Long, Long, Boolean](_<=_)(bool)(Code.long_leq)(c1, c2)
+   def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = lift2[Long, Long, Boolean](_>=_)(bool)(Code.long_geq)(c1, c2)
+   def long_eq_temp(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean] = lift2[Long, Long, Boolean](_==_)(bool)(Code.long_eq_temp)(c1, c2)
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A] = {
@@ -185,6 +201,9 @@ object CodePs extends Cde {
    def dref[A](x: Var[A])(using QuoteContext): Cde[A]    = injCde(Code.dref(dynVar(x)))
    def incr(i: Var[Int])(using QuoteContext):  Cde[Unit] = injCde(Code.incr(dynVar(i)))
    def decr(i: Var[Int])(using QuoteContext):  Cde[Unit] = injCde(Code.decr(dynVar(i)))
+
+   def long_incr(i: Var[Long])(using QuoteContext):  Cde[Unit] = injCde(Code.long_incr(dynVar(i)))
+   def long_decr(i: Var[Long])(using QuoteContext):  Cde[Unit] = injCde(Code.long_decr(dynVar(i)))
 
    // Arrays
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])
