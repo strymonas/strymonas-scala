@@ -13,104 +13,104 @@ object TestPipelines {
    import strymonas.CodePs._
    import scala.language.implicitConversions
 
-   def sumPipeline(using QuoteContext) = '{ (array: Array[Int]) => 
+   def sumPipeline(using QuoteContext) = '{ (array: Array[Long]) => 
       ${ Stream.of('{array})
-         .fold(int(0), _+_) } 
+         .fold(long(0), _+_) } 
    }
 
-   def sumOfSquaresPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+   def sumOfSquaresPipeline(using QuoteContext) = '{ (array: Array[Long]) =>
       ${ Stream.of('{array})
          .map((a) => a * a)
-         .fold(int(0), _+_) }
+         .fold(long(0), _+_) }
    }
 
-   def sumOfSquaresEvenPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+   def sumOfSquaresEvenPipeline(using QuoteContext) = '{ (array: Array[Long]) =>
       ${ Stream.of('{array})
-      .filter(d => (d mod int(2)) === int(0))
+      .filter(d => (d mod long(2)) === long(0))
       .map((a) => a * a )
-      .fold(int(0), _+_) }
+      .fold(long(0), _+_) }
    }
 
-   def cartPipeline(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
+   def cartPipeline(using QuoteContext) = '{ (vHi: Array[Long], vLo: Array[Long]) =>
       ${ Stream.of('{vHi})
       .flatMap((d) => Stream.of('{vLo}).map((dp) => d * dp))
-      .fold(int(0), _+_) }
+      .fold(long(0), _+_) }
    }
 
-   def mapsMegamorphicPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+   def mapsMegamorphicPipeline(using QuoteContext) = '{ (array: Array[Long]) =>
       ${ Stream.of('{array})
-         .map((a) => a * int(1))
-         .map((a) => a * int(2))
-         .map((a) => a * int(3))
-         .map((a) => a * int(4))
-         .map((a) => a * int(5))
-         .map((a) => a * int(6))
-         .map((a) => a * int(7))
-         .fold(int(0), _+_) }
+         .map((a) => a * long(1))
+         .map((a) => a * long(2))
+         .map((a) => a * long(3))
+         .map((a) => a * long(4))
+         .map((a) => a * long(5))
+         .map((a) => a * long(6))
+         .map((a) => a * long(7))
+         .fold(long(0), _+_) }
    }
 
-   def filtersMegamorphicPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+   def filtersMegamorphicPipeline(using QuoteContext) = '{ (array: Array[Long]) =>
       ${ Stream.of('{array})
-         .filter((a) => a > int(1))
-         .filter((a) => a > int(2))
-         .filter((a) => a > int(3))
-         .filter((a) => a > int(4))
-         .filter((a) => a > int(5))
-         .filter((a) => a > int(6))
-         .filter((a) => a > int(7))
-         .fold(int(0), _+_) }
+         .filter((a) => a > long(1))
+         .filter((a) => a > long(2))
+         .filter((a) => a > long(3))
+         .filter((a) => a > long(4))
+         .filter((a) => a > long(5))
+         .filter((a) => a > long(6))
+         .filter((a) => a > long(7))
+         .fold(long(0), _+_) }
    } 
 
-   def filterPipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+   def filterPipeline(using QuoteContext) = '{ (array: Array[Long]) =>
       ${ Stream.of('{array})
-      .filter(d => (d mod int(2)) === int(0))
-      .fold(int(0), _+_) }
+      .filter(d => (d mod long(2)) === long(0))
+      .fold(long(0), _+_) }
    }
 
-   def takePipeline(using QuoteContext) = '{ (array: Array[Int]) =>
+   def takePipeline(using QuoteContext) = '{ (array: Array[Long]) =>
       ${ Stream.of('{array})
       .take(int(2))
-      .fold(int(0), _+_) }
+      .fold(long(0), _+_) }
    }
 
-   def flatMapTakePipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
+   def flatMapTakePipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}))
       .take(int(vLimit_s))
-      .fold(int(0), _+_) }
+      .fold(long(0), _+_) }
    }
 
-   def dotProductPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
+   def dotProductPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long])  =>
       ${ Stream.of('{array1})
-      .zipWith[Int, Int](_+_, Stream.of('{array2}))
-      .fold(int(0), _+_) }
+      .zipWith[Long, Long](_+_, Stream.of('{array2}))
+      .fold(long(0), _+_) }
    }
 
-   def flatMapAfterZipPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
+   def flatMapAfterZipPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
       ${ Stream.of('{array1})
-      .zipWith[Int, Int](_+_, Stream.of('{array1}))
+      .zipWith[Long, Long](_+_, Stream.of('{array1}))
       .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-      .fold(int(0), _+_) }
+      .fold(long(0), _+_) }
    }
 
-   def zipAfterFlatMapPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1})
-      .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-      .zipWith[Int, Int](_+_, Stream.of('{array1}) )
-      .fold(int(0), _+_) }
-   }
-
-   def zipFlatMapFlatMapPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
+   def zipAfterFlatMapPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
       ${ Stream.of('{array1})
       .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-      .zipWith[Int, Int](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)) )
+      .zipWith[Long, Long](_+_, Stream.of('{array1}) )
+      .fold(long(0), _+_) }
+   }
+
+   def zipFlatMapFlatMapPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Stream.of('{array1})
+      .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
+      .zipWith[Long, Long](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)) )
       .take(int(vLimit_s))
-      .fold(int(0), _+_) }
+      .fold(long(0), _+_) }
    }
 
-   def zipFilterFilterPipeline(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1}).filter((d) => d > int(7))
-      .zipWith[Int, Int](_+_,  Stream.of('{array1}).filter((d) => d > int(5)))
-      .fold(int(0), _+_) } 
+   def zipFilterFilterPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Stream.of('{array1}).filter((d) => d > long(7))
+      .zipWith[Long, Long](_+_,  Stream.of('{array1}).filter((d) => d > long(5)))
+      .fold(long(0), _+_) } 
    }
 }

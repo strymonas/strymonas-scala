@@ -17,27 +17,27 @@ import java.util.concurrent.TimeUnit
 class ScalaBaseline {
    import Settings._
 
-   var v      : Array[Int] = _
-   var vHi    : Array[Int] = _
-   var vLo    : Array[Int] = _
-   var vFaZ   : Array[Int] = _
-   var vZaF   : Array[Int] = _
+   var v      : Array[Long] = _
+   var vHi    : Array[Long] = _
+   var vLo    : Array[Long] = _
+   var vFaZ   : Array[Long] = _
+   var vZaF   : Array[Long] = _
    var vLimit : Int = _ 
 
    @Setup
    def prepare() : Unit = {
-      v          = Array.tabulate(v_s)(i => i.toInt % 10)
-      vHi        = Array.tabulate(vHi_s)(i => i.toInt % 10)
-      vLo        = Array.tabulate(vLo_s)(i => i.toInt % 10)
-      vFaZ       = Array.tabulate(vFaZ_s)(_.toInt)
-      vZaF       = Array.tabulate(vZaF_s)(_.toInt)
+      v          = Array.tabulate(v_s)(i => i.toLong % 10)
+      vHi        = Array.tabulate(vHi_s)(i => i.toLong % 10)
+      vLo        = Array.tabulate(vLo_s)(i => i.toLong % 10)
+      vFaZ       = Array.tabulate(vFaZ_s)(_.toLong)
+      vZaF       = Array.tabulate(vZaF_s)(_.toLong)
       vLimit     = vLimit_s
    }
 
    @Benchmark
-   def sum(): Int = {
+   def sum(): Long = {
       var i=0
-      var ret=0
+      var ret = 0L
       while (i < v.length) {
          ret += v(i)
          i += 1
@@ -46,9 +46,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def sumOfSquarses(): Int = {
+   def sumOfSquarses(): Long = {
       var i=0
-      var ret=0
+      var ret = 0L
       while (i < v.length) {
          ret += v(i) * v(i)
          i += 1
@@ -57,9 +57,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def sumOfSquaresEven(): Int = {
+   def sumOfSquaresEven(): Long = {
       var i=0
-      var ret=0
+      var ret = 0L
       while (i < v.length) {
          if (v(i) % 2 == 0)
          ret += v(i) * v(i)
@@ -69,9 +69,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def cart(): Int = {
+   def cart(): Long = {
       var d, dp=0
-      var ret=0
+      var ret = 0L
       while (d < vHi.length) {
          dp = 0
          while (dp < vLo.length) {
@@ -84,9 +84,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def filtersMegamorphic(): Int = {
+   def filtersMegamorphic(): Long = {
       var i=0
-      var ret=0
+      var ret = 0L
       while (i < v.length) {
          if (v(i) > 1 && v(i) > 2 && v(i) > 3 && v(i) > 4 && v(i) > 5 && v(i) > 6 && v(i) > 7)
          ret += v(i)
@@ -96,9 +96,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def mapsMegamorphic(): Int = {
+   def mapsMegamorphic(): Long = {
       var i=0
-      var ret=0
+      var ret = 0L
       while (i < v.length) {
          ret += v(i) * 1*2*3*4*5*6*7
          i += 1
@@ -107,9 +107,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def dotProduct(): Int = {
+   def dotProduct(): Long = {
       var counter = 0
-      var ret = 0
+      var ret = 0L
       while (counter < vHi.length) {
          ret += vHi(counter) * vHi(counter)
          counter += 1
@@ -118,9 +118,9 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def flatMapAfterZip(): Int = {
+   def flatMapAfterZip(): Long = {
       var counter1 = 0
-      var ret = 0
+      var ret = 0L
       while (counter1 < vFaZ.length) {
          val item1 = vFaZ(counter1) + vFaZ(counter1)
          var counter2 = 0
@@ -135,8 +135,8 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def zipAfterFlatMap(): Int = {
-      var ret = 0
+   def zipAfterFlatMap(): Long = {
+      var ret = 0L
       var index1 =  0
       var index2 =  0
       var flag1 = (index1 <= vZaF.length - 1)
@@ -157,10 +157,10 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def flatMapTake(): Int = {
+   def flatMapTake(): Long = {
       var counter1 = 0
       var counter2 = 0
-      var ret = 0
+      var ret = 0L
       var n = 0
       var flag = true
       val size1 = v.length
@@ -182,14 +182,14 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def zipFlatMapFlatMap(): Int = {
+   def zipFlatMapFlatMap(): Long = {
       val arr1 = v
       val arr2 = vLo
       var index11 = 0
       var index12 = 0
       var index21 = 0
       var index22 = 0
-      var ret = 0
+      var ret = 0L
       var taken = 0
       val toTake = vLimit
       val size1 = arr1.length
@@ -221,8 +221,8 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def zipFilterFilter(): Int = {
-      var ret = 0
+   def zipFilterFilter(): Long = {
+      var ret = 0L
       var counter1 = 0
       var counter2 = 0
       val arr1 = v

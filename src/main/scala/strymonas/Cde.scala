@@ -32,7 +32,6 @@ trait Cde {
    }
 
    // Numbers
-   // def truncate(c1: Cde[Float])(using QuoteContext): Cde[Int]
    def int(c1: Int)(using QuoteContext): Cde[Int]
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
    def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
@@ -62,6 +61,34 @@ trait Cde {
       def ===(c2: Cde[Int])(using QuoteContext): Cde[Boolean] =  eq_temp(c1, c2)
    }
 
+   def long(c1: Long)(using QuoteContext): Cde[Long]
+   def long_imin(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+   def long_imax(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+
+   def long_add(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long]
+   def long_sub(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long]
+   def long_mul(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long]
+   def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long]
+   def long_modf(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+
+   def  long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean]
+   def  long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean]
+   def long_leq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean]
+   def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean]
+   def long_eq_temp(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+   implicit class LongCde(val c1: Cde[Long]) {
+      def +(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_add(c1, c2)
+      def -(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_sub(c1, c2)
+      def *(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_mul(c1, c2)
+      def /(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_div(c1, c2)
+      def mod(c2: Cde[Long])(using QuoteContext): Cde[Long] = long_modf(c1, c2)
+
+      def <(c2: Cde[Long])(using QuoteContext):   Cde[Boolean] =  long_lt(c1 ,c2)
+      def >(c2: Cde[Long])(using QuoteContext):   Cde[Boolean] =  long_gt(c1 ,c2)
+      def <=(c2: Cde[Long])(using QuoteContext):  Cde[Boolean] = long_leq(c1, c2)
+      def >=(c2: Cde[Long])(using QuoteContext):  Cde[Boolean] = long_geq(c1, c2)
+      def ===(c2: Cde[Long])(using QuoteContext): Cde[Boolean] =  long_eq_temp(c1, c2)
+   }
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A]
@@ -76,6 +103,9 @@ trait Cde {
    def dref[A](x: Var[A])(using QuoteContext): Cde[A]
    def incr(i: Var[Int])(using QuoteContext): Cde[Unit]
    def decr(i: Var[Int])(using QuoteContext): Cde[Unit]
+
+   def long_incr(i: Var[Long])(using QuoteContext): Cde[Unit]
+   def long_decr(i: Var[Long])(using QuoteContext): Cde[Unit]
 
    implicit class VarCde[A](val c1: Var[A]) {
       def :=(c2: Cde[A])(using QuoteContext): Cde[Unit] = assign[A](c1, c2)

@@ -118,59 +118,65 @@ object Code extends Cde {
       ${c1} == ${c2}
    }
 
-   // // Until we have specialization
-   // implicit class DoubleCde(val c1: Cde[Double]) {
-   //    def +(c2: Cde[Double]): Cde[Double] = '{
-   //       ${c1} + ${c2}
-   //    }
-
-   //    def -(c2: Cde[Double]): Cde[Double] = '{
-   //       ${c1} - ${c2}
-   //    }
-
-   //    def *(c2: Cde[Double]): Cde[Double] = '{
-   //       ${c1} * ${c2}
-   //    }
-
-   //    def /(c2: Cde[Double]): Cde[Double] = '{
-   //       ${c1} / ${c2}
-   //    }
-
-   //    def mod(c2: Cde[Double]): Cde[Double] = '{
-   //       ${c1} % ${c2}
-   //    }
-
-   //    // `=` is not available, original `==` has high priority
-   //    def ===(c2: Cde[Double]): Cde[Boolean] = '{
-   //       ${c1} == ${c2}
-   //    }
-
-   //    def <(c2: Cde[Double]): Cde[Boolean] = '{
-   //       ${c1} < ${c2}
-   //    }
-
-   //    def >(c2: Cde[Double]): Cde[Boolean] = '{
-   //       ${c1} > ${c2}
-   //    }
-
-   //    def <=(c2: Cde[Double]): Cde[Boolean] = '{
-   //       ${c1} <= ${c2}
-   //    }
-
-   //    def >=(c2: Cde[Double]): Cde[Boolean] = '{
-   //       ${c1} >= ${c2}
-   //    }
-   // }
-
-
-   // def truncate(c1: Cde[Float]): Cde[Int] = '{ ${c1}.toInt }
-
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
       //TODO: ported Oleg's, need to check perf
       cond('{ ${c1} < ${c2} }, c1, c2)
    }
 
    def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
+      //TODO: ported Oleg's, need to check perf
+      cond('{ ${c1} > ${c2} }, c1, c2)
+   }
+
+   // Long Numbers
+   def long(c1: Long)(using QuoteContext): Cde[Long] = Expr(c1)
+
+   def long_add(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
+      ${c1} + ${c2}
+   }
+
+   def long_sub(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
+      ${c1} - ${c2}
+   }
+
+   def long_mul(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
+      ${c1} * ${c2}
+   }
+
+   def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
+      ${c1} / ${c2}
+   }
+
+   def long_modf(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = '{
+      ${c1} % ${c2}
+   }
+
+   def  long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} < ${c2}
+   }
+
+   def  long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} > ${c2}
+   }
+
+   def long_leq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} <= ${c2}
+   }
+
+   def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
+      ${c1} >= ${c2}
+   }
+
+   def long_eq_temp(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean] = '{
+      ${c1} == ${c2}
+   }
+
+   def long_imin(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = {
+      //TODO: ported Oleg's, need to check perf
+      cond('{ ${c1} < ${c2} }, c1, c2)
+   }
+
+   def long_imax(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = {
       //TODO: ported Oleg's, need to check perf
       cond('{ ${c1} > ${c2} }, c1, c2)
    }
@@ -239,6 +245,13 @@ object Code extends Cde {
       i.update(dref(i) + inj(1))
    }
    def decr(i: Var[Int])(using QuoteContext): Cde[Unit] = {
+      i.update(dref(i) - inj(1))
+   }
+
+   def long_incr(i: Var[Long])(using QuoteContext): Cde[Unit] = {
+      i.update(dref(i) + inj(1))
+   }
+   def long_decr(i: Var[Long])(using QuoteContext): Cde[Unit] = {
       i.update(dref(i) - inj(1))
    }
 

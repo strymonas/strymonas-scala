@@ -244,12 +244,6 @@ object StreamRaw {
       }
    }
 
-   // /**
-   //  * Transforms a map raw operation from CPS to direct style
-   //  * 
-   //  * A => B ~> A => (B => Cde[Unit]) => Cde[Unit]
-   //  * 
-   //  */
    def mapRaw_Direct[A: Type, B: Type](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       mapRaw_CPS((e: A) => (k: B => Cde[Unit]) => k(f(e)), s)
    }
@@ -268,7 +262,6 @@ object StreamRaw {
    }
 
    def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Cde[Unit]) => {
-      // Emit[(A, B)] ~> (A, B) => Cde[Unit] => Cde[Unit]
       i1(x => i2(y => k((x, y))))
    }
 

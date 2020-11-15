@@ -18,20 +18,20 @@ class ScalaStrymonasV2 {
    import TestPipelines._
    import Settings._
 
-   var v      : Array[Int] = _
-   var vHi    : Array[Int] = _
-   var vLo    : Array[Int] = _
-   var vFaZ   : Array[Int] = _
-   var vZaF   : Array[Int] = _
+   var v      : Array[Long] = _
+   var vHi    : Array[Long] = _
+   var vLo    : Array[Long] = _
+   var vFaZ   : Array[Long] = _
+   var vZaF   : Array[Long] = _
    var vLimit : Int = _ 
 
    @Setup(Level.Trial)
    def prepare(): Unit = {
-      v          = Array.tabulate(v_s)(i => i.toInt % 10)
-      vHi        = Array.tabulate(vHi_s)(i => i.toInt % 10)
-      vLo        = Array.tabulate(vLo_s)(i => i.toInt % 10)
-      vFaZ       = Array.tabulate(vFaZ_s)(_.toInt)
-      vZaF       = Array.tabulate(vZaF_s)(_.toInt)
+      v          = Array.tabulate(v_s)(i => i.toLong % 10)
+      vHi        = Array.tabulate(vHi_s)(i => i.toLong % 10)
+      vLo        = Array.tabulate(vLo_s)(i => i.toLong % 10)
+      vFaZ       = Array.tabulate(vFaZ_s)(_.toLong)
+      vZaF       = Array.tabulate(vZaF_s)(_.toLong)
       vLimit     = vLimit_s
 
       sumS = run(sumPipeline)
@@ -48,88 +48,88 @@ class ScalaStrymonasV2 {
       zipFilterFilterS = run(zipFilterFilterPipeline)
    }
 
-   var sumS                 : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
-   var sumOfSquaresS        : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
-   var sumOfSquaresEvenS    : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
-   var cartS                : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var mapsMegamorphicS     : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
-   var filtersMegamorphicS  : Array[Int] => Int = null.asInstanceOf[Array[Int] => Int]
-   var dotProductS          : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var flatMapTakeS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var flatMapAfterZipS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipAfterFlatMapS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipFlatFlatS         : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
-   var zipFilterFilterS     : (Array[Int], Array[Int]) => Int = null.asInstanceOf[(Array[Int], Array[Int]) => Int]
+   var sumS                 : Array[Long] => Long = null.asInstanceOf[Array[Long] => Long]
+   var sumOfSquaresS        : Array[Long] => Long = null.asInstanceOf[Array[Long] => Long]
+   var sumOfSquaresEvenS    : Array[Long] => Long = null.asInstanceOf[Array[Long] => Long]
+   var cartS                : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var mapsMegamorphicS     : Array[Long] => Long = null.asInstanceOf[Array[Long] => Long]
+   var filtersMegamorphicS  : Array[Long] => Long = null.asInstanceOf[Array[Long] => Long]
+   var dotProductS          : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var flatMapTakeS         : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var flatMapAfterZipS     : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var zipAfterFlatMapS     : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var zipFlatFlatS         : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var zipFilterFilterS     : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
 
    @Benchmark
-   def sum(): Int = {
-      val ret: Int = sumS(v)
+   def sum(): Long = {
+      val ret: Long = sumS(v)
       ret
    }
 
    @Benchmark
-   def sumOfSquares(): Int = {
-      val ret: Int = sumOfSquaresS(v)
+   def sumOfSquares(): Long = {
+      val ret: Long = sumOfSquaresS(v)
       ret
    }
 
    @Benchmark
-   def sumOfSquaresEven(): Int = {
-      val ret: Int = sumOfSquaresEvenS(v)
+   def sumOfSquaresEven(): Long = {
+      val ret: Long = sumOfSquaresEvenS(v)
       ret
    }
 
    @Benchmark
-   def cart(): Int = {
-      val ret: Int = cartS(vHi, vLo)
+   def cart(): Long = {
+      val ret: Long = cartS(vHi, vLo)
       ret
    }
 
    @Benchmark
-   def mapsMegamorphic(): Int = {
-      val ret: Int = mapsMegamorphicS(v)
+   def mapsMegamorphic(): Long = {
+      val ret: Long = mapsMegamorphicS(v)
       ret
    }
 
    @Benchmark
-   def filtersMegamorphic(): Int = {
-      val ret: Int = filtersMegamorphicS(v)
+   def filtersMegamorphic(): Long = {
+      val ret: Long = filtersMegamorphicS(v)
       ret
    }
 
    @Benchmark
-   def dotProduct(): Int = {
-      val ret: Int = dotProductS(vHi, vHi)
+   def dotProduct(): Long = {
+      val ret: Long = dotProductS(vHi, vHi)
       ret
    }
 
    @Benchmark
-   def flatMapAfterZip(): Int = {
-      val ret: Int = flatMapAfterZipS(vFaZ, vFaZ)
+   def flatMapAfterZip(): Long = {
+      val ret: Long = flatMapAfterZipS(vFaZ, vFaZ)
       ret
    }
 
    @Benchmark
-   def zipAfterFlatMap(): Int = {
-      val ret: Int = zipAfterFlatMapS(vZaF, vZaF)
+   def zipAfterFlatMap(): Long = {
+      val ret: Long = zipAfterFlatMapS(vZaF, vZaF)
       ret
    }
 
    @Benchmark
-   def flatMapTake(): Int = {
-      val ret: Int = flatMapTakeS(v, vLo)
+   def flatMapTake(): Long = {
+      val ret: Long = flatMapTakeS(v, vLo)
       ret
    }
 
    @Benchmark
-   def zipFlatMapFlatMap(): Int = {
-      val ret: Int = zipFlatFlatS(v, vLo)
+   def zipFlatMapFlatMap(): Long = {
+      val ret: Long = zipFlatFlatS(v, vLo)
       ret
    }
 
    @Benchmark
-   def zipFilterFilter(): Int = {
-      val ret: Int = zipFilterFilterS(v, vHi)
+   def zipFilterFilter(): Long = {
+      val ret: Long = zipFilterFilterS(v, vHi)
       ret
    }
 }

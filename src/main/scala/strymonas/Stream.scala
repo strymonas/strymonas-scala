@@ -119,7 +119,7 @@ object Stream {
 
    def fromTo(a: Cde[Int], b: Cde[Int], step: Int = 1)(using QuoteContext): Stream[Int] = {
       val shape = 
-         if step == 1 then mkPullArray[Cde[Int]](b - a, (e => (k: Cde[Int] => Cde[Unit]) => letl(e+a)(k))) else
+         if step == 1 then mkPullArray[Cde[Int]](b - a, (e => (k: Cde[Int] => Cde[Unit]) => letl(e + a)(k))) else
          mkInitVar[Int, Cde[Int]](a, z =>
          guard[Cde[Int]](GExp(if (step >= 0) then (dref(z) <= b) else (dref(z) >= b)),
             infinite(k => 
