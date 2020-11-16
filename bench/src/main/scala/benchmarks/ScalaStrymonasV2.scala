@@ -117,7 +117,7 @@ class ScalaStrymonasV2 {
 
    @Benchmark
    def flatMapTake(): Long = {
-      val ret: Long = flatMapTakeS(v, vLo)
+      val ret: Long = flatMapTakeS(vHi, vLo)
       ret
    }
 

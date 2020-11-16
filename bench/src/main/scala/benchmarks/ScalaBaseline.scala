@@ -163,10 +163,10 @@ class ScalaBaseline {
       var ret = 0L
       var n = 0
       var flag = true
-      val size1 = v.length
+      val size1 = vHi.length
       val size2 = vLo.length
       while (counter1 < size1 && flag) {
-         val item1 = v(counter1)
+         val item1 = vHi(counter1)
          while (counter2 < size2 && flag) {
            val item2 = vLo(counter2)
            ret = ret + item1 * item2
@@ -180,6 +180,29 @@ class ScalaBaseline {
       }
       ret
    }
+   // def flatMapTake(): Long = {
+   //    var counter1 = 0
+   //    var counter2 = 0
+   //    var ret = 0L
+   //    var n = 0
+   //    var flag = true
+   //    val size1 = vHi.length
+   //    val size2 = vLo.length
+   //    while (counter1 < size1) {
+   //       val item1 = vHi(counter1)
+   //       while (counter2 < size2) {
+   //         val item2 = vLo(counter2)
+   //         ret = ret + item1 * item2
+   //         counter2 += 1
+   //         n += 1
+   //         if (n >= vLimit_s)
+   //           return ret
+   //       }
+   //       counter2 = 0
+   //       counter1 += 1
+   //    }
+   //    ret
+   // }
 
    @Benchmark
    def zipFlatMapFlatMap(): Long = {
