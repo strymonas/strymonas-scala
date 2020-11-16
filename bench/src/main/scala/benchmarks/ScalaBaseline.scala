@@ -46,7 +46,7 @@ class ScalaBaseline {
    }
 
    @Benchmark
-   def sumOfSquarses(): Long = {
+   def sumOfSquares(): Long = {
       var i=0
       var ret = 0L
       while (i < v.length) {
