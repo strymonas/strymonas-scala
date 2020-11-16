@@ -216,6 +216,18 @@ class StreamTest {
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
    }
 
+   @Test def zip_filter_filter: Unit = {
+      def s(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
+         ${ Stream.of('{array1}).filter((d) => d > long(7))
+         .zipWith[Long, Long](_+_,  Stream.of('{array2}).filter((d) => d > long(5)))
+         .fold(long(0), _+_) } 
+      }
+      // println(withQuoteContext(s.show))
+      val t = run { s }
+      assert(t(Array(8, 1, 9), Array(1, 2, 6)) == 14)
+      assert(t(Array(8, 9, 1, 10), Array(1, 6, 7, 8)) == 14+16+18)
+   }
+
    @Test def zip_flat_flat(): Unit = {
       def s(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long])  =>
          ${ Stream.of('{array1})

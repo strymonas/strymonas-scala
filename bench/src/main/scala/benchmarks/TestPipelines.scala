@@ -110,7 +110,7 @@ object TestPipelines {
 
    def zipFilterFilterPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
       ${ Stream.of('{array1}).filter((d) => d > long(7))
-      .zipWith[Long, Long](_+_,  Stream.of('{array1}).filter((d) => d > long(5)))
+      .zipWith[Long, Long](_+_,  Stream.of('{array2}).filter((d) => d > long(5)))
       .fold(long(0), _+_) } 
    }
 }
