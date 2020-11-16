@@ -228,7 +228,7 @@ class ScalaBaseline {
       val arr1 = v
       val arr2 = vHi
       while (counter1 < arr1.length && counter2 < arr2.length) {
-         while(!(arr1(counter1) > 7 && arr1(counter1) < arr1.length)) {
+         while(!(arr1(counter1) > 7 && counter1 < arr1.length)) {
             counter1 += 1
          }
          if(counter1 < arr1.length){
@@ -242,4 +242,50 @@ class ScalaBaseline {
       }
       ret
    }
+   // def zipFilterFilter(): Long = {
+   //    var ret = 0L
+   //    var counter1 = 0
+   //    var counter2 = 0
+   //    val arr1 = v
+   //    val arr2 = vHi
+   //    while (counter1 < arr1.length && counter2 < arr2.length) {
+   //       while(!(arr1(counter1) > 7)) {
+   //          counter1 += 1
+   //          if(counter1 >= arr1.length) {
+   //             return ret
+   //          }
+   //       }
+   //       val item2 = arr2(counter2)
+   //       if(item2 > 5) {
+   //          ret = ret + arr1(counter1) + item2
+   //          counter1 += 1
+   //       }
+   //       counter2 += 1
+   //    }
+   //    ret
+   // }
+   // def zipFilterFilter(): Long = {
+   //    var ret = 0L
+   //    var counter1 = 0
+   //    var counter2 = 0
+   //    val arr1 = v
+   //    val arr2 = vHi
+   //    var n1 = arr1.length
+   //    var n2 = arr2.length
+   //    while (counter1 < n1 && counter2 < n2) {
+   //       while(!(arr1(counter1) > 7)) {
+   //          counter1 += 1
+   //          if(counter1 >= n1) {
+   //             return ret
+   //          }
+   //       }
+   //       val item2 = arr2(counter2)
+   //       if(item2 > 5) {
+   //          ret = ret + arr1(counter1) + item2
+   //          counter1 += 1
+   //       }
+   //       counter2 += 1
+   //    }
+   //    ret
+   // }
 }
