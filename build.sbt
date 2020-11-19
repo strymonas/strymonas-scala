@@ -32,7 +32,6 @@ lazy val bench = project
     ),
 
     javaOptions ++= Seq("-Xms6g", "-Xmx6g", "-Xss4m",
-			   "-XX:+CMSClassUnloadingEnabled",
 			   "-XX:ReservedCodeCacheSize=256m",
 			   "-XX:-TieredCompilation", "-XX:+UseNUMA"
     )
