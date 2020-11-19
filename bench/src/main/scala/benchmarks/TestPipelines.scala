@@ -75,14 +75,14 @@ object TestPipelines {
 
    def flatMapTakePipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
       ${ Stream.of('{array1})
-      .flatMap((d) => Stream.of('{array2}))
+      .flatMap((d) => Stream.of('{array2}).map(y => y * d))
       .take(int(vLimit_s))
       .fold(long(0), _+_) }
    }
 
    def dotProductPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long])  =>
       ${ Stream.of('{array1})
-      .zipWith[Long, Long](_+_, Stream.of('{array2}))
+      .zipWith[Long, Long](_*_, Stream.of('{array2}))
       .fold(long(0), _+_) }
    }
 
@@ -102,8 +102,8 @@ object TestPipelines {
 
    def zipFlatMapFlatMapPipeline(using QuoteContext) = '{ (array1: Array[Long], array2: Array[Long]) =>
       ${ Stream.of('{array1})
-      .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-      .zipWith[Long, Long](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)) )
+      .flatMap((d) => Stream.of('{array2}).map((dp) => d * dp))
+      .zipWith[Long, Long](_+_, Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d - dp)) )
       .take(int(vLimit_s))
       .fold(long(0), _+_) }
    }
