@@ -2,6 +2,7 @@ package benchmarks
 
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -33,6 +34,22 @@ class ScalaBaseline {
       vZaF       = Array.tabulate(vZaF_s)(_.toLong)
       vLimit     = vLimit_s
    }
+
+   // @TearDown
+   // def check(): Unit = {
+   //    assert(sum() == 450000000L)
+   //    assert(sumOfSquares() == 2850000000L)
+   //    assert(sumOfSquaresEven() == 1200000000L)
+   //    assert(cart() == 2025000000L)
+   //    assert(mapsMegamorphic() == 2268000000000L)
+   //    assert(filtersMegamorphic() == 170000000L)
+   //    assert(flatMapTake() == 405000000L)
+   //    assert(dotProduct() == 285000000L)
+   //    assert(flatMapAfterZip() == 1499850000000L)
+   //    assert(zipAfterFlatMap() == 99999990000000L)
+   //    assert(zipFilterFilter() == 64000000L)
+   //    assert(zipFlatMapFlatMap() == 315000000L)
+   // }
 
    @Benchmark
    def sum(): Long = {
@@ -265,50 +282,4 @@ class ScalaBaseline {
       }
       ret
    }
-   // def zipFilterFilter(): Long = {
-   //    var ret = 0L
-   //    var counter1 = 0
-   //    var counter2 = 0
-   //    val arr1 = v
-   //    val arr2 = vHi
-   //    while (counter1 < arr1.length && counter2 < arr2.length) {
-   //       while(!(arr1(counter1) > 7)) {
-   //          counter1 += 1
-   //          if(counter1 >= arr1.length) {
-   //             return ret
-   //          }
-   //       }
-   //       val item2 = arr2(counter2)
-   //       if(item2 > 5) {
-   //          ret = ret + arr1(counter1) + item2
-   //          counter1 += 1
-   //       }
-   //       counter2 += 1
-   //    }
-   //    ret
-   // }
-   // def zipFilterFilter(): Long = {
-   //    var ret = 0L
-   //    var counter1 = 0
-   //    var counter2 = 0
-   //    val arr1 = v
-   //    val arr2 = vHi
-   //    var n1 = arr1.length
-   //    var n2 = arr2.length
-   //    while (counter1 < n1 && counter2 < n2) {
-   //       while(!(arr1(counter1) > 7)) {
-   //          counter1 += 1
-   //          if(counter1 >= n1) {
-   //             return ret
-   //          }
-   //       }
-   //       val item2 = arr2(counter2)
-   //       if(item2 > 5) {
-   //          ret = ret + arr1(counter1) + item2
-   //          counter1 += 1
-   //       }
-   //       counter2 += 1
-   //    }
-   //    ret
-   // }
 }

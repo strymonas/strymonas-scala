@@ -61,6 +61,22 @@ class ScalaStrymonasV2 {
    var zipFlatFlatS         : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
    var zipFilterFilterS     : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
 
+   // @TearDown
+   // def check(): Unit = {
+   //    assert(sum() == 450000000L)
+   //    assert(sumOfSquares() == 2850000000L)
+   //    assert(sumOfSquaresEven() == 1200000000L)
+   //    assert(cart() == 2025000000L)
+   //    assert(mapsMegamorphic() == 2268000000000L)
+   //    assert(filtersMegamorphic() == 170000000L)
+   //    assert(flatMapTake() == 405000000L)
+   //    assert(dotProduct() == 285000000L)
+   //    assert(flatMapAfterZip() == 1499850000000L)
+   //    assert(zipAfterFlatMap() == 99999990000000L)
+   //    assert(zipFilterFilter() == 64000000L)
+   //    assert(zipFlatMapFlatMap() == 315000000L)
+   // }
+
    @Benchmark
    def sum(): Long = {
       val ret: Long = sumS(v)
