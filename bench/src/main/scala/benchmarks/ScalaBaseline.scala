@@ -259,6 +259,61 @@ class ScalaBaseline {
       }
       ret
    }
+   // ((array1: scala.Array[scala.Long], array2: scala.Array[scala.Long]) => {
+   //    var x: scala.Long = 0L
+   //    val lv: scala.Int = 19999999
+   //    val `lv₂`: scala.Array[scala.Long] = array1
+   //    val `lv₃`: scala.Int = `lv₂`.length.-(1)
+   //    val `lv₄`: scala.Array[scala.Long] = array2
+   //    val `lv₅`: scala.Int = `lv₄`.length.-(1)
+   //    var `x₂`: scala.Int = 0
+   //    var `x₃`: scala.Boolean = `x₂`.<=(`lv₅`)
+   //    var `x₄`: scala.Boolean = false
+   //    var `x₅`: scala.Long = 0L
+   //    var `x₆`: scala.Array[scala.Long] = null
+   //    var `x₇`: scala.Int = 0
+   //    var `x₈`: scala.Int = 0
+   //    var `x₉`: scala.Int = 0
+   //    var i: scala.Int = 0
+   //    while (i.<=(`lv₃`).&&(`x₃`.||(`x₄`).&&(`x₉`.<=(lv)))) {
+   //      val `lv₆`: scala.Long = `lv₂`.apply(i)
+   //      val `lv₇`: scala.Array[scala.Long] = array2
+   //      val `lv₈`: scala.Int = `lv₇`.length.-(1)
+   //      var `i₂`: scala.Int = 0
+   //      while (`i₂`.<=(`lv₈`).&&(`x₃`.||(`x₄`).&&(`x₉`.<=(lv)))) {
+   //        val `lv₉`: scala.Long = `lv₇`.apply(`i₂`)
+   //        val `lv₁₀`: scala.Long = `lv₆`.*(`lv₉`)
+   //        var `x₁₀`: scala.Boolean = true
+   //        while (`x₁₀`.&&(`x₃`.||(`x₄`))) {
+   //          if (`x₄`.unary_!) {
+   //            val `lv₁₁`: scala.Int = `x₂`
+   //            `x₂` = `x₂`.+(1)
+   //            val `lv₁₂`: scala.Long = `lv₄`.apply(`lv₁₁`)
+   //            `x₅` = `lv₁₂`
+   //            `x₆` = array1
+   //            `x₇` = `x₆`.length.-(1)
+   //            `x₈` = 0
+   //            `x₄` = true
+   //            `x₃` = `x₂`.<=(`lv₅`)
+   //          } else ()
+   //          if (`x₄`) if (`x₈`.<=(`x₇`)) {
+   //            val `lv₁₃`: scala.Int = `x₈`
+   //            `x₈` = `x₈`.+(1)
+   //            val `lv₁₄`: scala.Long = `x₆`.apply(`lv₁₃`)
+   //            val `lv₁₅`: scala.Long = `x₅`.-(`lv₁₄`)
+   //            `x₁₀` = false
+   //            val `lv₁₆`: scala.Int = `x₉`
+   //            `x₉` = `x₉`.+(1)
+   //            x = x.+(`lv₁₀`.+(`lv₁₅`))
+   //          } else `x₄` = false else ()
+   //        }
+   //        `i₂` = `i₂`.+(1)
+   //      }
+   //      i = i.+(1)
+   //    }
+   //    x
+   //  })
+
 
    @Benchmark
    def zipFilterFilter(): Long = {
@@ -282,4 +337,30 @@ class ScalaBaseline {
       }
       ret
    }
+   //    ((array1: scala.Array[scala.Long], array2: scala.Array[scala.Long]) => {
+   //   var x: scala.Long = 0L
+   //   val lv: scala.Array[scala.Long] = array1
+   //   val `lv₂`: scala.Int = lv.length.-(1)
+   //   val `lv₃`: scala.Array[scala.Long] = array2
+   //   val `lv₄`: scala.Int = `lv₃`.length.-(1)
+   //   var `x₂`: scala.Int = 0
+   //   var i: scala.Int = 0
+   //   while (i.<=(`lv₂`).&&(`x₂`.<=(`lv₄`))) {
+   //     val `lv₅`: scala.Long = lv.apply(i)
+   //     if (`lv₅`.>(7L)) {
+   //       var `x₃`: scala.Boolean = true
+   //       while (`x₃`.&&(`x₂`.<=(`lv₄`))) {
+   //         val `lv₆`: scala.Int = `x₂`
+   //         `x₂` = `x₂`.+(1)
+   //         val `lv₇`: scala.Long = `lv₃`.apply(`lv₆`)
+   //         if (`lv₇`.>(5L)) {
+   //           `x₃` = false
+   //           x = x.+(`lv₅`.+(`lv₇`))
+   //         } else ()
+   //       }
+   //     } else ()
+   //     i = i.+(1)
+   //   }
+   //   x
+   // })
 }
