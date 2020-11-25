@@ -270,24 +270,18 @@ object Code extends Cde {
    }
    import scala.reflect.ClassTag
 
-   implicit def LiftedClassTag[T: Type: ClassTag] (using QuoteContext): Expr[ClassTag[T]] = {
-      '{ ClassTag(${Expr(summon[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]])}) }
-   }
+   // implicit def LiftedClassTag[T: Type: ClassTag] (using QuoteContext): Expr[ClassTag[T]] = {
+   //    '{ ClassTag(${Expr(summon[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]])}) }
+   // }
    
-   def foo[A]()(using t: Type[A], c: ClassTag[A])(using l: Liftable[A])(using QuoteContext): Expr[Unit] = '{
-      val array: Array[A] = new Array[A](1)(${implicitly[Expr[ClassTag[A]]]})
-
-      ()
+   def new_array_direct[A: Type: ClassTag, W: Type](i: Array[Expr[A]])(using QuoteContext): Expr[Array[A]] = {
+      '{ Array[A](${Varargs(i.toSeq)}: _*)(${Expr(summon[ClassTag[A]])}) }
    }
 
-   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = '{
-      // val array: Array[A] = ??? // new Array[A](1) //new Array[A](${Expr(i.length)})
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = '{
+      val array: Array[A] = ${new_array_direct[A, W](i)}
 
-      // ${initArray(i, '{array})}
-
-      // ${k('{array})}
-
-      ???
+      ${k('{array})}
    }
 
    private def initArray[T: Type: ClassTag](arr: Array[Expr[T]], array: Expr[Array[T]])(using QuoteContext): Expr[Array[T]] = {
