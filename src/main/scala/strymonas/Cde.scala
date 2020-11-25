@@ -116,7 +116,7 @@ trait Cde {
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])(i: Cde[Int])(k: (Cde[A] => Cde[W]))(using QuoteContext): Cde[W]
    def array_len[A: Type](arr: Cde[Array[A]])(using QuoteContext): Cde[Int]
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit]
-   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W]
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W]
    // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W]
 
    def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]]

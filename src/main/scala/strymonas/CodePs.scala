@@ -226,7 +226,7 @@ object CodePs extends Cde {
       injCde(Code.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
 
-   def new_array[A: Type, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
    
    // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
 

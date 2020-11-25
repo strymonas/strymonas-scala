@@ -1,6 +1,8 @@
 package strymonas
 
 import scala.quoted._
+import scala.reflect.ClassTag
+
 
 object StreamRaw {
    import Code._
@@ -48,7 +50,7 @@ object StreamRaw {
    enum Init[A] {
       case ILet(init: Cde[A], t: Type[A]) extends Init[Cde[A]]
       case IVar(init: Cde[A], t: Type[A]) extends Init[Var[A]]
-      case IArr(init: Array[Cde[A]], t: Type[A]) extends Init[Cde[Array[A]]]
+      case IArr(init: Array[Cde[A]], t: Type[A], ct: ClassTag[A]) extends Init[Cde[Array[A]]]
       // case IUArr(size: Int, init: Cde[A], t: Type[Array[A]]) extends Init[Cde[Array[A]]]
    }
    
@@ -128,8 +130,8 @@ object StreamRaw {
       Initializer[Var[Z], A](IVar(init, t), sk)
    }
 
-   def mkInitArr[Z, A](init: Array[Cde[Z]], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Z]): StreamShape[A] = {
-      Initializer[Cde[Array[Z]], A](IArr(init, t), sk)
+   def mkInitArr[Z, A](init: Array[Cde[Z]], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Z], ct: ClassTag[Z]): StreamShape[A] = {
+      Initializer[Cde[Array[Z]], A](IArr(init, t, ct), sk)
    }
 
    // def mkInitUArr[Z, A](size: Int, init: Cde[Z], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Array[Z]]): StreamShape[A] = {
@@ -196,11 +198,11 @@ object StreamRaw {
       def loop[A](consumer: A => Cde[Unit], st: StreamShape[A])(using ctx: Quotes): Cde[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk) =>
-               letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]], ctx)
+               letl(i)(i => loop[A](consumer, sk(i)))(t,  summon[Type[Unit]], ctx)
             case Initializer(IVar(i, t), sk) => 
                letVar(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
-            case Initializer(IArr(a, t), sk) => 
-               new_array(a)(a => loop[A](consumer, sk(a)))(t, summon[Type[Unit]], ctx)
+            case Initializer(IArr(a, t, ct), sk) => 
+               new_array(a)(a => loop[A](consumer, sk(a)))(t, ct, summon[Type[Unit]], ctx)
             // case Initializer(IUArr(n, i, t), sk) => 
             //    new_uarray(n, i)(a => loop[A](consumer, sk(a)))(t, summon[Type[Unit]], ctx)
             case Flattened(Filtered(preds), g, prod) =>
@@ -425,6 +427,26 @@ object StreamRaw {
       mmain(false, st) 
    }
 
+   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
+      st match {
+         case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+         case Initializer(IVar(i, t), sk) => {
+            var score = 0
+            val _ = 
+               letVar(i)(z => {
+                  score = linearize_score(sk(z)) 
+                  unit
+               })(t, summon[Type[Unit]], ctx)
+            score
+         }
+         case Initializer(IArr(_, t, _), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
+         // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+         case Flattened(Linear, _, _) => 0
+         case Flattened(_)            => 3
+         case Nested(_, s, t, sk) => 
+            5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
+      }
+   }
 
    def zipRaw[A, B](st1: StreamShape[A], st2: StreamShape[B])(using Quotes): StreamShape[(A, B)] = {
       def swap[A, B](st: StreamShape[(A, B)]) = {
