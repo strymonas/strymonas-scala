@@ -76,110 +76,71 @@ object Code extends Cde {
 
 
    // Numbers
-   def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
-
-   def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
-      ${c1} + ${c2}
-   }
-
-   def sub(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
-      ${c1} - ${c2}
-   }
-
-   def mul(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
-      ${c1} * ${c2}
-   }
-
-   def div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = '{
-      ${c1} / ${c2}
-   }
-
-   def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = '{
-      ${c1} % ${c2}
-   }
-
-   def  lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} < ${c2}
-   }
-
-   def  gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} > ${c2}
-   }
-
-   def leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} <= ${c2}
-   }
-
-   def geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} >= ${c2}
-   }
-
-   def eq_temp(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = '{
-      ${c1} == ${c2}
-   }
-
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
       //TODO: ported Oleg's, need to check perf
       cond('{ ${c1} < ${c2} }, c1, c2)
    }
+   // def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
+   //    //TODO: ported Oleg's, need to check perf
+   //    cond('{ ${c1} > ${c2} }, c1, c2)
+   // }
 
-   def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
-      //TODO: ported Oleg's, need to check perf
-      cond('{ ${c1} > ${c2} }, c1, c2)
+   class IntCode extends NumCde[Int] {
+      type A = Int
+      def add(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} + ${c2}}
+      def sub(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} - ${c2}}
+      def mul(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} * ${c2}}
+      def div(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} / ${c2}}
+      def modf(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
+         '{${c1} % ${c2}}
+
+      def  lt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} < ${c2}}
+      def  gt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} > ${c2}}
+      def leq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} <= ${c2}}
+      def geq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} >= ${c2}}
+      def eq_temp(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
+         '{${c1} == ${c2}}
    }
 
-   // Long Numbers
+   class LongCode extends NumCde[Long] {
+      type A = Long
+      def add(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} + ${c2}}
+      def sub(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} - ${c2}}
+      def mul(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} * ${c2}}
+      def div(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+         '{${c1} / ${c2}}
+      def modf(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
+         '{${c1} % ${c2}}
+
+      def  lt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} < ${c2}}
+      def  gt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} > ${c2}}
+      def leq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} <= ${c2}}
+      def geq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+         '{${c1} >= ${c2}}
+      def eq_temp(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
+         '{${c1} == ${c2}}
+   }
+
+   def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
+   val int_funs: NumCde[Int] = IntCode()
+
    def long(c1: Long)(using QuoteContext): Cde[Long] = Expr(c1)
+   val long_funs: NumCde[Long] = LongCode()
 
-   def long_add(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
-      ${c1} + ${c2}
-   }
-
-   def long_sub(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
-      ${c1} - ${c2}
-   }
-
-   def long_mul(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
-      ${c1} * ${c2}
-   }
-
-   def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = '{
-      ${c1} / ${c2}
-   }
-
-   def long_modf(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = '{
-      ${c1} % ${c2}
-   }
-
-   def  long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} < ${c2}
-   }
-
-   def  long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} > ${c2}
-   }
-
-   def long_leq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} <= ${c2}
-   }
-
-   def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = '{
-      ${c1} >= ${c2}
-   }
-
-   def long_eq_temp(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean] = '{
-      ${c1} == ${c2}
-   }
-
-   def long_imin(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = {
-      //TODO: ported Oleg's, need to check perf
-      cond('{ ${c1} < ${c2} }, c1, c2)
-   }
-
-   def long_imax(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = {
-      //TODO: ported Oleg's, need to check perf
-      cond('{ ${c1} > ${c2} }, c1, c2)
-   }
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A] = '{
