@@ -10,8 +10,8 @@ class StreamTest {
    
    inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
 
-   // import Code._
-   import CodePs._
+   import Code._
+   // import CodePs._
    import scala.language.implicitConversions
 
    /**
