@@ -59,7 +59,7 @@ object psCode extends Cde2 {
 } 
 
 object Test {
-    import psCode.{given _, _}
+    import psCode._
 
     def test(using QuoteContext) = {
       int(1) + int(2)
