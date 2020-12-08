@@ -1,6 +1,7 @@
-package strymonas
 import scala.quoted._
-import scala.quoted.util._
+import scala.quoted.staging._
+import org.junit.Test
+import org.junit.Assert._
 
 import scala.language.implicitConversions
 
@@ -32,7 +33,7 @@ object exprCode extends Cde2 {
     def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
 
     object IntNumOpsModuleImpl extends NumOpsModule[Int] {
-      def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = '{${c1} + ${c2}}
+      def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = '{ ${c1} + ${c2} }
     }
 }
 
@@ -51,7 +52,7 @@ object psCode extends Cde2 {
 
     def lift2[A, B, C](fs: (A, B) => C)(lift: C => Cde[C])(fd: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = ???
 
-    def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), Code.int(c1))
+    def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), exprCode.int(c1))
 
     object IntNumOpsModuleImpl extends NumOpsModule[Int] {
         def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_+_)(int)(exprCode.IntNumOpsModuleImpl.add)(c1, c2)
@@ -60,8 +61,14 @@ object psCode extends Cde2 {
 
 object Test {
     import psCode._
+    given Toolbox = Toolbox.make(getClass.getClassLoader)   
 
-    def test(using QuoteContext) = {
-      int(1) + int(2)
-    } 
+    // TODO: make a full example with two different interpreters, modularized as Tomoaki did in Cde.scala with HKTs
+    // @Test def expr_test(): Unit = {
+    //     def test(using QuoteContext): Cde[Int] = {
+    //         int(1) + int(2)
+    //     } 
+
+    //     assert(test)
+    // }
 }
