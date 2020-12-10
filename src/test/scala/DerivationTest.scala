@@ -200,7 +200,7 @@ class DerivationTest {
   
         // Producers
         def pullArray[A](upb: Int)(f: Int => A): Stream[A]
-        def fromTo(ifrom: Int, step: Int): Stream[Int]
+        def fromStep(ifrom: Int, step: Int): Stream[Int]
         def unfold[A, Z](step: Z => Option[(A, Z)])(z: Z): Stream[A]
 
         // Transformers
@@ -212,6 +212,78 @@ class DerivationTest {
 
         // Consumers
         def observe[A](limit: Int)(s: Stream[A]): List[A]
+    }   
+
+    trait Desugar10(val s: Stream1) extends Stream0 {  
+        type Stream[A] = s.Stream[A]
+  
+        def ofArr[A](arr: Array[A]): Stream[A] = {
+            s.pullArray(arr.size)(i => arr(i))
+        }
+
+        def iota(i: Int): Stream[Int] = {
+            s.fromStep(i, 1)
+        }
+
+        def fromTo(step: Int, from: Int, to: Int): Stream[Int] = {
+            if(step == 1)
+                s.pullArray(from - to)(i => i + from)
+            else
+                s.fromStep(from, step) 
+                    |> s.take_while(if step > 0 then ((x) => x <= to) else ((x) => x >= to))
+        }
+
+        def unfold[A, Z](step: Z => Option[(A, Z)])(z: Z): Stream[A] = 
+            s.unfold(step)(z)
+
+        // Transformers
+        def map[A, B](f: A => B)(st: Stream[A]): Stream[B] = {
+            s.mapAccum[A, B, Unit](z => a => (f(a), z))(())(st)    
+        }
+
+        def mapAccum[A, B, Z](f: Z => A => (B, Z))(z: Z)(st: Stream[A]): Stream[B] = {
+            s.mapAccum(f)(z)(st)
+        } 
+
+        def filter[A](f: A => Boolean)(st: Stream[A]): Stream[A] = {
+            s.filter(f)(st)
+        }
+
+        def flatMap[A, B](f: A => Stream[B])(st: Stream[A]): Stream[B] = {
+            s.flatMap[A, B, Unit](z => a => f(a) |> map(b => (b, z)))(())(st)
+        }
+
+        def take[A](n: Int)(st: Stream[A]): Stream[A] = {
+            s.zip[A, Int](st)(fromTo(1, 1, n)) |> map((x, y) => x)
+        }
+
+        def take_while[A](f: A => Boolean)(s1: Stream[A]): Stream[A] = {
+            s.take_while(f)(s1)    
+        }
+        
+        def drop[A](n: Int)(st: Stream[A]): Stream[A] = {
+            st |> s.mapAccum[A, (A, Int), Int](z => x => {
+                    val z_ = if(z <= n) then z+1 else z 
+                    ((x, z_), z_)
+                })(0)
+               |> s.filter((_, z) => z > n) 
+               |> map(_._1)
+        }
+
+        def drop_while[A](f: A => Boolean)(st: Stream[A]): Stream[A] = {
+            st |> s.mapAccum[A, (A, Boolean), Boolean](z => x => {
+                    val z_ = z && f(x)  
+                    ((x, z_), z_)
+                })(true)
+               |> s.filter((_, z) => !z) 
+               |> map(_._1)
+        }
+        def zipWith[A, B, C](f: A => B => C)(s1: Stream[A])(s2: Stream[B]): Stream[C] = {
+            s.zip(s1)(s2) |> map((x, y) => f(x)(y))
+        }
+
+        // Consumers
+        def observe[A](limit: Int)(st: Stream[A]): List[A] = s.observe(limit)(st)
     }   
 
     @Test def direct_tests() = {
