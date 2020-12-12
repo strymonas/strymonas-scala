@@ -59,9 +59,9 @@ object Code extends Cde[Expr, scala.quoted.util.Var] {
    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean] = Expr(c1)
    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
       '{! ${c1}}
-   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
+   def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
       '{${c1} && ${c2}}
-   def  lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
+   def infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
       '{${c1} || ${c2}}
 
 
@@ -69,52 +69,52 @@ object Code extends Cde[Expr, scala.quoted.util.Var] {
    class IntCode extends NumCde[Int, Cde, Var] {
       type A = Int
 
-      def add(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_+(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} + ${c2}}
-      def sub(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_-(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} - ${c2}}
-      def mul(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_*(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} * ${c2}}
-      def div(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_/(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} / ${c2}}
-      def modf(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
+      def infix_%(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} % ${c2}}
 
-      def  lt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_<(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
          '{${c1} < ${c2}}
-      def  gt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_>(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
          '{${c1} > ${c2}}
-      def leq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_<=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
          '{${c1} <= ${c2}}
-      def geq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_>=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
          '{${c1} >= ${c2}}
-      def eq_temp(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
+      def infix_===(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
          '{${c1} == ${c2}}
    }
 
    class LongCode extends NumCde[Long, Cde, Var] {
       type A = Long
 
-      def add(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_+(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} + ${c2}}
-      def sub(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_-(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} - ${c2}}
-      def mul(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_*(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} * ${c2}}
-      def div(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[A] = 
+      def infix_/(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} / ${c2}}
-      def modf(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
+      def infix_%(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
          '{${c1} % ${c2}}
 
-      def  lt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_<(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
          '{${c1} < ${c2}}
-      def  gt(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_>(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
          '{${c1} > ${c2}}
-      def leq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_<=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
          '{${c1} <= ${c2}}
-      def geq(c1: Cde[A], c2: Cde[A])(using QuoteContext):     Cde[Boolean] = 
+      def infix_>=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
          '{${c1} >= ${c2}}
-      def eq_temp(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
+      def infix_===(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
          '{${c1} == ${c2}}
    }
 

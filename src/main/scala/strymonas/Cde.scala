@@ -11,12 +11,13 @@ trait BoolCde[C[_], V[_]] {
 
    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean]
    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean]
-   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
-   def  lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
 
+   def unary_!(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = not(c1)
    implicit class BoolOps(val c1: Cde[Boolean]) {
-      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = land(c1, c2)
-      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] =  lor(c1, c2)
+      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = infix_&&(c1, c2)
+      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = infix_||(c1, c2)
    }
 }
 
@@ -40,17 +41,17 @@ trait NumCde[A <: AnyVal, C[_], V[_]] {
    type Cde[A] = C[A]
    type Var[A] = V[A]
 
-   def  add(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def  sub(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def  mul(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def  div(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def modf(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
+   def infix_+(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
+   def infix_-(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
+   def infix_*(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
+   def infix_/(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
+   def infix_%(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
 
-   def      lt(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def      gt(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def     leq(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def     geq(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def eq_temp(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
+   def infix_<(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
+   def infix_>(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
+   def infix_<=(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
+   def infix_>=(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
+   def infix_===(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
 }
 
 
@@ -135,17 +136,18 @@ trait Cde[C[_], V[_]] extends BoolCde[C, V] with   IntCde[C, V] with  LongCde[C,
    implicit val  IntOp: NumCde[Int, C, V]
    implicit val LongOp: NumCde[Long, C, V]
    implicit class NumOps[A <: AnyVal](val c1: Cde[A])(implicit t :NumCde[A, C, V]) {
-      def +(c2: Cde[A])(using QuoteContext):   Cde[A] = t.add(c1, c2)
-      def -(c2: Cde[A])(using QuoteContext):   Cde[A] = t.sub(c1, c2)
-      def *(c2: Cde[A])(using QuoteContext):   Cde[A] = t.mul(c1, c2)
-      def /(c2: Cde[A])(using QuoteContext):   Cde[A] = t.div(c1, c2)
-      def mod(c2: Cde[A])(using QuoteContext): Cde[A] = t.modf(c1, c2)
+      def +(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_+(c1, c2)
+      def -(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_-(c1, c2)
+      def *(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_*(c1, c2)
+      def /(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_/(c1, c2)
+      def %(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_%(c1, c2)
+      def mod(c2: Cde[A])(using QuoteContext): Cde[A] = t.infix_%(c1, c2)
 
-      def <(c2: Cde[A])(using QuoteContext):   Cde[Boolean] =     t.lt(c1 ,c2)
-      def >(c2: Cde[A])(using QuoteContext):   Cde[Boolean] =     t.gt(c1 ,c2)
-      def <=(c2: Cde[A])(using QuoteContext):  Cde[Boolean] =     t.leq(c1, c2)
-      def >=(c2: Cde[A])(using QuoteContext):  Cde[Boolean] =     t.geq(c1, c2)
-      def ===(c2: Cde[A])(using QuoteContext): Cde[Boolean] = t.eq_temp(c1, c2)
+      def <(c2: Cde[A])(using QuoteContext):   Cde[Boolean] = t.infix_<(c1 ,c2)
+      def >(c2: Cde[A])(using QuoteContext):   Cde[Boolean] = t.infix_>(c1 ,c2)
+      def <=(c2: Cde[A])(using QuoteContext):  Cde[Boolean] = t.infix_<=(c1, c2)
+      def >=(c2: Cde[A])(using QuoteContext):  Cde[Boolean] = t.infix_>=(c1, c2)
+      def ===(c2: Cde[A])(using QuoteContext): Cde[Boolean] = t.infix_===(c1, c2)
    }
 }
 
