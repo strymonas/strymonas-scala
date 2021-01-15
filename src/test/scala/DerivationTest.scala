@@ -31,9 +31,9 @@ class DerivationTest {
 
         def mapAccum[A, B, Z](f: Z => A => (B, Z))(st: Z)(s: Stream[A]): Stream[B]
         def take[A](n: Int)(s: Stream[A]): Stream[A]
-        def take_while[A](f: A => Boolean)(s1: Stream[A]): Stream[A]
+        def takeWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A]
         def drop[A](n: Int)(s: Stream[A]): Stream[A]
-        def drop_while[A](f: A => Boolean)(s1: Stream[A]): Stream[A]
+        def dropWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A]
         def zipWith[A, B, C](f: A => B => C)(s1: Stream[A])(s2: Stream[B]): Stream[C]
 
         // Consumers
@@ -122,14 +122,14 @@ class DerivationTest {
             }
         }
 
-        def take_while[A](f: A => Boolean)(s: Stream[A]): Stream[A] = {
+        def takeWhile[A](f: A => Boolean)(s: Stream[A]): Stream[A] = {
             s match {
                 case Nil() => Nil()
                 case Cons(x, t) => 
-                    if(f(x)) Cons(x, () => take_while(f)(t()))
+                    if(f(x)) Cons(x, () => takeWhile(f)(t()))
                     else Nil()
                 case Skip(t) => 
-                    Skip(() => take_while(f)(t()))
+                    Skip(() => takeWhile(f)(t()))
             }
         }
 
@@ -144,14 +144,14 @@ class DerivationTest {
             }
         }
 
-        def drop_while[A](f: A => Boolean)(s: Stream[A]): Stream[A] = {
+        def dropWhile[A](f: A => Boolean)(s: Stream[A]): Stream[A] = {
             s match {
                 case Nil() => Nil()
                 case Cons(x, t) => 
-                    if(f(x)) Skip(() => drop_while(f)(t()))
+                    if(f(x)) Skip(() => dropWhile(f)(t()))
                     else Cons(x, t)
                 case Skip(t) => 
-                    Skip(() => drop_while(f)(t()))
+                    Skip(() => dropWhile(f)(t()))
             }
         }
 
@@ -175,9 +175,9 @@ class DerivationTest {
         def zipWith[A, B, C](f: A => B => C)(s1: Stream[A])(s2: Stream[B]): Stream[C] = {
             (s1, s2) match {
                 case (Nil(), Nil())             => Nil()
-                case (Skip(t), s2)              => Skip(() => zip(t())(s2))
-                case (s1, Skip(t))              => Skip(() => zip(s1)(t()))
-                case (Cons(x, t1), Cons(y, t2)) => Cons(f(x)(y), () => zip(t1())(t2()))
+                case (Skip(t), s2)              => Skip(() => zipWith(f)(t())(s2))
+                case (s1, Skip(t))              => Skip(() => zipWith(f)(s1)(t()))
+                case (Cons(x, t1), Cons(y, t2)) => Cons(f(x)(y), () => zipWith(f)(t1())(t2()))
             }
         }
 
@@ -207,7 +207,7 @@ class DerivationTest {
         def mapAccum[A, B, Z](f: Z => A => (B, Z))(st: Z)(s: Stream[A]): Stream[B]
         def flatMap[A, B, Z](f: Z => A => Stream[(B, Z)])(z: Z)(s: Stream[A]): Stream[B]
         def filter[A](f: A => Boolean)(s: Stream[A]): Stream[A]
-        def take_while[A](f: A => Boolean)(s1: Stream[A]): Stream[A]
+        def takeWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A]
         def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)]
 
         // Consumers
@@ -229,7 +229,7 @@ class DerivationTest {
             if(step == 1)
                 s.pullArray(from - to)(i => i + from)
             else
-                s.fromStep(from, step) |> s.take_while(if step > 0 then ((x) => x <= to) else ((x) => x >= to))
+                s.fromStep(from, step) |> s.takeWhile(if step > 0 then ((x) => x <= to) else ((x) => x >= to))
         }
 
         def unfold[A, Z](step: Z => Option[(A, Z)])(z: Z): Stream[A] = 
@@ -256,8 +256,8 @@ class DerivationTest {
             s.zip[A, Int](st)(fromTo(1, 1, n)) |> map((x, y) => x)
         }
 
-        def take_while[A](f: A => Boolean)(s1: Stream[A]): Stream[A] = {
-            s.take_while(f)(s1)    
+        def takeWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A] = {
+            s.takeWhile(f)(s1)    
         }
         
         def drop[A](n: Int)(st: Stream[A]): Stream[A] = {
@@ -268,7 +268,7 @@ class DerivationTest {
                 |> map(_._1)
         }
 
-        def drop_while[A](f: A => Boolean)(st: Stream[A]): Stream[A] = {
+        def dropWhile[A](f: A => Boolean)(st: Stream[A]): Stream[A] = {
             st  |> s.mapAccum[A, (A, Boolean), Boolean](z => x => {
                     val z_ = z && f(x)  
                     ((x, z_), z_)})(true)
