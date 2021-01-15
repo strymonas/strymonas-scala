@@ -175,9 +175,9 @@ class DerivationTest {
         def zipWith[A, B, C](f: A => B => C)(s1: Stream[A])(s2: Stream[B]): Stream[C] = {
             (s1, s2) match {
                 case (Nil(), Nil())             => Nil()
-                case (Skip(t), s2)              => Skip(() => zipWith(f)(t())(s2))
-                case (s1, Skip(t))              => Skip(() => zipWith(f)(s1)(t()))
-                case (Cons(x, t1), Cons(y, t2)) => Cons(f(x)(y), () => zipWith(f)(t1())(t2()))
+                case (Skip(t), s2)              => Skip(() => zip(t())(s2))
+                case (s1, Skip(t))              => Skip(() => zip(s1)(t()))
+                case (Cons(x, t1), Cons(y, t2)) => Cons(f(x)(y), () => zip(t1())(t2()))
             }
         }
 
@@ -264,8 +264,8 @@ class DerivationTest {
             st  |> s.mapAccum[A, (A, Int), Int](z => x => {
                     val z_ = if(z <= n) then z+1 else z 
                     ((x, z_), z_)})(0)
-               |> s.filter((_, z) => z > n) 
-               |> map(_._1)
+                |> s.filter((_, z) => z > n) 
+                |> map(_._1)
         }
 
         def drop_while[A](f: A => Boolean)(st: Stream[A]): Stream[A] = {
@@ -315,25 +315,30 @@ class DerivationTest {
             }
         }
 
-        def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)] = ???
+        def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)] = (s1, s2) match {
+            case (Nil(), Nil())             => Nil()
+            case (Skip(t), s2)              => Skip(() => zip(t())(s2))
+            case (s1, Skip(t))              => Skip(() => zip(s1)(t()))
+            case (Cons(x, t1), Cons(y, t2)) => Cons((x, y), () => zip(t1())(t2()))
+        }
     }
 
-    
+    val t = new Desugar10(new Stream1Denot{}){}
 
     @Test def direct_tests() = {
+        import t._
+        val r1 = Array(0, 1, 2, 3, 4) 
+            |> ofArr 
+            |> mapAccum[Int, (Int, Int), Int](z => a => ((z, z + a), z + a))(1) 
+            |> observe(5)
 
-        // val r1 = Array(0, 1, 2, 3, 4) 
-        //     |> ofArr 
-        //     |> mapAccum[Int, (Int, Int), Int](z => a => ((z, z + a), z + a))(1) 
-        //     |> observe(5)
+        assert(r1 == List((1,1), (1,2), (2,4), (4,7), (7,11)))
 
-        // assert(r1 == List((1,1), (1,2), (2,4), (4,7), (7,11)))
+        val r2 = Array(0, 1, 2, 3, 4) 
+            |> ofArr 
+            |> map(a => a * a) 
+            |> observe(5)
 
-        // val r2 = Array(0, 1, 2, 3, 4) 
-        //     |> ofArr 
-        //     |> map(a => a * a) 
-        //     |> observe(5)
-
-        // assert(r2 == List(0, 1, 4, 9, 16))
+        assert(r2 == List(0, 1, 4, 9, 16))
     }
 }
