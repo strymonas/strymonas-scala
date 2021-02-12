@@ -178,6 +178,7 @@ class DerivationTest {
                 case (Skip(t), s2)              => Skip(() => zipWith(f)(t())(s2))
                 case (s1, Skip(t))              => Skip(() => zipWith(f)(s1)(t()))
                 case (Cons(x, t1), Cons(y, t2)) => Cons(f(x)(y), () => zipWith(f)(t1())(t2()))
+                case _ => ??? // TODO
             }
         }
 
@@ -320,10 +321,83 @@ class DerivationTest {
             case (Skip(t), s2)              => Skip(() => zip(t())(s2))
             case (s1, Skip(t))              => Skip(() => zip(s1)(t()))
             case (Cons(x, t1), Cons(y, t2)) => Cons((x, y), () => zip(t1())(t2()))
+            case _ => ??? // TODO
         }
     }
 
     val t = new Desugar10(new Stream1Denot{}){}
+
+    trait Stream2 { 
+        type Stream[A]
+  
+        def pullArray[A, Z](z: Z)(n: Int)(step: Z => Int => (A, Z)): Stream[(A, Z)]
+
+        def unroll[A, Z](step: Z => (Option[A], Z))(z: Z): Stream[(A, Z)]
+
+        def mapAccum[A, B, Z, Z1](f: Z => A => (B, Z))(st: Z)(s: Stream[(A, Z1)]): Stream[(B, (Z, Z1))]
+
+        def filter[A, Z](f: A => Boolean)(s: Stream[(A, Z)]): Stream[(A, Z)]
+
+        def guard[A, Z](f: Z => Boolean)(s: Stream[(A, Z)]): Stream[(A, Z)]
+        
+        def zip[A, B, Z1, Z2](s1: Stream[(A, Z1)])(s2: Stream[(B, Z2)]): Stream[((A, B), (Z1, Z2))]
+
+        enum PrivateStream[A1, B1] {
+            case Hid[A, Z, ZPriv](s: Stream[(A, (Z, ZPriv))]) extends PrivateStream[A, Z]
+        }
+        def flatMap[A, B, Z, Z1](f: Z => A => Stream[(B, Z)])(z: Z)(s: Stream[(A, Z1)]): Stream[(B, (Z, Z1))]
+
+        def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[(A, Z1)]): Stream[(A, Z2)]
+        
+        def observe[A, Z](limit: Int)(s: Stream[(A, Z)]): List[A]
+    } 
+
+    trait Desugar21(val s: Stream2) extends Stream1 {  
+
+        enum Stream[A] {
+            case St[A, Z](ss: s.Stream[(A, Z)]) extends Stream[A]
+        }
+
+        def toStream[A, Z](ss: s.Stream[(A, Z)]): Stream[A] = Stream.St(ss)
+
+        def pullArray[A](upb: Int)(f: Int => A): Stream[A] = {
+            s.pullArray(())(upb)(z => i => (f(i), z)) |> toStream
+        }
+
+        def fromStep(ifrom: Int, step: Int): Stream[Int] = {
+            s.unroll[Int, Int](z => (Some(z), z + step))(ifrom) |> toStream
+        }   
+
+        def unfold[A, Z](step: Z => Option[(A, Z)])(z: Z): Stream[A] = {
+            def ustep(z: Option[Z]): (Option[A], Option[Z]) = z match {
+                case None => (None, None)
+                case Some(z) => step(z) match {
+                    case Some(x, newZ) => (Some(x), Some(newZ))
+                    case None => (None, None)
+                }
+            }
+
+            s.unroll[A, Option[Z]](ustep)(Some(z)) |>
+            s.guard(_ == None) |>
+            toStream
+        }
+
+        // Transformers
+        def mapAccum[A, B, Z](f: Z => A => (B, Z))(z: Z)(stream: Stream[A]): Stream[B] = {
+            stream match {
+                case Stream.St(ss) => s.mapAccum(f)(z)(ss) |> toStream
+            }
+        }
+
+        def flatMap[A, B, Z](f: Z => A => Stream[(B, Z)])(z: Z)(s: Stream[A]): Stream[B] = ???
+        def filter[A](f: A => Boolean)(s: Stream[A]): Stream[A] = ???
+        def takeWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A] = ???
+        def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)] = ???
+
+        // Consumers
+        def observe[A](limit: Int)(s: Stream[A]): List[A] = ???
+    }
+
 
     @Test def direct_tests() = {
         import t._
