@@ -328,37 +328,39 @@ class DerivationTest {
     val t = new Desugar10(new Stream1Denot{}){}
 
     trait Stream2 { 
-        type Stream[A]
-  
-        def pullArray[A, Z](z: Z)(n: Int)(step: Z => Int => (A, Z)): Stream[(A, Z)]
-
-        def unroll[A, Z](step: Z => (Option[A], Z))(z: Z): Stream[(A, Z)]
-
-        def mapAccum[A, B, Z, Z1](f: Z => A => (B, Z))(st: Z)(s: Stream[(A, Z1)]): Stream[(B, (Z, Z1))]
-
-        def filter[A, Z](f: A => Boolean)(s: Stream[(A, Z)]): Stream[(A, Z)]
-
-        def guard[A, Z](f: Z => Boolean)(s: Stream[(A, Z)]): Stream[(A, Z)]
-        
-        def zip[A, B, Z1, Z2](s1: Stream[(A, Z1)])(s2: Stream[(B, Z2)]): Stream[((A, B), (Z1, Z2))]
-
-        enum PrivateStream[A1, B1] {
-            case Hid[A, Z, ZPriv](s: Stream[(A, (Z, ZPriv))]) extends PrivateStream[A, Z]
+        type Stream[A, Z]
+        enum PrivateStream[a, b] {
+            case Hid[A, Z, ZPriv](s: Stream[A, (Z, ZPriv)]) extends PrivateStream[A, Z]
         }
-        def flatMap[A, B, Z, Z1](f: Z => A => Stream[(B, Z)])(z: Z)(s: Stream[(A, Z1)]): Stream[(B, (Z, Z1))]
 
-        def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[(A, Z1)]): Stream[(A, Z2)]
+        def pullArray[A, Z](z: Z)(n: Int)(step: Z => Int => (A, Z)): Stream[A, Z]
+
+        def unroll[A, Z](step: Z => (Option[A], Z))(z: Z): Stream[A, Z]
+
+        def mapAccum[A, B, Z, Z1](f: Z => A => (B, Z))(st: Z)(s: Stream[A, Z1]): Stream[B, (Z, Z1)]
+
+        def filter[A, Z](f: A => Boolean)(s: Stream[A, Z]): Stream[A, Z]
+
+        def guard[A, Z](f: Z => Boolean)(s: Stream[A, Z]): Stream[A, Z]
         
-        def observe[A, Z](limit: Int)(s: Stream[(A, Z)]): List[A]
+        def zip[A, B, Z1, Z2](s1: Stream[A, Z1])(s2: Stream[B, Z2]): Stream[(A, B), (Z1, Z2)]
+
+        def flatMap[A, B, Z, Z1](f: Z => A => PrivateStream[B, Z])(z: Z)(s: Stream[A, Z1]): Stream[B, (Z, Z1)]
+
+        def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[A, Z1]): Stream[A, Z2]
+        
+        def observe[A, Z](limit: Int)(s: Stream[A, Z]): List[A]
     } 
 
     trait Desugar21(val s: Stream2) extends Stream1 {  
 
         enum Stream[A] {
-            case St[A, Z](ss: s.Stream[(A, Z)]) extends Stream[A]
+            case St[A, Z](ss: s.Stream[A, Z]) extends Stream[A]
         }
 
-        def toStream[A, Z](ss: s.Stream[(A, Z)]): Stream[A] = Stream.St(ss)
+        type PrivateStream[a, b] = s.PrivateStream[a, b]
+
+        def toStream[A, Z](ss: s.Stream[A, Z]): Stream[A] = Stream.St(ss)
 
         def pullArray[A](upb: Int)(f: Int => A): Stream[A] = {
             s.pullArray(())(upb)(z => i => (f(i), z)) |> toStream
@@ -389,7 +391,20 @@ class DerivationTest {
             }
         }
 
-        def flatMap[A, B, Z](f: Z => A => Stream[(B, Z)])(z: Z)(s: Stream[A]): Stream[B] = ???
+        def flatMap[A, B, Z](f: Z => A => Stream[(B, Z)])(z: Z)(stream: Stream[A]): Stream[B] = {
+            stream match {
+                case Stream.St(sto) => {
+                    def ff(z: Z)(a: A): PrivateStream[B, Z] = {              
+                        f(z)(a) match {
+                            case Stream.St(sti: (s.Stream[(B, Z), zpriv])) => ??? // s.PrivateStream.Hid(s.mapAccum((_) => (bz: (B, Z)) => bz)(z)(sti))
+                        }
+                    }
+
+                    s.flatMap(ff)(z)(sto) |> toStream
+                }
+            }
+        }
+
         def filter[A](f: A => Boolean)(s: Stream[A]): Stream[A] = ???
         def takeWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A] = ???
         def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)] = ???
