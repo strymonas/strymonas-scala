@@ -329,6 +329,7 @@ class DerivationTest {
 
     trait Stream2 { 
         type Stream[A, Z]
+
         enum PrivateStream[a, b] {
             case Hid[A, Z, ZPriv](s: Stream[A, (Z, ZPriv)]) extends PrivateStream[A, Z]
         }
@@ -356,7 +357,7 @@ class DerivationTest {
 
         enum Stream[A] {
             case St[A, Z](ss: s.Stream[A, Z]) extends Stream[A]
-        }
+        } 
 
         type PrivateStream[a, b] = s.PrivateStream[a, b]
 
@@ -390,13 +391,14 @@ class DerivationTest {
                 case Stream.St(ss) => s.mapAccum(f)(z)(ss) |> toStream
             }
         }
-
-        def flatMap[A, B, Z](f: Z => A => Stream[(B, Z)])(z: Z)(stream: Stream[A]): Stream[B] = {
+        
+        def flatMap[A, B, Z, zpriv](f: Z => A => Stream[(B, Z)])(z: Z)(stream: Stream[A]): Stream[B] = {
             stream match {
-                case Stream.St(sto) => {
+                case Stream.St(sto: (s.Stream[A, _])) => {
                     def ff(z: Z)(a: A): PrivateStream[B, Z] = {              
                         f(z)(a) match {
-                            case Stream.St(sti: (s.Stream[(B, Z), zpriv])) => ??? // s.PrivateStream.Hid(s.mapAccum((_) => (bz: (B, Z)) => bz)(z)(sti))
+                            case Stream.St(sti: (s.Stream[(B, Z), _])) => 
+                                s.PrivateStream.Hid(s.mapAccum((_: Z) => (bz: (B, Z)) => bz)(z)(sti))
                         }
                     }
 
@@ -405,12 +407,33 @@ class DerivationTest {
             }
         }
 
-        def filter[A](f: A => Boolean)(s: Stream[A]): Stream[A] = ???
-        def takeWhile[A](f: A => Boolean)(s1: Stream[A]): Stream[A] = ???
-        def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)] = ???
+        def filter[A](f: A => Boolean)(stream: Stream[A]): Stream[A] = stream match {
+            case Stream.St(st: (s.Stream[A, _])) =>
+                s.filter(f)(st) |> toStream
+        }
+
+        def takeWhile[A](f: A => Boolean)(stream: Stream[A]): Stream[A] = stream match {
+            case Stream.St(st: (s.Stream[A, _])) =>
+                s.mapAccum((z: Boolean) => (x: A) => (x, f(x)))(true)(st) |>
+                s.guard((z, z1) => z) |>
+                toStream
+        }
+
+        def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)] = {
+            s1 match {
+                case Stream.St(st1: (s.Stream[A, _])) =>
+                    s2 match {
+                        case Stream.St(st2: (s.Stream[B, _])) =>
+                            s.zip(st1)(st2) |> toStream
+                    }
+            }
+        }
 
         // Consumers
-        def observe[A](limit: Int)(s: Stream[A]): List[A] = ???
+        def observe[A](limit: Int)(stream: Stream[A]): List[A] = stream match {
+            case Stream.St(st: (s.Stream[A, _])) => 
+                s.observe(limit)(st) 
+        }
     }
 
 
