@@ -217,7 +217,7 @@ object Code extends Cde {
       }
    }
 
-   def cloop[A: Type](k: A => Cde[Unit],
+   def cloop[A](k: A => Cde[Unit],
                      bp: Option[Cde[Boolean]],
                      body: ((A => Cde[Unit]) => Cde[Unit]))(using QuoteContext): Cde[Unit] = {
       Var(bool(true)) { again => 

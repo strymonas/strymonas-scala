@@ -186,7 +186,7 @@ object CodePs extends Cde {
       }
    }
    
-   def cloop[A: Type](k: A => Cde[Unit],
+   def cloop[A](k: A => Cde[Unit],
                       bp: Option[Cde[Boolean]],
                       body: ((A => Cde[Unit]) => Cde[Unit]))(using QuoteContext): Cde[Unit] = {
       injCde(Code.cloop((x: A) => k(x) |> dyn, mapOpt[Cde[Boolean], Code[Boolean]](dyn, bp), k => body(x => k(x) |> injCde) |> dyn))

@@ -109,7 +109,7 @@ object StreamRaw {
       case Nested[A, B](g: Goon, sf: Flat[Cde[B]], t: Type[B], f: Cde[B] => StreamShape[A]) extends StreamShape[A]
    }
 
-   
+   // ==================================================
    import Goon._
    import Init._
    import Producer._
@@ -172,9 +172,9 @@ object StreamRaw {
       }
    }
 
-   def foldRaw[A: Type](consumer: A => Cde[Unit], st: StreamShape[A])(using QuoteContext): Cde[Unit] = {
+   def foldRaw[A](consumer: A => Cde[Unit], st: StreamShape[A])(using QuoteContext): Cde[Unit] = {
 
-      def consume[A: Type](g: Goon, consumer: A => Cde[Unit], st: Producer[A])(using QuoteContext): Cde[Unit] = {
+      def consume[A](g: Goon, consumer: A => Cde[Unit], st: Producer[A])(using QuoteContext): Cde[Unit] = {
          st match {
             case For(pullArray) =>
                val bp = if(g == Goon.GTrue) then None else Some(cde_of_goon(g))
@@ -185,7 +185,7 @@ object StreamRaw {
          }
       }
 
-      def loop[A : Type](consumer: A => Cde[Unit], st: StreamShape[A])(using ctx: QuoteContext): Cde[Unit] = {
+      def loop[A](consumer: A => Cde[Unit], st: StreamShape[A])(using ctx: QuoteContext): Cde[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk) =>
                letl(i)(i => loop[A](consumer, sk(i)))(t, summon[Type[Unit]], ctx)
@@ -212,7 +212,7 @@ object StreamRaw {
       loop(consumer, st)
    }
 
-   def normalizeFlat[A: Type](fl: Flat[A])(using QuoteContext): Flat[A] = {
+   def normalizeFlat[A](fl: Flat[A])(using QuoteContext): Flat[A] = {
       fl match {
          case (Filtered(preds), g, p) =>
             val pred = predsConj(preds)
@@ -221,7 +221,7 @@ object StreamRaw {
       }
    }
 
-   def mapRaw_CPS[A: Type, B: Type](tr: A => Emit[B], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+   def mapRaw_CPS[A, B](tr: A => Emit[B], s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       s match {
          case Initializer(init, sk) => 
             Initializer(init,  z => mapRaw_CPS(tr, sk(z)))
@@ -236,17 +236,10 @@ object StreamRaw {
       }
    }
 
-   def flatMapRaw[A, B: Type](last: Cde[A] => StreamShape[B], s: StreamShape[Cde[A]])(using t: Type[A]) : StreamShape[B] = {
-      s match {
-         case Initializer(init, sk) => Initializer(init, x => flatMapRaw(last, sk(x)))
-         case Flattened(sf) => Nested(Goon.GTrue, sf, t, last)
-         case Nested(g, sf, t, last2) => Nested(g, sf, t, x => flatMapRaw(last, last2(x)))
-      }
-   }
-
-   def mapRaw_Direct[A: Type, B: Type](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
+   def mapRaw_Direct[A, B](f: A => B, s: StreamShape[A])(using QuoteContext): StreamShape[B] = {
       mapRaw_CPS((e: A) => (k: B => Cde[Unit]) => k(f(e)), s)
    }
+
 
    def filterRaw[A](pred: A => Cde[Boolean], s: StreamShape[A])(using QuoteContext): StreamShape[A] = {
       s match { 
@@ -260,6 +253,16 @@ object StreamRaw {
             Nested(g, s, t, x => filterRaw(pred, last(x)))
       }
    }
+
+
+   def flatMapRaw[A, B](last: Cde[A] => StreamShape[B], s: StreamShape[Cde[A]])(using t_a: Type[A]) : StreamShape[B] = {
+      s match {
+         case Initializer(init, sk) => Initializer(init, x => flatMapRaw(last, sk(x)))
+         case Flattened(sf) => Nested(Goon.GTrue, sf, t_a, last)
+         case Nested(g, sf, t, last2) => Nested(g, sf, t, x => flatMapRaw(last, last2(x)))
+      }
+   }
+
 
    def zipEmit[A, B](i1: Emit[A], i2: Emit[B]): Emit[(A, B)] = (k: ((A, B)) => Cde[Unit]) => {
       i1(x => i2(y => k((x, y))))
@@ -276,8 +279,28 @@ object StreamRaw {
       }
    }
 
-   def linearize[A: Type](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
-      def loopnn[A: Type](stt: Flat[A]): StreamShape[A] = {
+
+   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
+      st match {
+         case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+         case Initializer(IVar(i, t), sk) => {
+            var score = 0
+            val _ = 
+               letVar(i)(z => {
+                  score = linearize_score(sk(z)) 
+                  unit
+               })(t, summon[Type[Unit]], ctx)
+            score
+         }
+         case Flattened(Linear, _, _) => 0
+         case Flattened(_)            => 3
+         case Nested(_, s, t, sk) => 
+            5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
+      }
+   }
+
+   def linearize[A](st: StreamShape[A])(using ctx: QuoteContext): StreamShape[A] = {
+      def loopnn[A](stt: Flat[A]): StreamShape[A] = {
          stt match {
             case (Linear, _, _) => Flattened(stt)
             case (Filtered(_), _, _) =>  loopnn(normalizeFlat(stt))
@@ -288,7 +311,7 @@ object StreamRaw {
          }
       }
 
-      def nested[A: Type, B: Type](gouter: Goon, next : Cde[B] => StreamShape[A], stt: Flat[Cde[B]])(using ctx: QuoteContext): StreamShape[A] = {
+      def nested[A, B: Type](gouter: Goon, next : Cde[B] => StreamShape[A], stt: Flat[Cde[B]])(using ctx: QuoteContext): StreamShape[A] = {
          stt match { 
             case (Filtered(_),_,_) | (_,_,For(_)) => assert(false)
             case (_, g1, Unfold(step)) =>
@@ -298,7 +321,7 @@ object StreamRaw {
                val guard = goon_disj(GRef(gref), GRef(in_inner))
                mkInitVar[B, A](uninit(summon[Type[B]], ctx), xres => {
                val st2 = mmain(true, next(dref(xres)))
-               split_init(unit, st2, (i_) => (g__, st_) => {
+               split_init(unit, st2, (i_) => (g__, step_ : Emit[A]) => {
                   val g_ = goon_conj(gouter, g__)
                   Flattened(Linear, guard,
                            Unfold((k: A=>Cde[Unit]) => {
@@ -312,7 +335,7 @@ object StreamRaw {
                                        ))
                                     ),
                                     if1(dref(in_inner), 
-                                       if_(cde_of_goon(g_), st_(k), in_inner := bool(false))
+                                       if_(cde_of_goon(g_), step_(k), in_inner := bool(false))
                                     )
                                  )
                               }))
@@ -325,7 +348,7 @@ object StreamRaw {
          }
       }
 
-      def split_init[A: Type, W](init: Cde[Unit], st: StreamShape[A], k: (Cde[Unit] => (Goon, Emit[A]) => StreamShape[W]))(using ctx: QuoteContext): StreamShape[W] = 
+      def split_init[A, W](init: Cde[Unit], st: StreamShape[A], k: (Cde[Unit] => (Goon, Emit[A]) => StreamShape[W]))(using ctx: QuoteContext): StreamShape[W] = 
          st match{
             case Initializer(ILet(i, t), sk) => 
                def applyLet[B : Type](i: Cde[B], sk: (Cde[B] => StreamShape[A])): StreamShape[W] = {
@@ -346,7 +369,7 @@ object StreamRaw {
             case Nested(_, _, _, _) => throw new Exception("Inner stream must be linearized first")
          }
 
-      def mmain[A: Type](unn: Boolean, st: StreamShape[A]): StreamShape[A] = {
+      def mmain[A](unn: Boolean, st: StreamShape[A]): StreamShape[A] = {
          st match {
             case Initializer(init, sk)                      => Initializer(init, x => (mmain(unn, sk(x))))
             case Flattened(sf@(_, _, For(_)))               => mmain(unn, for_unfold(sf))
@@ -383,27 +406,9 @@ object StreamRaw {
       mmain(false, st) 
    }
 
-   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
-      st match {
-         case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
-         case Initializer(IVar(i, t), sk) => {
-            var score = 0
-            val _ = 
-               letVar(i)(z => {
-                  score = linearize_score(sk(z)) 
-                  unit
-               })(t, summon[Type[Unit]], ctx)
-            score
-         }
-         case Flattened(Linear, _, _) => 0
-         case Flattened(_)            => 3
-         case Nested(_, s, t, sk) => 
-            5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
-      }
-   }
 
-   def zipRaw[A: Type, B: Type](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
-      def swap[A: Type, B: Type](st: StreamShape[(A, B)]) = {
+   def zipRaw[A, B](st1: StreamShape[A], st2: StreamShape[B])(using QuoteContext): StreamShape[(A, B)] = {
+      def swap[A, B](st: StreamShape[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
 
