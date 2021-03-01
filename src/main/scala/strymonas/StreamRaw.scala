@@ -380,8 +380,14 @@ object StreamRaw {
                   })
                }
                applyLet(i, sk)(t)
-               
-            // case Initializer(IArr(a, t), sk) if (a.length == 0) => ??? 
+            case Initializer(IArr(a, t, ct), sk) if (a.length == 0) => 
+               def applyLet[B : Type : ClassTag](a: Array[Cde[B]], sk: (Cde[Array[B]] => StreamShape[A])): StreamShape[W] = {
+                  mkInitArr[B, W](a, { zres => 
+                     split_init(init, sk(zres), k)
+                  })
+               }
+               applyLet(a, sk)(t,ct)
+
             // case Initializer(IArr(a, t), sk) => ??? 
             // case Initializer(IUArr(n, a, t), sk) => ??? 
                

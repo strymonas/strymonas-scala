@@ -178,6 +178,9 @@ object Code extends CdeSpec[Cde] {
 
 
 
+   // Double
+   def double(c1: Double)(using QuoteContext): Cde[Double] = Expr(c1)
+
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using Quotes): Cde[A] = {
       cnd match {

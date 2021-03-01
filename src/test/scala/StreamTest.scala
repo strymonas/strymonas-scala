@@ -182,10 +182,10 @@ class StreamTest {
       def s(using Quotes) = 
          import strymonas.StreamRaw._
          
-         val t1 = Stream.of(inj(Array(1,2,3))).filter(_ > int(1))
-         val t2 = t1.flatMap((d) => Stream.of(inj(Array(1,2,3))))
-         val t3 = t2.flatMap((d) => Stream.of(inj(Array(1,2,3))))
-         val t4 = mkInitVar(int(10), i => Stream.of(inj(Array(1,2,3))).stream)
+         val t1 = Stream.of_int_array(Array(1,2,3)).filter(_ > int(1))
+         val t2 = t1.flatMap((d) => Stream.of_int_array(Array(1,2,3)))
+         val t3 = t2.flatMap((d) => Stream.of_int_array(Array(1,2,3)))
+         val t4 = mkInitVar(int(10), i => Stream.of_int_array(Array(1,2,3)).stream)
          assert(linearize_score(t1.stream) == 3)
          assert(linearize_score(t2.stream) == 8)
          assert(linearize_score(t3.stream) == 13)

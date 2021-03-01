@@ -159,6 +159,9 @@ object CodePs extends Cde {
    def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):     Cde[Boolean] = lift2[Long, Long, Boolean](_>=_)(bool)(Code.long_geq)(c1, c2)
    def long_eq_temp(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean] = lift2[Long, Long, Boolean](_==_)(bool)(Code.long_eq_temp)(c1, c2)
 
+   // Double
+   def double(c1: Double)(using QuoteContext): Cde[Double] = Cde(Annot.Sta(c1), Code.double(c1))
+
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A] = {
       cnd match {
@@ -226,7 +229,35 @@ object CodePs extends Cde {
       injCde(Code.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
 
-   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = {
+      def a(darr: Code[Array[A]]): Cde[Array[A]] =
+         if i.forall(e =>
+               e match {
+                  case Cde(Annot.Sta(_),  _) => true
+                  case _                    => false
+               }
+            ) then
+               Cde(Annot.Sta(i.map(e =>
+                  e match {
+                     case Cde(Annot.Sta(x),  _) => x
+                     case _                    => assert(false)
+                  }
+               )), darr)
+         else if i.exists(e =>
+               e match {
+                  case Cde(Annot.Unk(),  _) => true
+                  case _                  => false
+               }
+            ) then
+               injCde(darr)
+         else
+            Cde(Annot.Global(), darr)
+
+      injCde(Code.new_array(i.map(e => dyn(e)))(darr =>
+         dyn(k(a(darr)))
+         )
+      )
+   }
    
    // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
 

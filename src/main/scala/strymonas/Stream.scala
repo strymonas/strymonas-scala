@@ -1,6 +1,8 @@
 package strymonas
 
 import scala.quoted._
+import scala.quoted.util._
+import scala.reflect.ClassTag
 
 import Code._
 import Code.given
@@ -103,6 +105,28 @@ object Stream {
          )
 
       Stream(shape)
+   }
+
+   def of_static[A: Type : ClassTag](arr: Array[Cde[A]])(using Quotes): Stream[A] = {
+      val len = arr.length
+      val shape = 
+         mkInitArr(arr, (arr: Cde[Array[A]]) => 
+            mkPullArray[Cde[A]](int(len-1), array_get (arr))
+         )
+
+      Stream(shape)
+   }
+
+   def of_int_array(arr: Array[Int])(using Quotes): Stream[Int] = {
+      of_static(arr.map(e => int(e)))
+   }
+
+   def of_long_array(arr: Array[Long])(using Quotes): Stream[Long] = {
+      of_static(arr.map(e => long(e)))
+   }
+
+   def of_double_array(arr: Array[Double])(using Quotes): Stream[Double] = {
+      of_static(arr.map(e => double(e)))
    }
 
    def iota(n: Cde[Int])(using Quotes): Stream[Int] = {
