@@ -90,12 +90,11 @@ object CodePs extends Cde {
       injCde(Code.letVar(dyn(x))(v => injVar(v) |> k |> dyn))
    }
 
-   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using ctx: QuoteContext): Cde[A] = {
-      (c1, c2) match {
-         case (Cde(Annot.Sta(()), _), _) => c2
+   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using ctx: QuoteContext): Cde[A] =
+      c1 match {
+         case Cde(Annot.Sta(()), _) => c2
          case _ => inj2[Unit, A, A](Code.seq)(c1, c2)
       }
-   }
    def unit(using QuoteContext): Cde[Unit] = Cde(Annot.Sta(()), Code.unit)
 
    // Booleans
@@ -137,7 +136,12 @@ object CodePs extends Cde {
    def sub(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_-_)(int)(Code.sub)(c1, c2)
    def mul(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_*_)(int)(Code.mul)(c1, c2)
    def div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_/_)(int)(Code.div)(c1, c2)
-   def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = lift2[Int, Int, Int](_%_)(int)(Code.modf)(c1, c2)
+   def modf(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = {
+      (c1, c2) match {
+         case (_, Cde(Annot.Sta(1),_)) => int(0)
+         case _ => lift2[Int, Int, Int](_%_)(int)(Code.modf)(c1, c2)
+      }
+   }
 
    def lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):      Cde[Boolean] = lift2[Int, Int, Boolean](_<_)(bool)(Code.lt)(c1, c2)
    def gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):      Cde[Boolean] = lift2[Int, Int, Boolean](_>_)(bool)(Code.gt)(c1, c2)
@@ -154,7 +158,12 @@ object CodePs extends Cde {
    def long_sub(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_-_)(long)(Code.long_sub)(c1, c2)
    def long_mul(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_*_)(long)(Code.long_mul)(c1, c2)
    def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Long] = lift2[Long, Long, Long](_/_)(long)(Code.long_div)(c1, c2)
-   def long_modf(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = lift2[Long, Long, Long](_%_)(long)(Code.long_modf)(c1, c2)
+   def long_modf(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = {
+      (c1, c2) match {
+         case (_, Cde(Annot.Sta(1),_)) => long(0)
+         case _ => lift2[Long, Long, Long](_%_)(long)(Code.long_modf)(c1, c2)
+      }
+   }
 
    def long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):      Cde[Boolean] = lift2[Long, Long, Boolean](_<_)(bool)(Code.long_lt)(c1, c2)
    def long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):      Cde[Boolean] = lift2[Long, Long, Boolean](_>_)(bool)(Code.long_gt)(c1, c2)
