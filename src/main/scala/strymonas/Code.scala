@@ -271,9 +271,9 @@ object Code extends CdeSpec[Cde] {
       array)
   }
    
-   // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] = {
-   //    new_array(Array.fill(n)(i))(k)
-   // }
+   def new_uarray[A: Type: ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = {
+      new_array(Array.fill(n)(i))(k)
+   }
 
    def int_array[A: Type](arr: Array[Int])(using Quotes): Cde[Array[Int]] = Cde(Annot.Sta(arr), CodeRaw.int_array(arr))
 

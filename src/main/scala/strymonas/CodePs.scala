@@ -36,6 +36,9 @@ object CodePs extends Cde {
    def injVar[A](x: Vari[A]): Var[A] = Var[A](Annot.Unk(), x)
    def dyn[A](x: Cde[A]): Code[A] = x.dyn
    def dynVar[A](x: Var[A]): Vari[A] = x.dyn
+   def injdyn[A, B](k: Cde[A] => Cde[B])(v: Code[A]): Cde[B] = {
+      dyn(k(injCde(v)))
+   }
 
    def inj1[A, B](f: Code[A] => Code[B]): (Cde[A] => Cde[B]) = {
       (x: Cde[A]) =>
@@ -259,7 +262,8 @@ object CodePs extends Cde {
       )
    }
    
-   // def new_uarray[A: Type, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = ???
+   def new_uarray[A: Type : ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] =
+      injCde(Code.new_uarray (n, dyn(i)) (injdyn(k)))
 
    def int_array[A: Type](arr: Array[Int])(using QuoteContext): Cde[Array[Int]] = Cde(Annot.Sta(arr), Code.int_array(arr))
 
