@@ -52,7 +52,7 @@ object StreamRaw {
       case ILet(init: Cde[A], t: Type[A]) extends Init[Cde[A]]
       case IVar(init: Cde[A], t: Type[A]) extends Init[Var[A]]
       case IArr(init: Array[Cde[A]], t: Type[A], ct: ClassTag[A]) extends Init[Cde[Array[A]]]
-      // case IUArr(size: Int, init: Cde[A], t: Type[Array[A]]) extends Init[Cde[Array[A]]]
+      case IUArr(size: Int, init: Cde[A], t: Type[A], ct: ClassTag[A]) extends Init[Cde[Array[A]]]
    }
    
    /* Linear is when a stream does not stutter (fails to produce at least one value while the state advances)
@@ -135,9 +135,9 @@ object StreamRaw {
       Initializer[Cde[Array[Z]], A](IArr(init, t, ct), sk)
    }
 
-   // def mkInitUArr[Z, A](size: Int, init: Cde[Z], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Array[Z]]): StreamShape[A] = {
-   //    Initializer[Cde[Array[Z]], A](IUArr(size, init, t), sk)
-   // }
+   def mkInitUArr[Z, A](size: Int, init: Cde[Z], sk: Cde[Array[Z]] => StreamShape[A])(using t : Type[Z], ct: ClassTag[Z]): StreamShape[A] = {
+      Initializer[Cde[Array[Z]], A](IUArr(size, init, t, ct), sk)
+   }
 
    /**
     * Make a new pull array from an upper bound and an indexing function in CPS
@@ -204,8 +204,8 @@ object StreamRaw {
                letVar(i)(z => loop[A](consumer, sk(z)))(t, summon[Type[Unit]], ctx)
             case Initializer(IArr(a, t, ct), sk) => 
                new_array(a)(a => loop[A](consumer, sk(a)))(t, ct, summon[Type[Unit]], ctx)
-            // case Initializer(IUArr(n, i, t), sk) => 
-            //    new_uarray(n, i)(a => loop[A](consumer, sk(a)))(t, summon[Type[Unit]], ctx)
+            case Initializer(IUArr(n, i, t, ct), sk) => 
+               new_uarray(n, i)(a => loop[A](consumer, sk(a)))(t, ct, summon[Type[Unit]], ctx)
             case Flattened(Filtered(preds), g, prod) =>
                val pred = predsConj(preds)
                val newConsumer = (x: A) => if1(pred(x), consumer(x))
@@ -388,10 +388,27 @@ object StreamRaw {
                   })
                }
                applyLet(a, sk)(t,ct)
-
-            // case Initializer(IArr(a, t), sk) => ??? 
-            // case Initializer(IUArr(n, a, t), sk) => ??? 
-               
+            case Initializer(IArr(a, t, ct), sk) => 
+               val len = a.length
+               def applyLet[B : Type : ClassTag](a: Array[Cde[B]], sk: (Cde[Array[B]] => StreamShape[A])): StreamShape[W] = {
+                  def loop(i: Int, zres: Cde[Array[B]], acc: Cde[Unit]): Cde[Unit] = {
+                     if i>=len then
+                        acc
+                     else
+                        loop(i+1, zres, seq(acc, array_set(zres)(int(i))(a(i))))
+                  }
+                  mkInitUArr[B, W](len, uninit[B], { zres => 
+                     split_init(loop(0, zres, init), sk(zres), k)
+                  })
+               }
+               applyLet(a, sk)(t,ct)
+            case Initializer(IUArr(size, i, t, ct), sk) =>
+               def applyLet[B : Type : ClassTag](i: Cde[B], sk: (Cde[Array[B]] => StreamShape[A])): StreamShape[W] = {
+                  mkInitUArr[B, W](size, i, { zres => 
+                     split_init(init, sk(zres), k)
+                  })
+               }
+               applyLet(i, sk)(t,ct)
             case Flattened(Filtered(_),_,_) | Flattened(_,_,For(_)) => assert(false)
             case Flattened(_,g,Unfold(step)) => k(init)(g, step)
             case Nested(_, _, _, _) => throw new Exception("Inner stream must be linearized first")
