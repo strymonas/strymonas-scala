@@ -181,6 +181,9 @@ object Code extends Cde {
       cond('{ ${c1} > ${c2} }, c1, c2)
    }
 
+   // Double
+   def double(c1: Double)(using QuoteContext): Cde[Double] = Expr(c1)
+
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using QuoteContext): Cde[A] = '{
       if(${cnd}) then ${bt} else ${bf}
