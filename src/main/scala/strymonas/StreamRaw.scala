@@ -173,9 +173,7 @@ object StreamRaw {
             mkInitVar(int(0), (i) =>
                Flattened(m, goon_conj(g, GExp(dref(i) <= array.upb())),
                         Unfold((k: A => Cde[Unit]) => 
-                           letl(dref(i))(v => 
-                              seq(incr(i), array.index(v)(k))
-                           )
+                           seq(array.index(dref(i))(k), incr(i))
                         )
                )
             )
@@ -332,30 +330,32 @@ object StreamRaw {
             case (Filtered(_),_,_) | (_,_,For(_)) => assert(false)
             case (_, g1, Unfold(step)) =>
                val g = goon_conj(gouter, g1)
-               mkInitVar[Boolean, A](cde_of_goon(g), gref => {
+               mkInitVar[Boolean, A](bool(true), goon => {
                mkInitVar[Boolean, A](bool(false), in_inner => {
-               val guard = goon_disj(GRef(gref), GRef(in_inner))
+               val guard = GRef(goon)
+               // The OCaml version uses outer_sample instead of uninit
                mkInitVar[B, A](uninit(summon[Type[B]], ctx), xres => {
                val st2 = mmain(true, next(dref(xres)))
-               split_init(unit, st2, (i_) => (g__, step_ : Emit[A]) => {
+               split_init(unit, st2, (i_ : Cde[Unit]) => (g__, step_) => {
                   val g_ = goon_conj(gouter, g__)
                   Flattened(Linear, guard,
-                           Unfold((k: A=>Cde[Unit]) => {
-                              cloop(k, Some(cde_of_goon(guard)), ((k: A => Cde[Unit]) => {
-                                 seq(if1(not(dref(in_inner)), 
-                                       (seq( 
+                     Unfold((k: A=>Cde[Unit]) => {
+                        letVar(bool(true))(again =>
+                           while_(dref(again))
+                                 (seq(if1(not(dref(in_inner)), 
+                                       (if_(cde_of_goon(g),
                                           (step(x => seq(xres := x, 
-                                                         seq(i_, 
-                                                            in_inner := bool(true))))),
-                                          (gref := cde_of_goon(g))
-                                       ))
-                                    ),
-                                    if1(dref(in_inner), 
-                                       if_(cde_of_goon(g_), step_(k), in_inner := bool(false))
-                                    )
+                                                     seq(i_, in_inner := cde_of_goon(g_))))),
+                                          (seq(goon := bool(false), again := bool(false))) 
+                                       ))),
+                                      if1(dref(in_inner), 
+                                       seq(step_(x => seq(k(x), again := bool(false))),
+                                           in_inner := cde_of_goon(g_))
+                                     )
                                  )
-                              }))
-                           })
+                                 )
+                           )
+                     })
                   )
                })
                })
