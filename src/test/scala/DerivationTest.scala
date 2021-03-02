@@ -436,6 +436,60 @@ class DerivationTest {
         }
     }
 
+    // μX. (1 + A * X) + State
+    enum StStream[A, Z] {
+        case SNil(z: Z)
+        case SCons(e: A, z: Z, step: () => StStream[A, Z])
+        case SSkip(z: Z, step: () => StStream[A, Z])
+    }
+    import StStream._
+
+    class Stream2Denot extends Stream2 {
+        type Stream[A, Z] = StStream[A, Z]
+
+        def unroll[A, Z](step: Z => (Option[A], Z))(z: Z): Stream[A, Z] = {
+            step(z) match {
+                case (Some(a), z) => SCons(a, z, () => unroll(step)(z))
+                case (None, z) => SSkip(z, () => unroll(step)(z))
+            }
+        }
+
+        def pullArray[A, Z](z: Z)(n: Int)(step: Z => Int => (A, Z)): Stream[A, Z] = {
+            def loop(z: Z)(i: Int): StStream[A, Z] = {
+                if(i > n) 
+                then SNil(z) 
+                else {
+                    val (a, zz): (A, Z) = step(z)(i)
+                    SCons(a, z, () => loop(z)(i+1))
+                }
+            }
+            loop(z)(0)
+        } 
+
+        def mapAccum[A, B, Z, Z1](f: Z => A => (B, Z))(st: Z)(s: Stream[A, Z1]): Stream[B, (Z, Z1)] = {
+            s match {
+                case SNil(z1) => SNil(st, z1) 
+                case SCons(a, z1, t) => 
+                    val (b, z): (B, Z) = f(st)(a)
+                    SCons(b, (z, z1), () => mapAccum(f)(z)(t()))
+                case SSkip(z1, t) =>
+                    SSkip((st, z1), () => mapAccum(f)(st)(t()))
+            }
+        }
+
+        def filter[A, Z](f: A => Boolean)(s: Stream[A, Z]): Stream[A, Z] = ???
+
+        def guard[A, Z](f: Z => Boolean)(s: Stream[A, Z]): Stream[A, Z] = ???
+        
+        def zip[A, B, Z1, Z2](s1: Stream[A, Z1])(s2: Stream[B, Z2]): Stream[(A, B), (Z1, Z2)] = ???
+
+        def flatMap[A, B, Z, Z1](f: Z => A => PrivateStream[B, Z])(z: Z)(s: Stream[A, Z1]): Stream[B, (Z, Z1)] = ???
+
+        def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[A, Z1]): Stream[A, Z2] = ???
+        
+        def observe[A, Z](limit: Int)(s: Stream[A, Z]): List[A] = ???
+    }
+
 
     @Test def direct_tests() = {
         import t._
