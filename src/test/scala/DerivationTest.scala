@@ -37,7 +37,7 @@ class DerivationTest {
         def zipWith[A, B, C](f: A => B => C)(s1: Stream[A])(s2: Stream[B]): Stream[C]
 
         // Consumers
-        def observe[A](limit: Int)(s: Stream[A]): List[A]
+        def observe[A](limit: Option[Int])(s: Stream[A]): List[A]
     }
 
     class Stream0Denot extends Stream0 {
@@ -182,12 +182,15 @@ class DerivationTest {
             }
         }
 
-        def observe[A](limit: Int)(s: Stream[A]): List[A] = {
+        def observe[A](limit: Option[Int])(s: Stream[A]): List[A] = {
             s match { 
                 case Nil() => scala.Nil
-                case _ if(limit == 0) => scala.Nil 
+                case _ if(limit == Some(0)) => scala.Nil 
                 case Cons(x, t) => 
-                    val tail: List[A] = observe(limit - 1)(t())
+                    val tail: List[A] = observe(limit match {
+                        case None => None 
+                        case Some(n) => Some(n-1)
+                    })(t())
                     (x :: tail)
                 case Skip(t) => 
                     val s = t() 
@@ -212,7 +215,7 @@ class DerivationTest {
         def zip[A, B](s1: Stream[A])(s2: Stream[B]): Stream[(A, B)]
 
         // Consumers
-        def observe[A](limit: Int)(s: Stream[A]): List[A]
+        def observe[A](limit: Option[Int])(s: Stream[A]): List[A]
     }   
 
     trait Desugar10(val s: Stream1) extends Stream0 {  
@@ -281,7 +284,7 @@ class DerivationTest {
         }
 
         // Consumers
-        def observe[A](limit: Int)(st: Stream[A]): List[A] = s.observe(limit)(st)
+        def observe[A](limit: Option[Int])(st: Stream[A]): List[A] = s.observe(limit)(st)
     }   
 
     class Stream1Denot extends Stream0Denot with Stream1 {
@@ -350,7 +353,7 @@ class DerivationTest {
 
         def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[A, Z1]): Stream[A, Z2]
         
-        def observe[A, Z](limit: Int)(s: Stream[A, Z]): List[A]
+        def observe[A, Z](limit: Option[Int])(s: Stream[A, Z]): List[A]
     } 
 
     trait Desugar21(val s: Stream2) extends Stream1 {  
@@ -392,7 +395,7 @@ class DerivationTest {
             }
         }
         
-        def flatMap[A, B, Z, zpriv](f: Z => A => Stream[(B, Z)])(z: Z)(stream: Stream[A]): Stream[B] = {
+        def flatMap[A, B, Z](f: Z => A => Stream[(B, Z)])(z: Z)(stream: Stream[A]): Stream[B] = {
             stream match {
                 case Stream.St(sto: (s.Stream[A, _])) => {
                     def ff(z: Z)(a: A): PrivateStream[B, Z] = {              
@@ -430,7 +433,7 @@ class DerivationTest {
         }
 
         // Consumers
-        def observe[A](limit: Int)(stream: Stream[A]): List[A] = stream match {
+        def observe[A](limit: Option[Int])(stream: Stream[A]): List[A] = stream match {
             case Stream.St(st: (s.Stream[A, _])) => 
                 s.observe(limit)(st) 
         }
@@ -477,33 +480,106 @@ class DerivationTest {
             }
         }
 
-        def filter[A, Z](f: A => Boolean)(s: Stream[A, Z]): Stream[A, Z] = ???
+        def filter[A, Z](f: A => Boolean)(s: Stream[A, Z]): Stream[A, Z] = {
+            s match {
+                case SNil(z) => SNil(z) 
+                case SCons(a, z, t) => 
+                    if(f(a))
+                        SCons(a, z, () => filter(f)(t()))
+                    else 
+                        SSkip(z, () => filter(f)(t()))
+                case SSkip(z, t) =>
+                    SSkip(z, () => filter(f)(t()))
+            }
+        }
 
-        def guard[A, Z](f: Z => Boolean)(s: Stream[A, Z]): Stream[A, Z] = ???
+        def guard[A, Z](f: Z => Boolean)(s: Stream[A, Z]): Stream[A, Z] = {
+            s match {
+                case SNil(z) => SNil(z) 
+                case SCons(a, z, t) => 
+                    if(f(z)) SCons(a, z, () => guard(f)(t()))
+                    else SNil(z)
+                case SSkip(z, t) =>
+                    if(f(z)) SSkip(z, () => guard(f)(t()))
+                    else SNil(z)
+            }
+        }
         
-        def zip[A, B, Z1, Z2](s1: Stream[A, Z1])(s2: Stream[B, Z2]): Stream[(A, B), (Z1, Z2)] = ???
+        def flatMap[A, B, Z, Z1](f: Z => A => PrivateStream[B, Z])(st: Z)(s: Stream[A, Z1]): Stream[B, (Z, Z1)] = {
+            s match {
+                case SNil(z1) => SNil(st, z1) 
+                case SSkip(z1, t) => SSkip((st, z1), () => flatMap(f)(st)(t()))
+                case SCons(x, z1, t) => 
+                    val inner = f(st)(x)
 
-        def flatMap[A, B, Z, Z1](f: Z => A => PrivateStream[B, Z])(z: Z)(s: Stream[A, Z1]): Stream[B, (Z, Z1)] = ???
+                    def runInner(stouter: () => StStream[A, Z1])(inner: PrivateStream[B, Z]): StStream[B, (Z, Z1)] = {
+                        inner match {
+                            case PrivateStream.Hid(SNil(z, _zp)) => 
+                                SSkip((z, z1), () => flatMap(f)(z)(stouter()))
+                            case PrivateStream.Hid(SSkip((z, _zp), t1)) => 
+                                SSkip((z, z1), () => runInner(stouter)(PrivateStream.Hid(t1())))
+                            case PrivateStream.Hid(SCons(y, (z, _zp), t1)) => 
+                                SCons(y, (z, z1), () => runInner(stouter)(PrivateStream.Hid(t1())))
 
-        def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[A, Z1]): Stream[A, Z2] = ???
+                        }
+                    }
+
+                    runInner(t)(inner)
+            }
+        }
+
+        def zip[A, B, Z1, Z2](s1: Stream[A, Z1])(s2: Stream[B, Z2]): Stream[(A, B), (Z1, Z2)] = {
+            (s1, s2) match {
+                case (SNil(z1),         SNil(z2))           => SNil(z1, z2)
+                case (SNil(z1),         SCons(_, z2, _))    => SNil(z1, z2)
+                case (SNil(z1),         SSkip(z2, _))       => SNil(z1, z2)
+                case (SCons(_, z1, _),  SNil(z2))           => SNil(z1, z2)
+                case (SSkip(z1, _),     SNil(z2))           => SNil(z1, z2)
+                case (SSkip(z1, t1),    SSkip(z2, t2))      => SSkip((z1, z2), () => zip(t1())(t2()))
+                case (SCons(_, z1, _),  SSkip(z2, t2))      => SSkip((z1, z2), () => zip(s1)(t2())) 
+                case (SSkip(z1, t1),    SCons(_, z2, _))    => SSkip((z1, z2), () => zip(t1())(s2))  
+                case (SCons(x, z1, t1), SCons(y, z2, t2))   => SCons((x, y), (z1, z2), () => zip(t1())(t2()))                 
+            }
+        }
+
+        def adjust[A, Z1, Z2](f: Z1 => Z2)(s: Stream[A, Z1]): Stream[A, Z2] = {
+            s match {
+                case SNil(z1) => SNil(f(z1))
+                case SSkip(z1, t) => SSkip(f(z1), () => adjust(f)(t()))
+                case SCons(x, z1, t) => SCons(x, f(z1), () => adjust(f)(t()))
+            }
+        }
         
-        def observe[A, Z](limit: Int)(s: Stream[A, Z]): List[A] = ???
+        def observe[A, Z](limit: Option[Int])(s: Stream[A, Z]): List[A] = {
+            s match {
+                case SNil(_) => List()
+                case _ if(limit == Some(0)) => List()
+                case SSkip(_, t) => t() |> observe(limit)
+                case SCons(x, _, t) => x :: {
+                    t() |> observe(limit match { 
+                        case None => None
+                        case Some(n) => Some(n-1)
+                    })
+                }
+            }
+        }
     }
 
+    val t2 = new Desugar10(new Desugar21(new Stream2Denot{}) {}){}
 
     @Test def direct_tests() = {
         import t._
         val r1 = Array(0, 1, 2, 3, 4) 
             |> ofArr 
             |> mapAccum[Int, (Int, Int), Int](z => a => ((z, z + a), z + a))(1) 
-            |> observe(5)
+            |> observe(Some(5))
 
         assert(r1 == List((1,1), (1,2), (2,4), (4,7), (7,11)))
 
         val r2 = Array(0, 1, 2, 3, 4) 
             |> ofArr 
             |> map(a => a * a) 
-            |> observe(5)
+            |> observe(Some(5))
 
         assert(r2 == List(0, 1, 4, 9, 16))
     }
