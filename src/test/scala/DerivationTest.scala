@@ -462,8 +462,8 @@ class DerivationTest {
                 if(i > n) 
                 then SNil(z) 
                 else {
-                    val (a, zz): (A, Z) = step(z)(i)
-                    SCons(a, z, () => loop(z)(i+1))
+                    val (a, z1): (A, Z) = step(z)(i)
+                    SCons(a, z1, () => loop(z1)(i+1))
                 }
             }
             loop(z)(0)
