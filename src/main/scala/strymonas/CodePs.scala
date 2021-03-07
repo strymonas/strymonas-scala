@@ -86,7 +86,12 @@ object CodePs extends Cde {
       injCde(Code.letVar(dyn(x))(v => injVar(v) |> k |> dyn))
    }
 
-   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using ctx: QuoteContext): Cde[A] = inj2[Unit, A, A](Code.seq)(c1, c2)
+   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using ctx: QuoteContext): Cde[A] = {
+      (c1, c2) match {
+         case (Cde(Annot.Sta(()), _), _) => c2
+         case _ => inj2[Unit, A, A](Code.seq)(c1, c2)
+      }
+   }
    def unit(using QuoteContext): Cde[Unit] = Cde(Annot.Sta(()), Code.unit)
 
    // Booleans
