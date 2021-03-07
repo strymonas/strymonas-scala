@@ -272,10 +272,6 @@ object Code extends Cde {
       ${arr}{${i}} = ${v}
    }
    import scala.reflect.ClassTag
-
-   // implicit def LiftedClassTag[T: Type: ClassTag] (using QuoteContext): Expr[ClassTag[T]] = {
-   //    '{ ClassTag(${Expr(summon[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]])}) }
-   // }
    
    def new_array_direct[A: Type: ClassTag, W: Type](i: Array[Expr[A]])(using QuoteContext): Expr[Array[A]] = {
       '{ Array[A](${Varargs(i.toSeq)}: _*)(${Expr(summon[ClassTag[A]])}) }
@@ -287,14 +283,6 @@ object Code extends Cde {
       ${k('{array})}
    }
 
-   private def initArray[T: Type: ClassTag](arr: Array[Expr[T]], array: Expr[Array[T]])(using QuoteContext): Expr[Array[T]] = {
-    UnrolledExpr.block(
-      arr.zipWithIndex.map {
-        case (x, i) => '{ $array(${Expr(i)}) = ${x} }
-      }.toList,
-      array)
-  }
-   
    def new_uarray[A: Type: ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = {
       new_array(Array.fill(n)(i))(k)
    }

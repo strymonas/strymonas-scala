@@ -234,7 +234,7 @@ object StreamRaw {
       }
    }
 
-   def mapRaw_CPS[A: Type, B: Type](tr: A => Emit[B], s: StreamShape[A], linear: Boolean = true)(using QuoteContext): StreamShape[B] = {
+   def mapRaw_CPS[A, B](tr: A => Emit[B], s: StreamShape[A], linear: Boolean = true)(using QuoteContext): StreamShape[B] = {
       s match {
          case Initializer(init, sk) => 
             Initializer(init,  z => mapRaw_CPS(tr, sk(z), linear))
@@ -289,28 +289,6 @@ object StreamRaw {
          def index(i: Cde[Int]): Emit[(A, B)] = {
             zipEmit(p1.index(i), p2.index(i))
          }
-      }
-   }
-
-
-   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
-      st match {
-         case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
-         case Initializer(IVar(i, t), sk) => {
-            var score = 0
-            val _ = 
-               letVar(i)(z => {
-                  score = linearize_score(sk(z)) 
-                  unit
-               })(t, summon[Type[Unit]], ctx)
-            score
-         }
-         case Initializer(IArr(_, t), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
-         // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
-         case Flattened(Linear, _, _) => 0
-         case Flattened(_)            => 3
-         case Nested(_, s, t, sk) => 
-            5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
       }
    }
 
