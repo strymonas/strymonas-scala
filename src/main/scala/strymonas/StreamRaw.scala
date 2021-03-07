@@ -452,7 +452,7 @@ object StreamRaw {
 
    def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
       st match {
-         case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+         case Initializer(ILet(i, t), sk) => linearize_score(sk(i))
          case Initializer(IVar(i, t), sk) => {
             var score = 0
             val _ = 
@@ -462,12 +462,44 @@ object StreamRaw {
                })(t, summon[Type[Unit]], ctx)
             score
          }
-         case Initializer(IArr(_, t, _), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
-         // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+         case Initializer(IArr(i, t, ct), sk) => {
+            var score = 0
+            val _ = 
+               new_array(i)(z => {
+                  score = linearize_score(sk(z)) 
+                  unit
+               })(t, ct, summon[Type[Unit]], ctx)
+            score
+         }
+         case Initializer(IUArr(size, i, t, ct), sk) => {
+            var score = 0
+            val _ = 
+               new_uarray(size,i)(z => {
+                  score = linearize_score(sk(z)) 
+                  unit
+               })(t, ct, summon[Type[Unit]], ctx)
+            score
+         }
          case Flattened(Linear, _, _) => 0
          case Flattened(_)            => 3
          case Nested(_, s, t, sk) => 
-            5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
+            5 + linearize_score(Flattened(s)) + {
+               var score = 0
+               val _ = s match {
+                  case (_, _, Unfold(st)) =>
+                     st(e => {
+                        score = linearize_score(sk(e))
+                        unit
+                     })
+                  case (m, g, For(pa)) => 
+                     pa.index(int(0))(e => {
+                        score = linearize_score(sk(e)) 
+                        unit
+                     })
+
+               }
+               score
+            }
       }
    }
 
