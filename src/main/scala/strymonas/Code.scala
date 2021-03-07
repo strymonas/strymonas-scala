@@ -248,10 +248,6 @@ object Code extends CdeSpec[Cde] {
       injCde(CodeRaw.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
    import scala.reflect.ClassTag
-
-   // implicit def LiftedClassTag[T: Type: ClassTag] (using QuoteContext): Expr[ClassTag[T]] = {
-   //    '{ ClassTag(${Expr(summon[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]])}) }
-   // }
    
    def new_array_direct[A: Type: ClassTag, W: Type](i: Array[Expr[A]])(using QuoteContext): Expr[Array[A]] = {
       '{ Array[A](${Varargs(i.toSeq)}: _*)(${Expr(summon[ClassTag[A]])}) }
