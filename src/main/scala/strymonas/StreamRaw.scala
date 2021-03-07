@@ -474,7 +474,7 @@ object StreamRaw {
             guard(g, mapRaw_CPS[B, (A, B)]((y => k => s(x => k((x, y)))), st2))
          case (_, Flattened(Linear,_,_)) => 
             swap(zipRaw(st2, st1))
-         /* If both streams are non-linear, make at least on of them linear */
+         /* If both streams are non-linear, make at least one of them linear */
          case (st1, st2) => 
             if linearize_score(st2) > linearize_score(st1)
             then zipRaw (linearize(st1), st2)
