@@ -180,7 +180,7 @@ class StreamTest {
 
    @Test def testlinearizeScore(): Unit = {
       def s(using QuoteContext) = 
-         import strymonas.StreamRaw._
+         import strymonas.Raw._
          
          val t1 = Stream.of_int_array(Array(1,2,3)).filter(_ > int(1))
          val t2 = t1.flatMap((d) => Stream.of_int_array(Array(1,2,3)))
