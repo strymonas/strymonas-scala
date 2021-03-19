@@ -9,8 +9,8 @@ object TestPipelines {
    given Toolbox = Toolbox.make(getClass.getClassLoader)
    import Settings._
 
-   // import strymonas.Code._
-   import strymonas.CodePs._
+   import strymonas.Code._
+   // import strymonas.CodePs._
    import scala.language.implicitConversions
 
    def sumPipeline(using QuoteContext) = '{ (array: Array[Long]) => 

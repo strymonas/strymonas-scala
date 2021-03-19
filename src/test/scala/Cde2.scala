@@ -8,37 +8,64 @@ import scala.language.implicitConversions
 trait Cde2 {
     type Cde[A] 
 
-    given IntPrimitiveMethods as PrimitiveMethods[Int] = IntPrimitiveMethodsImpl
-    protected val IntPrimitiveMethodsImpl: PrimitiveMethods[Int] = new PrimitiveMethods[Int]{ }
+    def int(c1: Int)(using QuoteContext): Cde[Int]
+    def long(c1: Long)(using QuoteContext): Cde[Long]
+    trait NumOpsModule[T] {
+      def infix_+(c1: Cde[T], c2: Cde[T])(using QuoteContext): Cde[T]
+    }
+    protected val IntNumOpsModuleImpl: NumOpsModule[Int]
+    protected val LongNumOpsModuleImpl: NumOpsModule[Long]
+    given NumOpsModule[Int] = IntNumOpsModuleImpl
+    given NumOpsModule[Long] = LongNumOpsModuleImpl
 
+    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean]
+    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+    def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+    def infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+
+
+    // Methods
     trait PrimitiveMethods[T](using t: NumOpsModule[T]):
       extension (self: Cde[T]):    
-        def +(c2: Cde[T])(using QuoteContext): Cde[T] = t.add(self, c2)
+        def +(c2: Cde[T])(using QuoteContext): Cde[T] = t.infix_+(self, c2)
       end extension
     end PrimitiveMethods
+    given PrimitiveMethods[Int] = new PrimitiveMethods[Int]{ }
+    given PrimitiveMethods[Long] = new PrimitiveMethods[Long]{ }
 
-    given IntNumOpsModule as NumOpsModule[Int] = IntNumOpsModuleImpl
-    protected val IntNumOpsModuleImpl: NumOpsModule[Int]
-
-    trait NumOpsModule[T] { this: IntNumOpsModuleImpl.type =>
-      def add(c1: Cde[T], c2: Cde[T])(using QuoteContext): Cde[T]
-    }
-
-    def int(c1: Int)(using QuoteContext): Cde[Int]
+    extension (self: Cde[Boolean]):    
+      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = infix_&&(self, c2)
+      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = infix_||(self, c2)
+      def unary_!(using QuoteContext): Cde[Boolean] = not(self)
+    end extension
 }
 
 object exprCode extends Cde2 {
     type Cde[A] = Expr[A]
+    given toExpr[A] as Conversion[Cde[A], Expr[A]] = x => x
+    // given ofExpr[A] as Conversion[Cde[A], Expr[A]] = x => x
 
     def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
-
+    def long(c1: Long)(using QuoteContext): Cde[Long] = Expr(c1)
     object IntNumOpsModuleImpl extends NumOpsModule[Int] {
-      def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = '{ ${c1} + ${c2} }
+      def infix_+(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = '{ ${c1} + ${c2} }
     }
+    object LongNumOpsModuleImpl extends NumOpsModule[Long] {
+      def infix_+(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = '{ ${c1} + ${c2} }
+    }
+
+    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean] = Expr(c1)
+    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = '{! ${c1}}
+    def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
+        '{${c1} && ${c2}}
+    def infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
+        '{${c1} || ${c2}}
 }
 
 object psCode extends Cde2 {
     type Code[A] = exprCode.Cde[A]
+    given toExpr[A] as Conversion[Cde[A], Expr[A]] = x => x.dyn
+    // given ofExpr[A] as Conversion[Expr[A], Cde[A]] = x => Cde(Annot.Unk[A](), exprCode.ofExpr(x))
 
     enum Annot[A]  {
       case Sta[A](x: A) extends Annot[A]
@@ -47,28 +74,94 @@ object psCode extends Cde2 {
     }
 
     case class Cde[A](sta : Annot[A], dyn : Code[A])
-    
-    def inj2[A, B, C](f: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = ???
 
-    def lift2[A, B, C](fs: (A, B) => C)(lift: C => Cde[C])(fd: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = ???
+    def injCde[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk(), x)
+    def dyn[A](x: Cde[A]): Code[A] = x.dyn
+    
+    def inj2[A, B, C](f: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
+      (x: Cde[A], y: Cde[B]) =>
+         val v = f (dyn(x), dyn(y))
+         (x, y) match {
+            case (Cde(Annot.Unk, _), _) | (_, Cde(Annot.Unk, _)) => injCde[C](v)
+            case _                                               => Cde[C](Annot.Global(), v)
+         }
+    }
+
+    def lift2[A, B, C](fs: (A, B) => C)(lift: C => Cde[C])(fd: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
+      (x: Cde[A], y: Cde[B]) =>
+         (x, y) match {
+            case (Cde(Annot.Sta(a), _), Cde(Annot.Sta(b), _)) => lift(fs(a, b))
+            case _                                            => inj2(fd)(x, y)
+         }
+    }
 
     def int(c1: Int)(using QuoteContext): Cde[Int] = Cde(Annot.Sta(c1), exprCode.int(c1))
-
+    def long(c1: Long)(using QuoteContext): Cde[Long] = Cde(Annot.Sta(c1), exprCode.long(c1))
     object IntNumOpsModuleImpl extends NumOpsModule[Int] {
-        def add(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Int] = lift2[Int, Int, Int](_+_)(int)(exprCode.IntNumOpsModuleImpl.add)(c1, c2)
+        def infix_+(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] =
+          lift2[Int, Int, Int](_+_)(int)(exprCode.IntNumOpsModuleImpl.infix_+)(c1, c2)
+    }
+    object LongNumOpsModuleImpl extends NumOpsModule[Long] {
+        def infix_+(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] =
+          lift2[Long, Long, Long](_+_)(long)(exprCode.LongNumOpsModuleImpl.infix_+)(c1, c2)
+    }
+
+    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean] = Cde(Annot.Sta(c1), exprCode.bool(c1))
+    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = {
+      c1 match {
+          case Cde(Annot.Sta(b), _) => bool(!b)
+          case _                    => Cde(c1.sta, exprCode.not(c1.dyn))
+      }
+    }
+    def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = {
+      (c1, c2) match {
+          case (Cde(Annot.Sta(true),  _), _) => c2
+          case (Cde(Annot.Sta(false), _), _) => bool(false)
+          case (_, Cde(Annot.Sta(true),  _)) => c1
+          case (_, Cde(Annot.Sta(false), _)) => bool(false)
+          case _                             => inj2(exprCode.infix_&&)(c1, c2)
+      }
+    }
+    def  infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = {
+      (c1, c2) match {
+          case (Cde(Annot.Sta(true),  _), _) => bool(true)
+          case (Cde(Annot.Sta(false), _), _) => c2
+          case (_, Cde(Annot.Sta(true),  _)) => bool(true)
+          case (_, Cde(Annot.Sta(false), _)) => c1
+          case _                             => inj2(exprCode.infix_||)(c1, c2) 
+      }
     }
 } 
 
-object Test {
+class CdeTest {
     import psCode._
     given Toolbox = Toolbox.make(getClass.getClassLoader)   
 
     // TODO: make a full example with two different interpreters, modularized as Tomoaki did in Cde.scala with HKTs
-    // @Test def expr_test(): Unit = {
-    //     def test(using QuoteContext): Cde[Int] = {
-    //         int(1) + int(2)
-    //     } 
+    @Test def int_add(): Unit = {
+        def test(using QuoteContext): Cde[Int] = {
+            int(1) + int(2)
+        }
 
-    //     assert(test)
-    // }
+        val t = run { test }
+        assert(t == 3)
+    }
+
+    @Test def long_add(): Unit = {
+        def test(using QuoteContext): Cde[Long] = {
+          long(1L) + long(2L)
+        }
+
+        val t = run { test }
+        assert(t == 3L)
+    }
+
+    @Test def bool_all(): Unit = {
+        def test(using QuoteContext): Cde[Boolean] = {
+          bool(true) && (bool(false) ||  !bool(true))
+        }
+
+        val t = run { test }
+        assert(t == false)
+    }
 }
