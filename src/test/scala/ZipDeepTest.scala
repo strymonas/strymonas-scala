@@ -6,16 +6,16 @@ import org.junit.Assert._
 
 
 class ZipDeepTest {
-   given Toolbox = Toolbox.make(getClass.getClassLoader)
+   given Compiler = Compiler.make(getClass.getClassLoader)
    
-   inline def showGen[W](f: QuoteContext ?=> Expr[W]) = println(withQuoteContext(f.show))
+   inline def showGen[W](f: Quotes ?=> Expr[W]) = println(withQuotes(f.show))
 
    // import Code._
    import CodePs._
    import scala.language.implicitConversions
 
    @Test def testz5(): Unit = {
-      def s(using QuoteContext) = '{ 
+      def s(using Quotes) = '{ 
          (array1: Array[Double], array2: Array[Double])  => ${ 
             Stream.of('{array1})
                   .take(int(5))
@@ -38,7 +38,7 @@ class ZipDeepTest {
    }
 
    @Test def testz6(): Unit = {
-      def s(using QuoteContext) = 
+      def s(using Quotes) = 
             Stream.of(inj(Array(0, 1, 2, 3, 4))).map(_ * int(1)).zipWith[Int, Int](Stream.of(inj(Array(0, 1, 2, 3))), _*_)
                .zipWith[Int, Int](
                   Stream.of(inj(Array(0, 1, 2, 3, 4))).map(_ * int(2)).zipWith[Int, Int](Stream.of(inj(Array(1, 2, 3))), _/_),
@@ -52,7 +52,7 @@ class ZipDeepTest {
    }
 
    @Test def testz70(): Unit = {
-      def s(using QuoteContext) = 
+      def s(using Quotes) = 
          Stream.fromTo(int(1), int(10))
                .filter((d) => (d mod int(2)) === int(0))
                .zipWith[Int, (Int, Int)](
@@ -66,7 +66,7 @@ class ZipDeepTest {
    }
 
    @Test def testz7(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(-1,0,-1,1,-1,2,3,4))).filter(_ >= int(0))
          val s2 = Stream.of(inj(Array(0,1,10,2,3))).filter(_ < int(10))
          val s3 = Stream.of(inj(Array(-1,-1,-1,0,1,-1,-1,2,3,4))).map(_ * int(2)).filter(_ >= int(0))
@@ -86,7 +86,7 @@ class ZipDeepTest {
    }
 
    @Test def testxx(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          Stream.of(inj(Array(0,1,2,3)))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
@@ -100,7 +100,7 @@ class ZipDeepTest {
    }
 
    @Test def testyy(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          Stream.of(inj(Array(1,2,3)))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .filter(x => (x mod int(2)) === inj(0))
@@ -113,7 +113,7 @@ class ZipDeepTest {
    }
 
    @Test def testzff1(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
          val s2 = Stream.fromTo(int(10), int(40), 10).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
@@ -125,7 +125,7 @@ class ZipDeepTest {
    }
 
    @Test def testzfff1(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
          val s2 = Stream.fromTo(int(10), int(40), 10).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
@@ -137,7 +137,7 @@ class ZipDeepTest {
    }
 
    @Test def testzff2(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(10, 20, 30))).flatMap(e => Stream.iota(e).take(int(5)))
          val s2 = Stream.of(inj(Array(10, 20, 30, 40))).flatMap(e => Stream.iota(int(100) + e).take(inj(3)))
 
@@ -149,7 +149,7 @@ class ZipDeepTest {
    }
 
    @Test def testzff3(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(10, 20, 30)))
             .filter(x => (x mod int(2)) === inj(0))
             .flatMap(e => Stream.iota(e).take(int(5)))
@@ -165,7 +165,7 @@ class ZipDeepTest {
    }
 
    @Test def testzff4(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(10, 11, 20, 21, 30, 31)))
             .filter(x => (x mod int(2)) === inj(0))
             .flatMap(e => Stream.iota(e).take(int(5)).filter(x => (x mod int(3)) === inj(0)))
@@ -182,7 +182,7 @@ class ZipDeepTest {
    }
 
    @Test def testzff5(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(0,1,2,3)))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
@@ -200,7 +200,7 @@ class ZipDeepTest {
    }
 
    @Test def testz8(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val s1 = Stream.of(inj(Array(0,1,2,3)))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
             .flatMap(x => Stream.of(inj(Array(0,1))).map(c => x + c))
@@ -218,7 +218,7 @@ class ZipDeepTest {
    }
    
    @Test def testz81(): Unit = {
-      def s(using QuoteContext) = {
+      def s(using Quotes) = {
          val thisandnext: Cde[Int] => Stream[Int] = e => Stream.fromTo(int(0), int(1), 1).map(c => e + c)
 
          val s1 = Stream.of(inj(Array(0,1,2,3)))

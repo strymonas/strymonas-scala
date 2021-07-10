@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 @Warmup(30)
 @Fork(3)
 class ScalaStrymonasV2 {
-   given Toolbox = Toolbox.make(getClass.getClassLoader)
+   given Compiler = Compiler.make(getClass.getClassLoader)
    import TestPipelines._
    import Settings._
 
