@@ -59,78 +59,70 @@ object Code extends Cde[Expr, scala.quoted.util.Var] {
    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean] = Expr(c1)
    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
       '{! ${c1}}
-   def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
+   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
       '{${c1} && ${c2}}
-   def infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
+   def lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = 
       '{${c1} || ${c2}}
 
 
    // Numbers
-   class IntCode extends NumCde[Int, Cde, Var] {
-      type A = Int
-
-      def infix_+(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} + ${c2}}
-      def infix_-(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} - ${c2}}
-      def infix_*(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} * ${c2}}
-      def infix_/(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} / ${c2}}
-      def infix_%(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} % ${c2}}
-
-      def infix_<(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
-         '{${c1} < ${c2}}
-      def infix_>(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
-         '{${c1} > ${c2}}
-      def infix_<=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
-         '{${c1} <= ${c2}}
-      def infix_>=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
-         '{${c1} >= ${c2}}
-      def infix_===(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
-         '{${c1} == ${c2}}
-   }
-
-   class LongCode extends NumCde[Long, Cde, Var] {
-      type A = Long
-
-      def infix_+(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} + ${c2}}
-      def infix_-(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} - ${c2}}
-      def infix_*(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} * ${c2}}
-      def infix_/(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} / ${c2}}
-      def infix_%(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A] = 
-         '{${c1} % ${c2}}
-
-      def infix_<(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
-         '{${c1} < ${c2}}
-      def infix_>(c1: Cde[A], c2: Cde[A])(using QuoteContext):   Cde[Boolean] = 
-         '{${c1} > ${c2}}
-      def infix_<=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
-         '{${c1} <= ${c2}}
-      def infix_>=(c1: Cde[A], c2: Cde[A])(using QuoteContext):  Cde[Boolean] = 
-         '{${c1} >= ${c2}}
-      def infix_===(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean] = 
-         '{${c1} == ${c2}}
-   }
-
-   implicit val  IntOp: NumCde[ Int, Cde, Var]  =  IntCode()
-   implicit val LongOp: NumCde[Long, Cde, Var] = LongCode()
-
    def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
-
    // TODO: ported Oleg's, need to check perf
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
       {cond('{ ${c1} < ${c2} }, c1, c2)}
-
    // def imax(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
    //    {cond('{ ${c1} > ${c2} }, c1, c2)}
 
+   def int_plus(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
+         '{${c1} + ${c2}}
+   def int_minus(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
+      '{${c1} - ${c2}}
+   def int_times(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
+      '{${c1} * ${c2}}
+   def int_div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
+      '{${c1} / ${c2}}
+   def int_mod(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int] = 
+      '{${c1} % ${c2}}
+
+   def int_lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):   Cde[Boolean] = 
+      '{${c1} < ${c2}}
+   def int_gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):   Cde[Boolean] = 
+      '{${c1} > ${c2}}
+   def int_leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Boolean] = 
+      '{${c1} <= ${c2}}
+   def int_geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext):  Cde[Boolean] = 
+      '{${c1} >= ${c2}}
+   def int_eq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = 
+      '{${c1} == ${c2}}
+   def int_neq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean] = 
+      '{${c1} != ${c2}}
+
+
    def long(c1: Long)(using QuoteContext): Cde[Long] = Expr(c1)
+
+   def long_plus(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = 
+      '{${c1} + ${c2}}
+   def long_minus(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = 
+      '{${c1} - ${c2}}
+   def long_times(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = 
+      '{${c1} * ${c2}}
+   def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = 
+      '{${c1} / ${c2}}
+   def long_mod(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long] = 
+      '{${c1} % ${c2}}
+
+   def long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):   Cde[Boolean] = 
+      '{${c1} < ${c2}}
+   def long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):   Cde[Boolean] = 
+      '{${c1} > ${c2}}
+   def long_leq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Boolean] = 
+      '{${c1} <= ${c2}}
+   def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext):  Cde[Boolean] = 
+      '{${c1} >= ${c2}}
+   def long_eq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean] = 
+      '{${c1} == ${c2}}
+   def long_neq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean] = 
+      '{${c1} != ${c2}}
 
 
    // Control operators
@@ -200,14 +192,16 @@ object Code extends Cde[Expr, scala.quoted.util.Var] {
 
    
    // Others
+   def nil[A: Type]()(using QuoteContext): Cde[List[A]] = '{ Nil }
+   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = '{ ${x} :: ${xs}}
+   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = '{ ${xs}.reverse }
+   
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using QuoteContext): Cde[Tuple2[A,B]] =
       '{(${x}, ${y})}
    def uninit[A: Type](using QuoteContext): Cde[A] = default(summon[Type[A]])
    def blackhole[A: Type](using QuoteContext): Cde[A] = '{throw new Exception("BH")}
    def is_static[A: Type](c1: Cde[A])(using QuoteContext): Boolean = false
    def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean = true
-
-   def nil[A: Type]()(using QuoteContext): Cde[List[A]] = '{ Nil }
-   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = '{ ${x} :: ${xs}}
-   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] = '{ ${xs}.reverse }
 }
+
+// object CodeEx = CdePS(Code)

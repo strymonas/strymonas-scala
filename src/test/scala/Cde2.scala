@@ -43,7 +43,7 @@ trait Cde2 {
 object exprCode extends Cde2 {
     type Cde[A] = Expr[A]
     given toExpr[A] as Conversion[Cde[A], Expr[A]] = x => x
-    // given ofExpr[A] as Conversion[Cde[A], Expr[A]] = x => x
+    // given ofExpr[A] as Conversion[Expr[A], Cde[A]] = x => x
 
     def int(c1: Int)(using QuoteContext): Cde[Int] = Expr(c1)
     def long(c1: Long)(using QuoteContext): Cde[Long] = Expr(c1)

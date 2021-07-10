@@ -11,16 +11,15 @@ trait BoolCde[C[_], V[_]] {
 
    def bool(c1: Boolean)(using QuoteContext): Cde[Boolean]
    def not(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean]
-   def infix_&&(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
-   def infix_||(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def land(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
+   def lor(c1: Cde[Boolean], c2: Cde[Boolean])(using QuoteContext): Cde[Boolean]
 
    def unary_!(c1: Cde[Boolean])(using QuoteContext): Cde[Boolean] = not(c1)
    implicit class BoolOps(val c1: Cde[Boolean]) {
-      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = infix_&&(c1, c2)
-      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = infix_||(c1, c2)
+      def &&(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = land(c1, c2)
+      def ||(c2: Cde[Boolean])(using QuoteContext): Cde[Boolean] = lor(c1, c2)
    }
 }
-
 
 trait IntCde[C[_], V[_]] {
    type Cde[A] = C[A]
@@ -28,6 +27,35 @@ trait IntCde[C[_], V[_]] {
 
    def int(c1: Int)(using QuoteContext): Cde[Int]
    def imin(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+
+   def int_plus(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def int_minus(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def int_times(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def int_div(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+   def int_mod(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Int]
+
+   def int_lt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+   def int_gt(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+   def int_leq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+   def int_geq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+   def int_eq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+   def int_neq(c1: Cde[Int], c2: Cde[Int])(using QuoteContext): Cde[Boolean]
+
+   implicit class IntOps(val c1: Cde[Int]) {
+      def +(c2: Cde[Int])(using QuoteContext):   Cde[Int] = int_plus(c1, c2)
+      def -(c2: Cde[Int])(using QuoteContext):   Cde[Int] = int_minus(c1, c2)
+      def *(c2: Cde[Int])(using QuoteContext):   Cde[Int] = int_times(c1, c2)
+      def /(c2: Cde[Int])(using QuoteContext):   Cde[Int] = int_div(c1, c2)
+      def %(c2: Cde[Int])(using QuoteContext):   Cde[Int] = int_mod(c1, c2)
+      def mod(c2: Cde[Int])(using QuoteContext): Cde[Int] = int_mod(c1, c2)
+
+      def <(c2: Cde[Int])(using QuoteContext):   Cde[Boolean] = int_lt(c1 ,c2)
+      def >(c2: Cde[Int])(using QuoteContext):   Cde[Boolean] = int_gt(c1 ,c2)
+      def <=(c2: Cde[Int])(using QuoteContext):  Cde[Boolean] = int_leq(c1, c2)
+      def >=(c2: Cde[Int])(using QuoteContext):  Cde[Boolean] = int_geq(c1, c2)
+      def ===(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = int_eq(c1, c2)
+      def !==(c2: Cde[Int])(using QuoteContext): Cde[Boolean] = int_neq(c1, c2)
+   }
 }
 
 trait LongCde[C[_], V[_]] {
@@ -35,25 +63,36 @@ trait LongCde[C[_], V[_]] {
    type Var[A] = V[A]
 
    def long(c1: Long)(using QuoteContext): Cde[Long]
+
+   def long_plus(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+   def long_minus(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+   def long_times(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+   def long_div(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+   def long_mod(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Long]
+   
+   def long_lt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+   def long_gt(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+   def long_leq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+   def long_geq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+   def long_eq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+   def long_neq(c1: Cde[Long], c2: Cde[Long])(using QuoteContext): Cde[Boolean]
+
+   implicit class LongOps(val c1: Cde[Long]) {
+      def +(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_plus(c1, c2)
+      def -(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_minus(c1, c2)
+      def *(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_times(c1, c2)
+      def /(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_div(c1, c2)
+      def %(c2: Cde[Long])(using QuoteContext):   Cde[Long] = long_mod(c1, c2)
+      def mod(c2: Cde[Long])(using QuoteContext): Cde[Long] = long_mod(c1, c2)
+
+      def <(c2: Cde[Long])(using QuoteContext):   Cde[Boolean] = long_lt(c1 ,c2)
+      def >(c2: Cde[Long])(using QuoteContext):   Cde[Boolean] = long_gt(c1 ,c2)
+      def <=(c2: Cde[Long])(using QuoteContext):  Cde[Boolean] = long_leq(c1, c2)
+      def >=(c2: Cde[Long])(using QuoteContext):  Cde[Boolean] = long_geq(c1, c2)
+      def ===(c2: Cde[Long])(using QuoteContext): Cde[Boolean] = long_eq(c1, c2)
+      def !==(c2: Cde[Long])(using QuoteContext): Cde[Boolean] = long_neq(c1, c2)
+   }
 }
-
-trait NumCde[A <: AnyVal, C[_], V[_]] {
-   type Cde[A] = C[A]
-   type Var[A] = V[A]
-
-   def infix_+(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def infix_-(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def infix_*(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def infix_/(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-   def infix_%(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[A]
-
-   def infix_<(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def infix_>(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def infix_<=(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def infix_>=(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-   def infix_===(c1: Cde[A], c2: Cde[A])(using QuoteContext): Cde[Boolean]
-}
-
 
 trait BasicCde[C[_], V[_]] {
    type Cde[A] = C[A]
@@ -99,6 +138,14 @@ trait ArrayCde[C[_], V[_]] {
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using QuoteContext): Cde[Unit]
 }
 
+trait ListCde[C[_], V[_]] {
+   type Cde[A] = C[A]
+   type Var[A] = V[A]
+
+   def nil[A: Type]()(using QuoteContext): Cde[List[A]] 
+   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]]
+   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] 
+}
 
 trait OtherCde[C[_], V[_]] {
    type Cde[A] = C[A]
@@ -111,17 +158,6 @@ trait OtherCde[C[_], V[_]] {
    def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean
 }
 
-
-trait ListCde[C[_], V[_]] {
-   type Cde[A] = C[A]
-   type Var[A] = V[A]
-
-   def nil[A: Type]()(using QuoteContext): Cde[List[A]] 
-   def cons[A: Type](x: Cde[A], xs: Cde[List[A]])(using QuoteContext): Cde[List[A]]
-   def reverse[A: Type](xs: Cde[List[A]])(using QuoteContext): Cde[List[A]] 
-}
-
-
 trait Cde[C[_], V[_]] extends BoolCde[C, V] with   IntCde[C, V] with  LongCde[C, V]
                                             with BasicCde[C, V] with ArrayCde[C, V]
                                             with OtherCde[C, V] with  ListCde[C, V] {
@@ -132,23 +168,6 @@ trait Cde[C[_], V[_]] extends BoolCde[C, V] with   IntCde[C, V] with  LongCde[C,
    implicit def ofExpr[A](x: Expr[A]): Cde[A]
 
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
-
-   implicit val  IntOp: NumCde[Int, C, V]
-   implicit val LongOp: NumCde[Long, C, V]
-   implicit class NumOps[A <: AnyVal](val c1: Cde[A])(implicit t :NumCde[A, C, V]) {
-      def +(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_+(c1, c2)
-      def -(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_-(c1, c2)
-      def *(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_*(c1, c2)
-      def /(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_/(c1, c2)
-      def %(c2: Cde[A])(using QuoteContext):   Cde[A] = t.infix_%(c1, c2)
-      def mod(c2: Cde[A])(using QuoteContext): Cde[A] = t.infix_%(c1, c2)
-
-      def <(c2: Cde[A])(using QuoteContext):   Cde[Boolean] = t.infix_<(c1 ,c2)
-      def >(c2: Cde[A])(using QuoteContext):   Cde[Boolean] = t.infix_>(c1 ,c2)
-      def <=(c2: Cde[A])(using QuoteContext):  Cde[Boolean] = t.infix_<=(c1, c2)
-      def >=(c2: Cde[A])(using QuoteContext):  Cde[Boolean] = t.infix_>=(c1, c2)
-      def ===(c2: Cde[A])(using QuoteContext): Cde[Boolean] = t.infix_===(c1, c2)
-   }
 }
 
 
