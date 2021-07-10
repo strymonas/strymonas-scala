@@ -158,9 +158,9 @@ trait OtherCde[C[_], V[_]] {
    def is_fully_dynamic[A: Type](c1: Cde[A])(using QuoteContext): Boolean
 }
 
-trait Cde[C[_], V[_]] extends BoolCde[C, V] with   IntCde[C, V] with  LongCde[C, V]
-                                            with BasicCde[C, V] with ArrayCde[C, V]
-                                            with OtherCde[C, V] with  ListCde[C, V] {
+trait CdeSpec[C[_], V[_]] extends BoolCde[C, V] with   IntCde[C, V] with  LongCde[C, V]
+                                                with BasicCde[C, V] with ArrayCde[C, V]
+                                                with OtherCde[C, V] with  ListCde[C, V] {
    type Cde[A] = C[A]
    type Var[A] = V[A]
 
@@ -169,6 +169,3 @@ trait Cde[C[_], V[_]] extends BoolCde[C, V] with   IntCde[C, V] with  LongCde[C,
 
    def inj[T: Liftable](c1: T)(using QuoteContext): Cde[T]
 }
-
-
-// trait CdeEx[C[_], V[_]] extends Cde[C, V] with ...

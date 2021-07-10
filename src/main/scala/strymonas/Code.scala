@@ -8,7 +8,7 @@ import scala.language.implicitConversions
 /**
  * The Scala's code generator
  */
-object Code extends Cde[Expr, scala.quoted.util.Var] {
+object Code extends CdeSpec[Expr, scala.quoted.util.Var] {
    implicit def toExpr[A](x: Cde[A]): Expr[A] = x
    implicit def ofExpr[A](x: Expr[A]): Cde[A] = x
 

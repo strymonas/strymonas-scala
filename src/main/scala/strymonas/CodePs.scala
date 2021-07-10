@@ -23,7 +23,7 @@ case class VarRaw[A](sta : Annot[A], dyn : Vari[A])
 /**
  * The Scala's code generator which uses partially-static optimaization
  */
-object CodePs extends Cde[CdeRaw, VarRaw] {
+object CodePs extends CdeSpec[CdeRaw, VarRaw] {
    implicit def toExpr[A](x:  Cde[A]): Expr[A] = x.dyn
    implicit def ofExpr[A](x: Expr[A]):  Cde[A] = CdeRaw(Annot.Unk[A](), Code.ofExpr(x))
 
