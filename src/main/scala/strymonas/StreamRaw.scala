@@ -1,7 +1,6 @@
 package strymonas
 
 import scala.quoted._
-import scala.quoted.util._
 import imports._
 import imports.Cardinality._
 
@@ -137,7 +136,7 @@ trait StreamRaw extends StreamRawOps {
    * @tparam A      the type of the producer's elements.
    * @return        a linear or nested stream aware of the variable reference to decrement.
    */
-   def takeRaw[A: Type](n: Expr[Int], stream: StreamShape[A])(using QuoteContext): StreamShape[A] = {
+   def takeRaw[A: Type](n: Expr[Int], stream: StreamShape[A])(using Quotes): StreamShape[A] = {
       stream match {
          case linear: Linear[A] => {
             val enhancedProducer: Producer[(Var[Int], A)] = addCounter[A](n, linear.producer)
@@ -202,7 +201,7 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   def zipRaw[A: Type, B: Type](stream1: StreamShape[Expr[A]], stream2: StreamShape[B])(using QuoteContext): StreamShape[(Expr[A], B)] = {
+   def zipRaw[A: Type, B: Type](stream1: StreamShape[Expr[A]], stream2: StreamShape[B])(using Quotes): StreamShape[(Expr[A], B)] = {
       (stream1, stream2) match {
 
          case (Linear(producer1), Linear(producer2)) =>
@@ -270,7 +269,7 @@ trait StreamRaw extends StreamRawOps {
    * @tparam A
    * @return
    */
-   private def makeLinear[A: Type](stream: StreamShape[Expr[A]])(using QuoteContext): Producer[Expr[A]] = {
+   private def makeLinear[A: Type](stream: StreamShape[Expr[A]])(using Quotes): Producer[Expr[A]] = {
       stream match {
          case Linear(producer) => producer
          case Nested(producer, nestedf) => {
@@ -374,7 +373,7 @@ trait StreamRaw extends StreamRawOps {
       }
    }
 
-   private def pushLinear[A, B, C](producer: Producer[A], nestedProducer: Producer[B], nestedf: (B => StreamShape[C]))(using QuoteContext): StreamShape[(A, C)] = {
+   private def pushLinear[A, B, C](producer: Producer[A], nestedProducer: Producer[B], nestedf: (B => StreamShape[C]))(using Quotes): StreamShape[(A, C)] = {
       val newProducer = new Producer[(Var[Boolean], producer.St, B)] {
 
          type St = (Var[Boolean], producer.St, nestedProducer.St)

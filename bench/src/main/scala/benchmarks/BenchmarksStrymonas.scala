@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 @Warmup(30)
 @Fork(3)
 class S {
-   given Toolbox = Toolbox.make(getClass.getClassLoader)
+   given Compiler = Compiler.make(getClass.getClassLoader)
    import TestPipelines._
    import S._
 
@@ -81,7 +81,7 @@ class S {
 
    @Benchmark
    def sum_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(sum)
    }
 
@@ -111,7 +111,7 @@ class S {
 
    @Benchmark
    def sumOfSquares_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(sumOfSquares)
    }
 
@@ -141,7 +141,7 @@ class S {
 
    @Benchmark
    def sumOfSquaresEven_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(sumOfSquaresEven)
    }
 
@@ -171,7 +171,7 @@ class S {
 
    @Benchmark
    def cart_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(cart)
    }
 
@@ -201,7 +201,7 @@ class S {
 
    @Benchmark
    def dotProduct_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(dotProduct)
    }
 
@@ -231,7 +231,7 @@ class S {
 
    @Benchmark
    def flatMap_after_zip_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(flatMap_after_zip)
    }
 
@@ -261,7 +261,7 @@ class S {
 
    @Benchmark
    def zip_after_flatMap_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(flatMap_take)
    }
 
@@ -291,7 +291,7 @@ class S {
 
    @Benchmark
    def flatMap_take_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(zip_after_flatMap)
    }
 
@@ -321,7 +321,7 @@ class S {
 
    @Benchmark
    def zip_flat_flat_staged_init_fresh_compiler(): Unit = {
-      given Toolbox = Toolbox.make(getClass.getClassLoader)
+      given Compiler = Compiler.make(getClass.getClassLoader)
       run(zip_flat_flat)
    }
 }

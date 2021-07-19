@@ -5,7 +5,7 @@ import org.junit.Test
 import org.junit.Assert._
 
 class StreamTest {
-   given Toolbox = Toolbox.make(getClass.getClassLoader)
+   given Compiler = Compiler.make(getClass.getClassLoader)
 
    @Test def sum(): Unit = {
       val t = run { '{ (array: Array[Int]) => 

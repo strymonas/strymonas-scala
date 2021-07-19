@@ -1,4 +1,4 @@
-val dottyVersion = "0.24.0-RC1"
+val dottyVersion = "3.0.3-RC1-bin-20210716-cc47c56-NIGHTLY"
 
 lazy val root = project
   .in(file("."))
@@ -8,11 +8,11 @@ lazy val root = project
 
     scalaVersion := dottyVersion,
 
+    scalacOptions += "-language:experimental.namedTypeArguments",
+
     libraryDependencies ++= Seq(
-      "ch.epfl.lamp" % "dotty_0.24" % dottyVersion,
-      "ch.epfl.lamp" % "dotty_0.24" % dottyVersion % "test->runtime",
       "com.novocode" % "junit-interface" % "0.11" % "test",
-      "ch.epfl.lamp" %% "dotty-staging" % dottyVersion
+      scalaOrganization.value %% "scala3-staging" % dottyVersion
     )
   )
 
@@ -26,9 +26,7 @@ lazy val bench = project
     scalaVersion := dottyVersion,
 
     libraryDependencies ++= Seq(
-      "ch.epfl.lamp" % "dotty_0.24" % dottyVersion,
-      "ch.epfl.lamp" % "dotty_0.24" % dottyVersion % "test->runtime",
-      "ch.epfl.lamp" %% "dotty-staging" % dottyVersion
+      scalaOrganization.value %% "scala3-staging" % dottyVersion
     ),
 
     javaOptions ++= Seq("-Xms6g", "-Xmx6g", "-Xss4m",

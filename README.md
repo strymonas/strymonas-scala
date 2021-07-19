@@ -4,7 +4,7 @@
 
 ## Building strymonas
 
-strymonas is built with SBT 1.3.8 or later and uses the [sbt-dotty](https://github.com/lampepfl/dotty/tree/master/sbt-dotty) plugin for Scala 3.
+strymonas is built with SBT 1.5.0 or later for Scala 3.
 
 * Use `sbt test` to run the tests.
 * Use `sbt bench/jmh:run` to run the benchmarks

@@ -1,16 +1,14 @@
 package strymonas
 
 import scala.quoted._
-import scala.quoted.util._
 import scala.quoted.staging._
-import scala.quoted.autolift
 import imports._
 
 /**
   * Port of the strymonas library as described in O. Kiselyov et al., Stream fusion, to completeness (POPL 2017)
   */
 
-type E[T] = QuoteContext ?=> Expr[T]
+type E[T] = Quotes ?=> Expr[T]
 
 case class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
    import imports.Cardinality._
@@ -58,7 +56,7 @@ case class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
    * @return     a new stream consisting of all elements of the input stream that do satisfy the given
    *             predicate `pred`.
    */
-   def filter(pred: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
+   def filter(pred: (Expr[A] => Expr[Boolean]))(using Quotes): Stream[A] = {
       val filterStream = (a: Expr[A]) =>
          new Producer[Expr[A]] {
 
@@ -80,17 +78,17 @@ case class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
 
 
    /** A stream containing the first `n` elements of this stream. */
-   def take(n: Expr[Int])(using QuoteContext): Stream[A] = Stream(takeRaw[Expr[A]](n, stream))
+   def take(n: Expr[Int])(using Quotes): Stream[A] = Stream(takeRaw[Expr[A]](n, stream))
 
    /** zip **/
-   def zip[B: Type, C: Type](f: (Expr[A] => Expr[B] => Expr[C]), stream2: Stream[B])(using QuoteContext): Stream[C] = {
+   def zip[B: Type, C: Type](f: (Expr[A] => Expr[B] => Expr[C]), stream2: Stream[B])(using Quotes): Stream[C] = {
       val Stream(stream_b) = stream2
       Stream(mapRaw[(Expr[A], Expr[B]), Expr[C]]((t => k => k(f(t._1)(t._2))), zipRaw[A, Expr[B]](stream, stream_b)))
    }
 }
 
 object Stream {
-   def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
+   def of[A: Type](arr: Expr[Array[A]])(using Quotes): Stream[A] = {
       import imports.Cardinality._
 
       val prod = new Producer[Expr[A]] {
