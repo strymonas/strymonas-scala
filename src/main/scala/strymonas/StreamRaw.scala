@@ -439,11 +439,10 @@ object StreamRaw {
                def applyNested[B : Type](
                   g: Goon, 
                   sf: Flat[Cde[B]], 
-                  t: Type[B],
                   next: Cde[B] => StreamShape[A]) : StreamShape[A] = {
                   nested[A,B](g, next, sf)
                }
-               applyNested(g, sf, t, next)(t)
+               applyNested(g, sf, next)(t)
          }
       }
 
