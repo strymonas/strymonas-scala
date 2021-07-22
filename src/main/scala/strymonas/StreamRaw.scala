@@ -3,7 +3,6 @@ package strymonas
 import scala.quoted._
 
 object StreamRaw {
-   // import Code._
    import CodePs._
 
    enum Goon {

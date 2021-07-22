@@ -3,7 +3,7 @@ package strymonas
 import scala.quoted._
 import scala.language.implicitConversions
 
-type Code[A] = Code.Cde[A] // CdeRaw
+type CodeRaw[A] = Code.Cde[A]
 type VarRaw[A] = Code.Var[A]
 
 enum Annot[A]  {
@@ -12,11 +12,11 @@ enum Annot[A]  {
   case Unk[A]() extends Annot[A]
 }
 
-case class Cde[A](sta : Annot[A], dyn : Code[A])
+case class Cde[A](sta : Annot[A], dyn : CodeRaw[A])
 
 
 /**
- * The Scala's code generator which uses partially-static optimaization
+ * The Scala's code generator which applies online partial evaluation
  */
 object CodePs extends CdeSpec[Cde] {
    implicit def toExpr[A](x:  Cde[A]): Expr[A] = x.dyn
@@ -29,7 +29,7 @@ object CodePs extends CdeSpec[Cde] {
       }
    }
 
-   def injCde[A](x: Code[A]): Cde[A] = Cde[A](Annot.Unk(), x)
+   def injCde[A](x: CodeRaw[A]): Cde[A] = Cde[A](Annot.Unk(), x)
    def injVar[A](x: VarRaw[A]): Var[A] = {
       new Var[A] {
          def get(using Quotes): Cde[A] = x.get |> injCde[A]
@@ -37,17 +37,17 @@ object CodePs extends CdeSpec[Cde] {
       }
    }
 
-   def dyn[A](x: Cde[A]): Code[A] = x.dyn
+   def dyn[A](x: Cde[A]): CodeRaw[A] = x.dyn
    def dynVar[A](x: Var[A]): VarRaw[A] = {
       new Code.Var[A] {
-         def get(using Quotes): Code.Cde[A] = x.get |> dyn
-         def update(e: Code.Cde[A])(using Quotes): Code.Cde[Unit] = x.update(injCde(e)) |> dyn
+         def get(using Quotes): CodeRaw[A] = x.get |> dyn
+         def update(e: CodeRaw[A])(using Quotes): CodeRaw[Unit] = x.update(injCde(e)) |> dyn
       }
    }
    
 
 
-   def inj1[A, B](f: Code[A] => Code[B]): (Cde[A] => Cde[B]) = {
+   def inj1[A, B](f: CodeRaw[A] => CodeRaw[B]): (Cde[A] => Cde[B]) = {
       (x: Cde[A]) =>
          x match {
             case Cde(Annot.Unk(), y) => injCde[B](f(y))
@@ -55,7 +55,7 @@ object CodePs extends CdeSpec[Cde] {
          }
    }
 
-   def inj2[A, B, C](f: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
+   def inj2[A, B, C](f: (CodeRaw[A], CodeRaw[B]) => CodeRaw[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
       (x: Cde[A], y: Cde[B]) =>
          val v = f (dyn(x), dyn(y))
          (x, y) match {
@@ -64,7 +64,9 @@ object CodePs extends CdeSpec[Cde] {
          }
    }
 
-   def lift1[A, B](fs: A => B)(lift: B => Cde[B])(fd: Code[A] => Code[B]): (Cde[A] => Cde[B]) = {
+   def lift1[A, B](fs: A => B)
+                  (lift: B => Cde[B])
+                  (fd: CodeRaw[A] => CodeRaw[B]): (Cde[A] => Cde[B]) = {
       (x: Cde[A]) =>
          x match {
             case Cde(Annot.Sta(a), _) => lift(fs(a)) 
@@ -72,7 +74,9 @@ object CodePs extends CdeSpec[Cde] {
          }
    }
 
-   def lift2[A, B, C](fs: (A, B) => C)(lift: C => Cde[C])(fd: (Code[A], Code[B]) => Code[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
+   def lift2[A, B, C](fs: (A, B) => C)
+                     (lift: C => Cde[C])
+                     (fd: (CodeRaw[A], CodeRaw[B]) => CodeRaw[C]): ((Cde[A], Cde[B]) => Cde[C]) = {
       (x: Cde[A], y: Cde[B]) =>
          (x, y) match {
             case (Cde(Annot.Sta(a), _), Cde(Annot.Sta(b), _)) => lift(fs(a, b))
@@ -89,7 +93,7 @@ object CodePs extends CdeSpec[Cde] {
    def letl[A: Type, W: Type](x: Cde[A])(k: (Cde[A] => Cde[W]))(using Quotes): Cde[W] = {
       x match {
          case Cde(Annot.Sta(_), _) => k(x)
-         case Cde(_,            v) => injCde(Code.letl(v)((v: Code[A]) => dyn[W](k(injCde[A](v)))))
+         case Cde(_,            v) => injCde(Code.letl(v)((v: CodeRaw[A]) => dyn[W](k(injCde[A](v)))))
       }
    }
 
@@ -198,14 +202,14 @@ object CodePs extends CdeSpec[Cde] {
                case None    => body(int(0))
                case Some(g) => if1(g, body(int(0)))
             }
-         case _ => injCde(Code.for_(dyn(upb), mapOpt[Cde[Boolean], Code[Boolean]](dyn, guard), i => injCde(i) |> body |> dyn))
+         case _ => injCde(Code.for_(dyn(upb), mapOpt[Cde[Boolean], CodeRaw[Boolean]](dyn, guard), i => injCde(i) |> body |> dyn))
       }
    }
    
    def cloop[A: Type](k: A => Cde[Unit],
                       bp: Option[Cde[Boolean]],
                       body: ((A => Cde[Unit]) => Cde[Unit]))(using Quotes): Cde[Unit] = {
-      injCde(Code.cloop((x: A) => k(x) |> dyn, mapOpt[Cde[Boolean], Code[Boolean]](dyn, bp), k => body(x => k(x) |> injCde) |> dyn))
+      injCde(Code.cloop((x: A) => k(x) |> dyn, mapOpt[Cde[Boolean], CodeRaw[Boolean]](dyn, bp), k => body(x => k(x) |> injCde) |> dyn))
    }
 
    def while_(goon: Cde[Boolean])(body: Cde[Unit])(using Quotes): Cde[Unit] = {

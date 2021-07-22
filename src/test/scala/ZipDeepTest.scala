@@ -10,7 +10,6 @@ class ZipDeepTest {
    
    inline def showGen[W](f: Quotes ?=> Expr[W]) = println(withQuotes(f.show))
 
-   // import Code._
    import CodePs._
    import scala.language.implicitConversions
 
