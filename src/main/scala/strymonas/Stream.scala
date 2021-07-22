@@ -1,7 +1,6 @@
 package strymonas
 
 import scala.quoted._
-import scala.quoted.staging._
 
 import Code._
 import StreamRaw._
