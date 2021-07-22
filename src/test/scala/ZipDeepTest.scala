@@ -10,7 +10,7 @@ class ZipDeepTest {
    
    inline def showGen[W](f: Quotes ?=> Expr[W]) = println(withQuotes(f.show))
 
-   import CodePs._
+   import Code._
    import scala.language.implicitConversions
 
    @Test def testz5(): Unit = {

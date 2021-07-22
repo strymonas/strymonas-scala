@@ -3,7 +3,7 @@ package strymonas
 import scala.quoted._
 
 object StreamRaw {
-   import CodePs._
+   import Code._
 
    enum Goon {
       case GTrue

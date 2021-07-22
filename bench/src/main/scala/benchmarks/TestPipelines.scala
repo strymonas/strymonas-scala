@@ -9,7 +9,7 @@ object TestPipelines {
    given Compiler = Compiler.make(getClass.getClassLoader)
    import Settings._
 
-   import strymonas.CodePs._
+   import strymonas.Code._
    import scala.language.implicitConversions
 
    def sumPipeline(using Quotes) = '{ (array: Array[Long]) => 
