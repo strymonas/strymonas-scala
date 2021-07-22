@@ -447,11 +447,10 @@ class Raw extends Stream_Raw {
                def applyNested[B : Type](
                   g: Goon, 
                   sf: Flat[Cde[B]], 
-                  t: Type[B],
                   next: Cde[B] => Stream[A]) : Stream[A] = {
                   nested[A,B](g, next, sf)
                }
-               applyNested(g, sf, t, next)(t)
+               applyNested(g, sf, next)(t)
          }
       }
 
