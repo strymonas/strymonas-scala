@@ -9,14 +9,10 @@ trait Cde2 {
     type Cde[A] 
 
     def int(c1: Int)(using Quotes): Cde[Int]
+    def infix_int_+(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int]
+    
     def long(c1: Long)(using Quotes): Cde[Long]
-    trait NumOpsModule[T] {
-      def infix_+(c1: Cde[T], c2: Cde[T])(using Quotes): Cde[T]
-    }
-    protected val IntNumOpsModuleImpl: NumOpsModule[Int]
-    protected val LongNumOpsModuleImpl: NumOpsModule[Long]
-    given NumOpsModule[Int] = IntNumOpsModuleImpl
-    given NumOpsModule[Long] = LongNumOpsModuleImpl
+    def infix_long_+(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long]
 
     def bool(c1: Boolean)(using Quotes): Cde[Boolean]
     def not(c1: Cde[Boolean])(using Quotes): Cde[Boolean]
@@ -25,11 +21,15 @@ trait Cde2 {
 
 
     // Methods
-    trait PrimitiveMethods[T](using t: NumOpsModule[T]):
-      extension (self: Cde[T])  
-        def +(c2: Cde[T])(using Quotes): Cde[T] = t.infix_+(self, c2)
-    given PrimitiveMethods[Int] = new PrimitiveMethods[Int]{ }
-    given PrimitiveMethods[Long] = new PrimitiveMethods[Long]{ }
+    trait IntMethods:
+      extension (self: Cde[Int])  
+        def +(c2: Cde[Int])(using Quotes): Cde[Int] = infix_int_+(self, c2)
+    given IntMethods = new IntMethods{ }
+
+    trait LongMethods:
+      extension (self: Cde[Long])  
+        def +(c2: Cde[Long])(using Quotes): Cde[Long] = infix_long_+(self, c2)
+    given LongMethods = new LongMethods{ }
 
     extension (self: Cde[Boolean])   
       def &&(c2: Cde[Boolean])(using Quotes): Cde[Boolean] = infix_&&(self, c2)
@@ -43,13 +43,10 @@ object exprCode extends Cde2 {
     // given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x => x
 
     def int(c1: Int)(using Quotes): Cde[Int] = Expr(c1)
+    def infix_int_+(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] = '{ ${c1} + ${c2} }
+
     def long(c1: Long)(using Quotes): Cde[Long] = Expr(c1)
-    object IntNumOpsModuleImpl extends NumOpsModule[Int] {
-      def infix_+(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] = '{ ${c1} + ${c2} }
-    }
-    object LongNumOpsModuleImpl extends NumOpsModule[Long] {
-      def infix_+(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] = '{ ${c1} + ${c2} }
-    }
+    def infix_long_+(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] = '{ ${c1} + ${c2} }
 
     def bool(c1: Boolean)(using Quotes): Cde[Boolean] = Expr(c1)
     def not(c1: Cde[Boolean])(using Quotes): Cde[Boolean] = '{! ${c1}}
@@ -93,15 +90,12 @@ object psCode extends Cde2 {
     }
 
     def int(c1: Int)(using Quotes): Cde[Int] = Cde(Annot.Sta(c1), exprCode.int(c1))
+    def infix_int_+(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] =
+      lift2[Int, Int, Int](_+_)(int)(exprCode.infix_int_+)(c1, c2)
+
     def long(c1: Long)(using Quotes): Cde[Long] = Cde(Annot.Sta(c1), exprCode.long(c1))
-    object IntNumOpsModuleImpl extends NumOpsModule[Int] {
-        def infix_+(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] =
-          lift2[Int, Int, Int](_+_)(int)(exprCode.IntNumOpsModuleImpl.infix_+)(c1, c2)
-    }
-    object LongNumOpsModuleImpl extends NumOpsModule[Long] {
-        def infix_+(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] =
-          lift2[Long, Long, Long](_+_)(long)(exprCode.LongNumOpsModuleImpl.infix_+)(c1, c2)
-    }
+    def infix_long_+(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] =
+      lift2[Long, Long, Long](_+_)(long)(exprCode.infix_long_+)(c1, c2)
 
     def bool(c1: Boolean)(using Quotes): Cde[Boolean] = Cde(Annot.Sta(c1), exprCode.bool(c1))
     def not(c1: Cde[Boolean])(using Quotes): Cde[Boolean] = {
