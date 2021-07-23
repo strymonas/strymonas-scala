@@ -1,14 +1,13 @@
 package strymonas
 
 import scala.quoted._
-import scala.language.implicitConversions
 
 /**
  * The Scala's code generator
  */
 object CodeRaw extends CdeSpec[Expr] {
-   implicit def toExpr[A](x: Cde[A]): Expr[A] = x
-   implicit def ofExpr[A](x: Expr[A]): Cde[A] = x
+   given toExpr[A]: Conversion[Cde[A], Expr[A]] = x=>x
+   given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x=>x
 
    // utils
    def inj[T: ToExpr](c1: T)(using Quotes): Cde[T] = Expr(c1)

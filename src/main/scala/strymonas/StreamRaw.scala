@@ -4,6 +4,7 @@ import scala.quoted._
 
 object StreamRaw {
    import Code._
+   import Code.given
 
    enum Goon {
       case GTrue

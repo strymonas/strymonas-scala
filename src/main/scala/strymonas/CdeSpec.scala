@@ -1,7 +1,6 @@
 package strymonas
 
 import scala.quoted._
-import scala.language.implicitConversions
 
 trait BoolCde[C[_]] {
    type Cde[A] = C[A]
@@ -11,11 +10,12 @@ trait BoolCde[C[_]] {
    def land(c1: Cde[Boolean], c2: Cde[Boolean])(using Quotes): Cde[Boolean]
    def lor(c1: Cde[Boolean], c2: Cde[Boolean])(using Quotes): Cde[Boolean]
 
-   def unary_!(c1: Cde[Boolean])(using Quotes): Cde[Boolean] = not(c1)
-   implicit class BoolOps(val c1: Cde[Boolean]) {
-      def &&(c2: Cde[Boolean])(using Quotes): Cde[Boolean] = land(c1, c2)
-      def ||(c2: Cde[Boolean])(using Quotes): Cde[Boolean] = lor(c1, c2)
-   }
+   trait BoolOps:
+      extension (c1: Cde[Boolean])  
+         def unary_!(using Quotes): Cde[Boolean] = not(c1)
+         def &&(c2: Cde[Boolean])(using Quotes): Cde[Boolean] = land(c1, c2)
+         def ||(c2: Cde[Boolean])(using Quotes): Cde[Boolean] = lor(c1, c2)
+    given BoolOps = new BoolOps{ }
 }
 
 trait IntCde[C[_]] {
@@ -37,21 +37,22 @@ trait IntCde[C[_]] {
    def int_eq(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Boolean]
    def int_neq(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Boolean]
 
-   implicit class IntOps(val c1: Cde[Int]) {
-      def +(c2: Cde[Int])(using Quotes):   Cde[Int] = int_plus(c1, c2)
-      def -(c2: Cde[Int])(using Quotes):   Cde[Int] = int_minus(c1, c2)
-      def *(c2: Cde[Int])(using Quotes):   Cde[Int] = int_times(c1, c2)
-      def /(c2: Cde[Int])(using Quotes):   Cde[Int] = int_div(c1, c2)
-      def %(c2: Cde[Int])(using Quotes):   Cde[Int] = int_mod(c1, c2)
-      def mod(c2: Cde[Int])(using Quotes): Cde[Int] = int_mod(c1, c2)
+   trait IntOps:
+      extension (c1: Cde[Int])  
+         def +(c2: Cde[Int])(using Quotes):   Cde[Int] = int_plus(c1, c2)
+         def -(c2: Cde[Int])(using Quotes):   Cde[Int] = int_minus(c1, c2)
+         def *(c2: Cde[Int])(using Quotes):   Cde[Int] = int_times(c1, c2)
+         def /(c2: Cde[Int])(using Quotes):   Cde[Int] = int_div(c1, c2)
+         def %(c2: Cde[Int])(using Quotes):   Cde[Int] = int_mod(c1, c2)
+         def mod(c2: Cde[Int])(using Quotes): Cde[Int] = int_mod(c1, c2)
 
-      def <(c2: Cde[Int])(using Quotes):   Cde[Boolean] = int_lt(c1 ,c2)
-      def >(c2: Cde[Int])(using Quotes):   Cde[Boolean] = int_gt(c1 ,c2)
-      def <=(c2: Cde[Int])(using Quotes):  Cde[Boolean] = int_leq(c1, c2)
-      def >=(c2: Cde[Int])(using Quotes):  Cde[Boolean] = int_geq(c1, c2)
-      def ===(c2: Cde[Int])(using Quotes): Cde[Boolean] = int_eq(c1, c2)
-      def !==(c2: Cde[Int])(using Quotes): Cde[Boolean] = int_neq(c1, c2)
-   }
+         def <(c2: Cde[Int])(using Quotes):   Cde[Boolean] = int_lt(c1 ,c2)
+         def >(c2: Cde[Int])(using Quotes):   Cde[Boolean] = int_gt(c1 ,c2)
+         def <=(c2: Cde[Int])(using Quotes):  Cde[Boolean] = int_leq(c1, c2)
+         def >=(c2: Cde[Int])(using Quotes):  Cde[Boolean] = int_geq(c1, c2)
+         def ===(c2: Cde[Int])(using Quotes): Cde[Boolean] = int_eq(c1, c2)
+         def !==(c2: Cde[Int])(using Quotes): Cde[Boolean] = int_neq(c1, c2)
+    given IntOps = new IntOps{ }
 }
 
 trait LongCde[C[_]] {
@@ -72,21 +73,22 @@ trait LongCde[C[_]] {
    def long_eq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
 
-   implicit class LongOps(val c1: Cde[Long]) {
-      def +(c2: Cde[Long])(using Quotes):   Cde[Long] = long_plus(c1, c2)
-      def -(c2: Cde[Long])(using Quotes):   Cde[Long] = long_minus(c1, c2)
-      def *(c2: Cde[Long])(using Quotes):   Cde[Long] = long_times(c1, c2)
-      def /(c2: Cde[Long])(using Quotes):   Cde[Long] = long_div(c1, c2)
-      def %(c2: Cde[Long])(using Quotes):   Cde[Long] = long_mod(c1, c2)
-      def mod(c2: Cde[Long])(using Quotes): Cde[Long] = long_mod(c1, c2)
+   trait LongOps:
+      extension (c1: Cde[Long])  
+         def +(c2: Cde[Long])(using Quotes):   Cde[Long] = long_plus(c1, c2)
+         def -(c2: Cde[Long])(using Quotes):   Cde[Long] = long_minus(c1, c2)
+         def *(c2: Cde[Long])(using Quotes):   Cde[Long] = long_times(c1, c2)
+         def /(c2: Cde[Long])(using Quotes):   Cde[Long] = long_div(c1, c2)
+         def %(c2: Cde[Long])(using Quotes):   Cde[Long] = long_mod(c1, c2)
+         def mod(c2: Cde[Long])(using Quotes): Cde[Long] = long_mod(c1, c2)
 
-      def <(c2: Cde[Long])(using Quotes):   Cde[Boolean] = long_lt(c1 ,c2)
-      def >(c2: Cde[Long])(using Quotes):   Cde[Boolean] = long_gt(c1 ,c2)
-      def <=(c2: Cde[Long])(using Quotes):  Cde[Boolean] = long_leq(c1, c2)
-      def >=(c2: Cde[Long])(using Quotes):  Cde[Boolean] = long_geq(c1, c2)
-      def ===(c2: Cde[Long])(using Quotes): Cde[Boolean] = long_eq(c1, c2)
-      def !==(c2: Cde[Long])(using Quotes): Cde[Boolean] = long_neq(c1, c2)
-   }
+         def <(c2: Cde[Long])(using Quotes):   Cde[Boolean] = long_lt(c1 ,c2)
+         def >(c2: Cde[Long])(using Quotes):   Cde[Boolean] = long_gt(c1 ,c2)
+         def <=(c2: Cde[Long])(using Quotes):  Cde[Boolean] = long_leq(c1, c2)
+         def >=(c2: Cde[Long])(using Quotes):  Cde[Boolean] = long_geq(c1, c2)
+         def ===(c2: Cde[Long])(using Quotes): Cde[Boolean] = long_eq(c1, c2)
+         def !==(c2: Cde[Long])(using Quotes): Cde[Boolean] = long_neq(c1, c2)
+    given LongOps = new LongOps{ }
 }
 
 trait BasicCde[C[_]] {
@@ -106,7 +108,10 @@ trait BasicCde[C[_]] {
    def cloop[A: Type](k: A => Cde[Unit], bp: Option[Cde[Boolean]], body: ((A => Cde[Unit]) => Cde[Unit]))(using Quotes): Cde[Unit]
    def while_(goon: Cde[Boolean])(body: Cde[Unit])(using Quotes): Cde[Unit]
 
-
+   trait BasicOps:
+      extension (c1: Cde[Unit])  
+         def @:[A: Type](c2: Cde[A])(using Quotes): Cde[A] = seq(c1,c2)
+    given BasicOps = new BasicOps{ }
 }
 
 //  Variables (Reference cells)
@@ -130,9 +135,10 @@ trait VarCde[C[_]] {
    def long_incr(i: Var[Long])(using Quotes): Cde[Unit]
    def long_decr(i: Var[Long])(using Quotes): Cde[Unit]
 
-   implicit class VarOps[A](val c1: Var[A]) {
-      def :=(c2: Cde[A])(using Quotes): Cde[Unit] = assign[A](c1, c2)
-   }
+   trait VarOps:
+      extension [A](c1: Var[A])  
+         def :=(c2: Cde[A])(using Quotes): Cde[Unit] = assign[A](c1, c2)
+    given VarOps = new VarOps{ }
 }
 
 
@@ -169,8 +175,8 @@ trait CdeSpec[C[_]] extends BoolCde[C] with   IntCde[C] with  LongCde[C]
                                        with OtherCde[C]  {
    type Cde[A] = C[A]
 
-   implicit def toExpr[A](x: Cde[A]): Expr[A]
-   implicit def ofExpr[A](x: Expr[A]): Cde[A]
+   given toExpr[A]: Conversion[Cde[A], Expr[A]]
+   given ofExpr[A]: Conversion[Expr[A], Cde[A]]
 
    def inj[T: ToExpr](c1: T)(using Quotes): Cde[T]
 }

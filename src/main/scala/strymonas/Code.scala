@@ -1,7 +1,6 @@
 package strymonas
 
 import scala.quoted._
-import scala.language.implicitConversions
 
 type CodeRaw[A] = CodeRaw.Cde[A]
 type VarRaw[A] = CodeRaw.Var[A]
@@ -19,8 +18,8 @@ case class Cde[A](sta : Annot[A], dyn : CodeRaw[A])
  * The Scala's code generator which applies online partial evaluation
  */
 object Code extends CdeSpec[Cde] {
-   implicit def toExpr[A](x:  Cde[A]): Expr[A] = x.dyn
-   implicit def ofExpr[A](x: Expr[A]):  Cde[A] = Cde(Annot.Unk[A](), CodeRaw.ofExpr(x))
+   given toExpr[A]: Conversion[Cde[A], Expr[A]] = x => x.dyn
+   given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x => Cde(Annot.Unk[A](), CodeRaw.ofExpr(x))
 
    def mapOpt[A, B](f: A => B, x: Option[A]): Option[B] = {
       x match {

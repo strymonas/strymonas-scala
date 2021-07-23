@@ -10,6 +10,7 @@ object TestPipelines {
    import Settings._
 
    import strymonas.Code._
+   import strymonas.Code.given
    import scala.language.implicitConversions
 
    def sumPipeline(using Quotes) = '{ (array: Array[Long]) => 

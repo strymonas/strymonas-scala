@@ -3,6 +3,7 @@ package strymonas
 import scala.quoted._
 
 import Code._
+import Code.given
 import StreamRaw._
 import StreamRaw.Goon._
 import StreamRaw.Init._
