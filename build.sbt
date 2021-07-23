@@ -1,4 +1,4 @@
-val dottyVersion = "0.27.0-RC1"
+val scala3Version = "3.0.0"
 
 lazy val root = project
   .in(file("."))
@@ -6,13 +6,11 @@ lazy val root = project
     name := "strymonas",
     version := "0.1.0",
 
-    scalaVersion := dottyVersion,
+    scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
-      "ch.epfl.lamp" % "dotty_0.27" % dottyVersion,
-      "ch.epfl.lamp" % "dotty_0.27" % dottyVersion % "test->runtime",
+      "org.scala-lang" %% "scala3-staging" % scala3Version,
       "com.novocode" % "junit-interface" % "0.11" % "test",
-      "ch.epfl.lamp" %% "dotty-staging" % dottyVersion
     )
   )
 
@@ -23,12 +21,10 @@ lazy val bench = project
     name := "strymonas-bench",
     version := "0.1.0",
 
-    scalaVersion := dottyVersion,
+    scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
-      "ch.epfl.lamp" % "dotty_0.27" % dottyVersion,
-      "ch.epfl.lamp" % "dotty_0.27" % dottyVersion % "test->runtime",
-      "ch.epfl.lamp" %% "dotty-staging" % dottyVersion
+      "org.scala-lang" %% "scala3-staging" % scala3Version
     ),
 
     javaOptions ++= Seq("-Xms6g", "-Xmx6g", "-Xss4m",
