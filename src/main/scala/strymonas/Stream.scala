@@ -1,7 +1,7 @@
 package strymonas
 
 import scala.quoted._
-import scala.quoted.util._
+
 import scala.reflect.ClassTag
 
 import Code._

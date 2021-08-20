@@ -292,26 +292,26 @@ object StreamRaw {
    }
 
 
-   def linearize_score[A](st: StreamShape[A])(using ctx: Quotes): Int = {
-      st match {
-         case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
-         case Initializer(IVar(i, t), sk) => {
-            var score = 0
-            val _ = 
-               letVar(i)(z => {
-                  score = linearize_score(sk(z)) 
-                  unit
-               })(t, summon[Type[Unit]], ctx)
-            score
-         }
-         case Initializer(IArr(_, t), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
-         // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
-         case Flattened(Linear, _, _) => 0
-         case Flattened(_)            => 3
-         case Nested(_, s, t, sk) => 
-            5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
-      }
-   }
+   // def linearize_score[A](st: StreamShape[A])(using ctx: Quotes): Int = {
+   //    st match {
+   //       case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+   //       case Initializer(IVar(i, t), sk) => {
+   //          var score = 0
+   //          val _ = 
+   //             letVar(i)(z => {
+   //                score = linearize_score(sk(z)) 
+   //                unit
+   //             })(t, summon[Type[Unit]], ctx)
+   //          score
+   //       }
+   //       case Initializer(IArr(_, t), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
+   //       // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+   //       case Flattened(Linear, _, _) => 0
+   //       case Flattened(_)            => 3
+   //       case Nested(_, s, t, sk) => 
+   //          5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
+   //    }
+   // }
 
    def linearize[A](st: StreamShape[A])(using ctx: Quotes): StreamShape[A] = {
       def loopnn[A](stt: Flat[A]): StreamShape[A] = {
@@ -449,7 +449,7 @@ object StreamRaw {
       mmain(false, st) 
    }
 
-   def linearize_score[A](st: StreamShape[A])(using ctx: QuoteContext): Int = {
+   def linearize_score[A](st: StreamShape[A])(using ctx: Quotes): Int = {
       st match {
          case Initializer(ILet(i, t), sk) => linearize_score(sk(i))
          case Initializer(IVar(i, t), sk) => {

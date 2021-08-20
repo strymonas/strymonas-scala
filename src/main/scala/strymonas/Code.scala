@@ -1,7 +1,7 @@
 package strymonas
 
 import scala.quoted._
-
+import scala.language.implicitConversions
 type CodeRaw[A] = CodeRaw.Cde[A]
 type VarRaw[A] = CodeRaw.Var[A]
 
@@ -179,7 +179,7 @@ object Code extends CdeSpec[Cde] {
 
 
    // Double
-   def double(c1: Double)(using QuoteContext): Cde[Double] = Expr(c1)
+   def double(c1: Double)(using Quotes): Cde[Double] = Expr(c1)
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using Quotes): Cde[A] = {
@@ -249,11 +249,11 @@ object Code extends CdeSpec[Cde] {
    }
    import scala.reflect.ClassTag
    
-   def new_array_direct[A: Type: ClassTag, W: Type](i: Array[Expr[A]])(using QuoteContext): Expr[Array[A]] = {
+   def new_array_direct[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(using Quotes): Cde[Array[A]] = {
       '{ Array[A](${Varargs(i.toSeq)}: _*)(${Expr(summon[ClassTag[A]])}) }
    }
 
-   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = '{
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] = '{
       val array: Array[A] = ${new_array_direct[A, W](i)}
 
       ${k('{array})}
@@ -267,7 +267,7 @@ object Code extends CdeSpec[Cde] {
       array)
   }
    
-   def new_uarray[A: Type: ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using QuoteContext): Cde[W] = {
+   def new_uarray[A: Type: ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] = {
       new_array(Array.fill(n)(i))(k)
    }
 
@@ -284,13 +284,11 @@ object Code extends CdeSpec[Cde] {
       inj1[List[A], List[A]](CodeRaw.reverse)(xs)
    }
 
-   def uninit[A: Type](using Quotes): Cde[A] = default(summon[Type[A]])
+   def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using Quotes): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](CodeRaw.pair)(x, y)
+   def uninit[A: Type](using Quotes): Cde[A] = injCde(CodeRaw.uninit)
 
    def blackhole_arr[A: Type](using Quotes): Cde[Array[A]] = '{throw new Exception("BH")}
    def blackhole[A: Type](using Quotes): Cde[A] = '{throw new Exception("BH")}
-   // def blackhole[A: Type](using Quotes): Cde[A] = '{???}
-
-   def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = false
 
    def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = {
       c1 match {
