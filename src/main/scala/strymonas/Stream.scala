@@ -5,6 +5,7 @@ import scala.reflect.ClassTag
 
 class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cde[A]]) {
    type CStream[A] = (raw: Raw) ?=> raw.Stream[raw.Cde[A]]
+   given Raw = raw
 
    def fold[W: Type](z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using Quotes): Cde[W] = {
       import raw._
@@ -20,7 +21,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw._
          import raw.code._
          import raw.code.given
-         flatMapRaw[A, Cde[B]](x => f(x).stream(using raw), stream)
+         flatMapRaw[A, Cde[B]](x => f(x).stream, stream)
 
       Cooked(raw, newShape)
    }
@@ -30,7 +31,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw._
          import raw.code._
          import raw.code.given
-         mapRaw[Cde[A], Cde[B]](a => letl(f(a)), stream(using raw))
+         mapRaw[Cde[A], Cde[B]](a => letl(f(a)), stream)
 
       Cooked[B](raw, newShape)
    }
@@ -40,7 +41,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw._
          import raw.code._
          import raw.code.given
-         filterRaw[Cde[A]](f, stream(using raw))
+         filterRaw[Cde[A]](f, stream)
       
       Cooked[A](raw, newShape)
    }
@@ -50,7 +51,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw._
          import raw.code._
          import raw.code.given
-         mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](stream(using raw), str2.stream(using raw)))
+         mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](stream, str2.stream))
 
       Cooked[C](raw, newShape)
    }
@@ -63,7 +64,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          mkInit(n - int(1), i => {
             var vsSt: Stream[Cde[Unit]] = 
                mkPullArray[Cde[Unit]](i, i => k => k(unit))
-            val zipSt: Stream[(Cde[Unit], Cde[A])] = zipRaw(vsSt, stream(using raw))
+            val zipSt: Stream[(Cde[Unit], Cde[A])] = zipRaw(vsSt, stream)
             mapRaw_Direct[(Cde[Unit], Cde[A]), Cde[A]](_._2, zipSt)
          })
 
@@ -77,7 +78,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw.code._
          import raw.code.given
          mkInitVar(bool(true), zr =>
-            mapRaw((e: Cde[A]) => k => if_(f(e), k(e), zr := bool(false)), guard(GRef(zr), stream(using raw)))
+            mapRaw((e: Cde[A]) => k => if_(f(e), k(e), zr := bool(false)), guard(GRef(zr), stream))
          )
       Cooked[A](raw, shape)
    }
@@ -94,7 +95,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
             letl(dref(zr))(z =>
                tr(z)(a)((z2: Cde[Z]) => (b: Cde[B]) =>
                seq(zr := z2, k(b)))),
-            stream(using raw)))
+            stream))
          Cooked[B](raw, shape)
    }
 
@@ -104,7 +105,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw.code._
          import raw.code.given
          mkInitVar(n, z =>
-            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), stream(using raw))
+            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), stream)
          )
       Cooked[A](raw, shape)
    }
@@ -115,7 +116,7 @@ class Cooked[A: Type](val raw: Raw, val stream: (raw: Raw) ?=> raw.Stream[raw.Cd
          import raw.code._
          import raw.code.given
          mkInitVar(bool(false), z =>
-            filterRaw ((e: Cde[A]) => dref(z) || seq(z := not(f(e)), dref(z)), stream(using raw))
+            filterRaw ((e: Cde[A]) => dref(z) || seq(z := not(f(e)), dref(z)), stream)
          )
       Cooked[A](raw, shape)
    }
@@ -206,7 +207,7 @@ object Cooked {
          import raw._
          import raw.Goon._
          import raw.code._
-         mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](str1.stream(using raw), str2.stream(using raw)))
+         mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](str1.stream, str2.stream))
 
       Cooked[C](raw, newShape)
    }
