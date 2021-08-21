@@ -1,14 +1,12 @@
 package strymonas
 
 import scala.quoted._
-import scala.quoted.util._
 import scala.reflect.ClassTag
 
 trait Stream_Raw {
    type Cde[A]
    type Var[A]
    type Stream[A]
-
    type Emit[A] = (A => Cde[Unit]) => Cde[Unit]
 
    enum Goon {
@@ -26,26 +24,26 @@ trait Stream_Raw {
 
    def infinite[A](step: Emit[A]): Stream[A]
    
-   def guard[A](g: Goon, st: Stream[A])(using QuoteContext): Stream[A]
+   def guard[A](g: Goon, st: Stream[A])(using Quotes): Stream[A]
 
-   def foldRaw[A](consumer: A => Cde[Unit], st: Stream[A])(using QuoteContext): Cde[Unit]
+   def foldRaw[A](consumer: A => Cde[Unit], st: Stream[A])(using Quotes): Cde[Unit]
 
-   def mapRaw[A, B](tr: A => Emit[B], s: Stream[A], linear: Boolean = true)(using QuoteContext): Stream[B]
-   def mapRaw_Direct[A, B](f: A => B, s: Stream[A])(using QuoteContext): Stream[B] 
+   def mapRaw[A, B](tr: A => Emit[B], s: Stream[A], linear: Boolean = true)(using Quotes): Stream[B]
+   def mapRaw_Direct[A, B](f: A => B, s: Stream[A])(using Quotes): Stream[B] 
 
-   def filterRaw[A](pred: A => Cde[Boolean], s: Stream[A])(using QuoteContext): Stream[A]
+   def filterRaw[A](pred: A => Cde[Boolean], s: Stream[A])(using Quotes): Stream[A]
    
    def flatMapRaw[A, B](last: Cde[A] => Stream[B], s: Stream[Cde[A]])(using t_a: Type[A]) : Stream[B]
    
-   def zipRaw[A, B](st1: Stream[A], st2: Stream[B])(using QuoteContext): Stream[(A, B)]
+   def zipRaw[A, B](st1: Stream[A], st2: Stream[B])(using Quotes): Stream[(A, B)]
 }
 
-class Raw extends Stream_Raw {
+class Raw(val code : CdeSpec[Code.Cde]) extends Stream_Raw {
+   import code._
+   import code.given
    
-   type Cde[A] = CodePs.Cde[A]
-   type Var[A] = CodePs.Var[A]
-
-   import CodePs._
+   type Cde[A] = code.Cde[A]
+   type Var[A] = code.Var[A]
 
    enum Stream[A]  {
       case Initializer[S, A](init: Init[S], step: (S => Stream[A])) extends Stream[A]
@@ -53,14 +51,14 @@ class Raw extends Stream_Raw {
       case Nested[A, B](g: Goon, sf: Flat[Cde[B]], t: Type[B], f: Cde[B] => Stream[A]) extends Stream[A]
    }
 
-   def cde_of_goon(g: Goon)(using QuoteContext): Cde[Boolean] = 
+   def cde_of_goon(g: Goon)(using Quotes): Cde[Boolean] = 
       g match {
          case Goon.GTrue => bool(true)
          case Goon.GExp(e) => e
          case Goon.GRef(e) => dref(e)
       }
 
-   def goon_conj(g1: Goon, g2: Goon)(using QuoteContext): Goon = 
+   def goon_conj(g1: Goon, g2: Goon)(using Quotes): Goon = 
       (g1, g2) match {
          case (Goon.GTrue, g) => g
          case (g, Goon.GTrue) => g
@@ -70,7 +68,7 @@ class Raw extends Stream_Raw {
          case (Goon.GExp(g1), Goon.GRef(g2)) => Goon.GExp(dref(g2) && g1)
       }
 
-   def goon_disj(g1: Goon, g2: Goon)(using QuoteContext): Goon = 
+   def goon_disj(g1: Goon, g2: Goon)(using Quotes): Goon = 
       (g1, g2) match {
          case (Goon.GTrue, _) | (_, Goon.GTrue) => Goon.GTrue
          case (Goon.GExp(g1), Goon.GExp(g2)) => Goon.GExp(g1 || g2)
@@ -135,7 +133,7 @@ class Raw extends Stream_Raw {
       }
    }
 
-   def predsConj[A](preds: List[A => Cde[Boolean]])(using QuoteContext): (A => Cde[Boolean]) = {
+   def predsConj[A](preds: List[A => Cde[Boolean]])(using Quotes): (A => Cde[Boolean]) = {
       x => preds.map(pred => pred(x)).reduceRight((a,b) => a && b)
    }
 
@@ -187,7 +185,7 @@ class Raw extends Stream_Raw {
       Flattened(Linear, GTrue, Unfold(step))
    }
 
-   def guard[A](g: Goon, st: Stream[A])(using QuoteContext): Stream[A] = {
+   def guard[A](g: Goon, st: Stream[A])(using Quotes): Stream[A] = {
       st match {
          case Initializer(init,sk)    => Initializer(init, x => guard(g, sk(x)))
          case Flattened(m, g2, p)     => Flattened(m, goon_conj(g2, g), p)
@@ -196,7 +194,7 @@ class Raw extends Stream_Raw {
    }
 
 
-   def for_unfold[A](sf: Flat[A])(using QuoteContext): Stream[A] = {
+   def for_unfold[A](sf: Flat[A])(using Quotes): Stream[A] = {
       sf match {
          case (_, _, Unfold(_))  => Flattened(sf)
          case (m, g, For(array)) =>
@@ -210,9 +208,9 @@ class Raw extends Stream_Raw {
       }
    }
 
-   def foldRaw[A](consumer: A => Cde[Unit], st: Stream[A])(using QuoteContext): Cde[Unit] = {
+   def foldRaw[A](consumer: A => Cde[Unit], st: Stream[A])(using Quotes): Cde[Unit] = {
 
-      def consume[A](g: Goon, consumer: A => Cde[Unit], st: Producer[A])(using QuoteContext): Cde[Unit] = {
+      def consume[A](g: Goon, consumer: A => Cde[Unit], st: Producer[A])(using Quotes): Cde[Unit] = {
          st match {
             case For(pullArray) =>
                val bp = if(g == Goon.GTrue) then None else Some(cde_of_goon(g))
@@ -223,7 +221,7 @@ class Raw extends Stream_Raw {
          }
       }
 
-      def loop[A](consumer: A => Cde[Unit], st: Stream[A])(using ctx: QuoteContext): Cde[Unit] = {
+      def loop[A](consumer: A => Cde[Unit], st: Stream[A])(using ctx: Quotes): Cde[Unit] = {
          st match {
             case Initializer(ILet(i, t), sk) =>
                letl(i)(i => loop[A](consumer, sk(i)))(t,  summon[Type[Unit]], ctx)
@@ -254,7 +252,7 @@ class Raw extends Stream_Raw {
       loop(consumer, st)
    }
 
-   def normalizeFlat[A](fl: Flat[A])(using QuoteContext): Flat[A] = {
+   def normalizeFlat[A](fl: Flat[A])(using Quotes): Flat[A] = {
       fl match {
          case (Filtered(preds), g, p) =>
             val pred = predsConj(preds)
@@ -263,7 +261,7 @@ class Raw extends Stream_Raw {
       }
    }
 
-   def mapRaw[A, B](tr: A => Emit[B], s: Stream[A], linear: Boolean = true)(using QuoteContext): Stream[B] = {
+   def mapRaw[A, B](tr: A => Emit[B], s: Stream[A], linear: Boolean = true)(using Quotes): Stream[B] = {
       s match {
          case Initializer(init, sk) => 
             Initializer(init,  z => mapRaw(tr, sk(z), linear))
@@ -278,12 +276,12 @@ class Raw extends Stream_Raw {
       }
    }
 
-   def mapRaw_Direct[A, B](f: A => B, s: Stream[A])(using QuoteContext): Stream[B] = {
+   def mapRaw_Direct[A, B](f: A => B, s: Stream[A])(using Quotes): Stream[B] = {
       mapRaw((e: A) => (k: B => Cde[Unit]) => k(f(e)), s)
    }
 
 
-   def filterRaw[A](pred: A => Cde[Boolean], s: Stream[A])(using QuoteContext): Stream[A] = {
+   def filterRaw[A](pred: A => Cde[Boolean], s: Stream[A])(using Quotes): Stream[A] = {
       s match { 
          case Initializer(init, sk) => 
             Initializer(init,  z => filterRaw(pred, sk(z)))
@@ -310,7 +308,7 @@ class Raw extends Stream_Raw {
       i1(x => i2(y => k((x, y))))
    }
 
-   def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using QuoteContext): PullArray[(A, B)] = {
+   def mkZipPullArray[A, B](p1: PullArray[A], p2: PullArray[B])(using Quotes): PullArray[(A, B)] = {
       new PullArray[(A, B)] {
          def upb(): Cde[Int] = {
             imin(p1.upb(), p2.upb())
@@ -321,7 +319,7 @@ class Raw extends Stream_Raw {
       }
    }
 
-   def linearize[A](st: Stream[A])(using ctx: QuoteContext): Stream[A] = {
+   def linearize[A](st: Stream[A])(using ctx: Quotes): Stream[A] = {
       def loopnn[A](stt: Flat[A]): Stream[A] = {
          stt match {
             case (Linear, _, _) => Flattened(stt)
@@ -333,7 +331,7 @@ class Raw extends Stream_Raw {
          }
       }
 
-      def nested[A, B: Type](gouter: Goon, next : Cde[B] => Stream[A], stt: Flat[Cde[B]])(using ctx: QuoteContext): Stream[A] = {
+      def nested[A, B: Type](gouter: Goon, next : Cde[B] => Stream[A], stt: Flat[Cde[B]])(using ctx: Quotes): Stream[A] = {
          stt match { 
             case (Filtered(_),_,_) | (_,_,For(_)) => assert(false)
             case (_, g1, Unfold(step)) =>
@@ -372,7 +370,7 @@ class Raw extends Stream_Raw {
          }
       }
 
-      def split_init[A, W](init: Cde[Unit], st: Stream[A], k: (Cde[Unit] => (Goon, Emit[A]) => Stream[W]))(using ctx: QuoteContext): Stream[W] = 
+      def split_init[A, W](init: Cde[Unit], st: Stream[A], k: (Cde[Unit] => (Goon, Emit[A]) => Stream[W]))(using ctx: Quotes): Stream[W] = 
          st match{
             case Initializer(ILet(i, t), sk) => 
                def applyLet[B : Type](i: Cde[B], sk: (Cde[B] => Stream[A])): Stream[W] = {
@@ -457,7 +455,27 @@ class Raw extends Stream_Raw {
       mmain(false, st) 
    }
 
-   def linearize_score[A](st: Stream[A])(using ctx: QuoteContext): Int = {
+   // def linearize_score[A](st: Stream[A])(using ctx: Quotes): Int = {
+   //    st match {
+   //       case Initializer(ILet(i, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+   //       case Initializer(IVar(i, t), sk) => {
+   //          var score = 0
+   //          val _ = 
+   //             letVar(i)(z => {
+   //                score = linearize_score(sk(z)) 
+   //                unit
+   //             })(t, summon[Type[Unit]], ctx)
+   //          score
+   //       }
+   //       case Initializer(IArr(_, t), sk) => linearize_score(sk(blackhole_arr(t, ctx)))
+   //       // case Initializer(IUArr(_, _, t), sk) => linearize_score(sk(blackhole(t, ctx)))
+   //       case Flattened(Linear, _, _) => 0
+   //       case Flattened(_)            => 3
+   //       case Nested(_, s, t, sk) => 
+   //          5 + linearize_score(Flattened(s)) + linearize_score(sk(blackhole(t, ctx)))
+   //    }
+   // }
+   def linearize_score[A](st: Stream[A])(using ctx: Quotes): Int = {
       st match {
          case Initializer(ILet(i, t), sk) => linearize_score(sk(i))
          case Initializer(IVar(i, t), sk) => {
@@ -510,7 +528,7 @@ class Raw extends Stream_Raw {
       }
    }
 
-   def zipRaw[A, B](st1: Stream[A], st2: Stream[B])(using QuoteContext): Stream[(A, B)] = {
+   def zipRaw[A, B](st1: Stream[A], st2: Stream[B])(using Quotes): Stream[(A, B)] = {
       def swap[A, B](st: Stream[(A, B)]) = {
          mapRaw_Direct((x: (A, B)) => (x._2, x._1), st)
       }
@@ -542,3 +560,5 @@ class Raw extends Stream_Raw {
       } 
    }
 }
+
+class RawScalaImpl extends Raw(Code)

@@ -2,10 +2,10 @@ import org.junit.Test
 import org.junit.Assert._
 import scala.util.chaining._
 import scala.collection.mutable.ListBuffer
-import scala.language.implicitConversions
 
 class DerivationTest {
-    def [A, B](a: A) |> (f: (A) => B): B = a.pipe(f)
+    extension [A](a: A)
+        def |>[B](f: (A) => B): B = a.pipe(f)
 
     // μX. (1 + A * X) 
     enum SkipStream[A] {
