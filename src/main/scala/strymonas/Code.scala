@@ -18,6 +18,8 @@ case class Cde[A](sta : Annot[A], dyn : CodeRaw[A])
  * The Scala's code generator which applies online partial evaluation
  */
 object Code extends CdeSpec[Cde] {
+   type Compiler = staging.Compiler
+
    given toExpr[A]: Conversion[Cde[A], Expr[A]] = x => x.dyn
    given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x => Cde(Annot.Unk[A](), CodeRaw.ofExpr(x))
 
@@ -44,7 +46,7 @@ object Code extends CdeSpec[Cde] {
       }
    }
    def injdyn[A, B](k: Cde[A] => Cde[B])(v: CodeRaw[A]): Cde[B] = {
-      dyn(k(injCde(v)))
+      ofExpr(dyn(k(injCde(v))))
    }
    
 
@@ -322,4 +324,8 @@ object Code extends CdeSpec[Cde] {
          case _                 => false
       }
    }
+
+   def withQuotes[A](c1: Quotes ?=> A)(using Compiler): A = staging.withQuotes(c1)
+   def run[A](c: Quotes ?=> Cde[A])(using Compiler): A = staging.run(dyn(c))
+   def show[A](c: Quotes ?=> Cde[A])(using Compiler): Unit = println(staging.withQuotes(dyn(c).show))
 }

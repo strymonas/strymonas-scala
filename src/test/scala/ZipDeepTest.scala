@@ -1,15 +1,12 @@
 import scala.quoted._
-import scala.quoted.staging._
 import strymonas._
 import org.junit.Test
 import org.junit.Assert._
 
 
 class ZipDeepTest {
-   given Compiler = Compiler.make(getClass.getClassLoader)
+   given Code.Compiler = staging.Compiler.make(getClass.getClassLoader)
    
-   inline def showGen[W](f: Quotes ?=> Expr[W]) = println(withQuotes(f.show))
-
    import Code._
    import Code.given
    import scala.language.implicitConversions

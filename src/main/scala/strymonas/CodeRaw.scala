@@ -7,6 +7,8 @@ import scala.reflect.ClassTag
  * The Scala's code generator
  */
 object CodeRaw extends CdeSpec[Expr] {
+   type Compiler = staging.Compiler
+
    given toExpr[A]: Conversion[Cde[A], Expr[A]] = x=>x
    given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x=>x
 
@@ -219,4 +221,8 @@ object CodeRaw extends CdeSpec[Expr] {
    def blackhole_arr[A: Type](using Quotes): Cde[Array[A]] = '{throw new Exception("BH")}
    def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = false
    def is_fully_dynamic[A: Type](c1: Cde[A])(using Quotes): Boolean = true
+
+   def withQuotes[A](c1: Quotes ?=> A)(using Compiler): A = staging.withQuotes(c1)
+   def run[A](c: Quotes ?=> Cde[A])(using Compiler): A = staging.run(c)
+   def show[A](c: Quotes ?=> Cde[A])(using Compiler): Unit = println(staging.withQuotes(c.show))
 }

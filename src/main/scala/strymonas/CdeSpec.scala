@@ -178,9 +178,14 @@ trait CdeSpec[C[_]] extends BoolCde[C] with   IntCde[C] with  LongCde[C]
                                        with  ListCde[C] with   VarCde[C]
                                        with OtherCde[C]  {
    type Cde[A] = C[A]
+   type Compiler
 
    given toExpr[A]: Conversion[Cde[A], Expr[A]]
    given ofExpr[A]: Conversion[Expr[A], Cde[A]]
 
    def inj[T: ToExpr](c1: T)(using Quotes): Cde[T]
+
+   def withQuotes[A](c1: Quotes ?=> A)(using Compiler): A
+   def run[A](c: Quotes ?=> Cde[A])(using Compiler): A
+   def show[A](c: Quotes ?=> Cde[A])(using Compiler): Unit
 }
