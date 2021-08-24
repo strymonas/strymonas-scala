@@ -74,6 +74,8 @@ trait LongCde[C[_]] {
    def long_eq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
 
+   def toInt(c1: Cde[Long])(using Quotes): Cde[Int]
+
    trait LongOps:
       extension (c1: Cde[Long])  
          def +(c2: Cde[Long])(using Quotes):   Cde[Long] = long_plus(c1, c2)

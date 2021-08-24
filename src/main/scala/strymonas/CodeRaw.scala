@@ -132,6 +132,9 @@ object CodeRaw extends CdeSpec[Expr] {
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean] = 
       '{${c1} != ${c2}}
 
+   def toInt(c1: Cde[Long])(using Quotes): Cde[Int] =
+      '{${c1}.toInt}
+
    // Double
    def double(c1: Double)(using Quotes): Cde[Double] = Expr(c1)
 

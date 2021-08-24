@@ -49,6 +49,7 @@ class ScalaBaseline {
    //    assert(zipAfterFlatMap() == 99999990000000L)
    //    assert(zipFilterFilter() == 64000000L)
    //    assert(zipFlatMapFlatMap() == 315000000L)
+   //    assert(decoding() == ???)
    // }
 
    @Benchmark
@@ -363,4 +364,48 @@ class ScalaBaseline {
    //   }
    //   x
    // })
+
+   @Benchmark
+   def decoding(): Long = {
+      val arr1 = v
+      val arr2 = v
+      val byte_max = 255
+      var guard = true
+      var sum = 0L
+      var j1  = 0
+      var j2  = 0
+      var i1  = 0
+      while (i1 < arr1.length && guard) {
+         val t1 = arr1(i1)
+         val miner: Int =
+            if (t1<byte_max-1) then
+               t1.toInt
+            else
+               byte_max-1
+         var i2 = 0
+         while (i2 <= miner && guard) {
+            val l = i2>=t1
+            val t2 = arr2(j1)
+            if (j2<byte_max) then {
+               val r = j2>=t2
+               if (l||r) then {
+                  sum += 1
+               }
+               j2 += 1
+               if (j2>t2) then {
+                  j1 += 1
+                  if (j1>=arr2.length) then guard = false
+                  j2=0
+               }
+               i2 += 1
+            } else {
+               j1 += 1
+               if (j1>=arr2.length) then guard = false
+               j2 = 0
+            }
+         }
+         i1 += 1
+      }
+      sum
+   }
 }

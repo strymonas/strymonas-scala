@@ -190,6 +190,8 @@ object Code extends CdeSpec[Cde] {
    def long_eq(c1: Cde[Long], c2: Cde[Long])(using Quotes):   Cde[Boolean] = lift2[Long, Long, Boolean](_==_)(bool)(CodeRaw.long_eq)(c1, c2)
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes):  Cde[Boolean] = lift2[Long, Long, Boolean](_!=_)(bool)(CodeRaw.long_neq)(c1, c2)
 
+   def toInt(c1: Cde[Long])(using Quotes): Cde[Int] = lift1[Long, Int](_.toInt)(int)(CodeRaw.toInt)(c1)
+
    // Double
    def double(c1: Double)(using Quotes): Cde[Double] = Cde(Annot.Sta(c1), CodeRaw.double(c1))
 
@@ -291,7 +293,7 @@ object Code extends CdeSpec[Cde] {
    }
    
    def new_uarray[A: Type : ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] =
-      injCde(CodeRaw.new_uarray (n, dyn(i)) (injdyn(k)))
+      injCde(CodeRaw.new_uarray (n, dyn(i)) (t => toExpr(injdyn(k)(t))))
 
    def int_array(arr: Array[Int])(using Quotes): Cde[Array[Int]] = Cde(Annot.Sta(arr), CodeRaw.int_array(arr))
 
