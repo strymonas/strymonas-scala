@@ -1,6 +1,7 @@
 package strymonas
 
 import scala.quoted._
+import scala.reflect.ClassTag
 
 trait BoolCde[C[_]] {
    type Cde[A] = C[A]
@@ -72,6 +73,8 @@ trait LongCde[C[_]] {
    def long_geq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
    def long_eq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean]
+
+   def toInt(c1: Cde[Long])(using Quotes): Cde[Int]
 
    trait LongOps:
       extension (c1: Cde[Long])  
@@ -145,10 +148,12 @@ trait VarCde[C[_]] {
 trait ArrayCde[C[_]] {
    type Cde[A] = C[A]
 
-   def int_array[A: Type](arr: Array[Int])(using Quotes): Cde[Array[Int]]
+   def int_array(arr: Array[Int])(using Quotes): Cde[Array[Int]]
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])(i: Cde[Int])(k: (Cde[A] => Cde[W]))(using Quotes): Cde[W]
    def array_len[A: Type](arr: Cde[Array[A]])(using Quotes): Cde[Int]
    def array_set[A: Type](arr: Cde[Array[A]])(i: Cde[Int])(v: Cde[A])(using Quotes): Cde[Unit]
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W]
+   def new_uarray[A: Type: ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W]
 }
 
 trait ListCde[C[_]] {
@@ -165,6 +170,7 @@ trait OtherCde[C[_]] {
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using Quotes): Cde[Tuple2[A,B]]
    def uninit[A: Type](using Quotes): Cde[A]
    def blackhole[A: Type](using Quotes): Cde[A]
+   def blackhole_arr[A: Type](using Quotes): Cde[Array[A]]
    def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean
    def is_fully_dynamic[A: Type](c1: Cde[A])(using Quotes): Boolean
 }
@@ -174,9 +180,14 @@ trait CdeSpec[C[_]] extends BoolCde[C] with   IntCde[C] with  LongCde[C]
                                        with  ListCde[C] with   VarCde[C]
                                        with OtherCde[C]  {
    type Cde[A] = C[A]
+   type Compiler
 
    given toExpr[A]: Conversion[Cde[A], Expr[A]]
    given ofExpr[A]: Conversion[Expr[A], Cde[A]]
 
    def inj[T: ToExpr](c1: T)(using Quotes): Cde[T]
+
+   def withQuotes[A](c1: Quotes ?=> A)(using Compiler): A
+   def run[A](c: Quotes ?=> Cde[A])(using Compiler): A
+   def show[A](c: Quotes ?=> Cde[A])(using Compiler): Unit
 }

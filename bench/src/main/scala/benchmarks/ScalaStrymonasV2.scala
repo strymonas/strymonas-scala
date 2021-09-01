@@ -46,6 +46,7 @@ class ScalaStrymonasV2 {
       zipAfterFlatMapS = run(zipAfterFlatMapPipeline)
       zipFlatFlatS = run(zipFlatMapFlatMapPipeline)
       zipFilterFilterS = run(zipFilterFilterPipeline)
+      decodingS = run(decodingPipeline)
    }
 
    var sumS                 : Array[Long] => Long = null.asInstanceOf[Array[Long] => Long]
@@ -60,6 +61,7 @@ class ScalaStrymonasV2 {
    var zipAfterFlatMapS     : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
    var zipFlatFlatS         : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
    var zipFilterFilterS     : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
+   var decodingS            : (Array[Long], Array[Long]) => Long = null.asInstanceOf[(Array[Long], Array[Long]) => Long]
 
    // @TearDown
    // def check(): Unit = {
@@ -75,6 +77,7 @@ class ScalaStrymonasV2 {
    //    assert(zipAfterFlatMap() == 99999990000000L)
    //    assert(zipFilterFilter() == 64000000L)
    //    assert(zipFlatMapFlatMap() == 315000000L)
+   //    assert(decoding() == ???)
    // }
 
    @Benchmark
@@ -146,6 +149,12 @@ class ScalaStrymonasV2 {
    @Benchmark
    def zipFilterFilter(): Long = {
       val ret: Long = zipFilterFilterS(v, vHi)
+      ret
+   }
+
+   @Benchmark
+   def decoding(): Long = {
+      val ret: Long = decodingS(v, v)
       ret
    }
 }

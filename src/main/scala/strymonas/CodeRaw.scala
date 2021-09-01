@@ -1,11 +1,14 @@
 package strymonas
 
 import scala.quoted._
+import scala.reflect.ClassTag
 
 /**
  * The Scala's code generator
  */
 object CodeRaw extends CdeSpec[Expr] {
+   type Compiler = staging.Compiler
+
    given toExpr[A]: Conversion[Cde[A], Expr[A]] = x=>x
    given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x=>x
 
@@ -129,6 +132,11 @@ object CodeRaw extends CdeSpec[Expr] {
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Boolean] = 
       '{${c1} != ${c2}}
 
+   def toInt(c1: Cde[Long])(using Quotes): Cde[Int] =
+      '{${c1}.toInt}
+
+   // Double
+   def double(c1: Double)(using Quotes): Cde[Double] = Expr(c1)
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using Quotes): Cde[A] = 
@@ -186,7 +194,15 @@ object CodeRaw extends CdeSpec[Expr] {
 
 
    // Arrays
-   def int_array[A: Type](arr: Array[Int])(using Quotes): Cde[Array[Int]] = inj(arr)
+   def new_array_direct[A: Type: ClassTag, W: Type](i: Array[Expr[A]])(using Quotes): Expr[Array[A]] =
+      '{ Array[A](${Varargs(i.toSeq)}: _*)(${Expr(summon[ClassTag[A]])}) }
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] =
+      '{ val array: Array[A] = ${new_array_direct[A, W](i)}
+         ${k('{array})}
+      }
+   def new_uarray[A: Type: ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] =
+      new_array(Array.fill(n)(i))(k)
+   def int_array(arr: Array[Int])(using Quotes): Cde[Array[Int]] = inj(arr)
    def array_get[A: Type, W: Type](arr: Cde[Array[A]])(i: Cde[Int])
                                   (k: (Cde[A] => Cde[W]))(using Quotes): Cde[W] =
       letl('{${arr}.apply{${i}}})(k)
@@ -205,6 +221,11 @@ object CodeRaw extends CdeSpec[Expr] {
       '{(${x}, ${y})}
    def uninit[A: Type](using Quotes): Cde[A] = default(summon[Type[A]])
    def blackhole[A: Type](using Quotes): Cde[A] = '{throw new Exception("BH")}
+   def blackhole_arr[A: Type](using Quotes): Cde[Array[A]] = '{throw new Exception("BH")}
    def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = false
    def is_fully_dynamic[A: Type](c1: Cde[A])(using Quotes): Boolean = true
+
+   def withQuotes[A](c1: Quotes ?=> A)(using Compiler): A = staging.withQuotes(c1)
+   def run[A](c: Quotes ?=> Cde[A])(using Compiler): A = staging.run(c)
+   def show[A](c: Quotes ?=> Cde[A])(using Compiler): Unit = println(staging.withQuotes(c.show))
 }

@@ -1,15 +1,12 @@
 import scala.quoted._
-import scala.quoted.staging._
 import strymonas._
 import org.junit.Test
 import org.junit.Assert._
 
 
 class StreamTest {
-   given Compiler = Compiler.make(getClass.getClassLoader)
+   given Code.Compiler = staging.Compiler.make(getClass.getClassLoader)
    
-   inline def showGen[W](f: Quotes ?=> Expr[W]) = println(withQuotes(f.show))
-
    import Code._
    import Code.given
    import scala.language.implicitConversions
@@ -22,7 +19,7 @@ class StreamTest {
 
    @Test def sum(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) => 
-         ${ Stream.of('{array}).fold(long(0L), (_+_)) }  
+         ${ Cooked.of('{array}).fold(long(0L), (_+_)) }  
       }
       
       val t = run { s }
@@ -33,7 +30,7 @@ class StreamTest {
 
    @Test def sumOfSquares(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) =>
-         ${ Stream.of('{array})
+         ${ Cooked.of('{array})
             .map[Long]((a) => a * a )
             .fold(long(0), (_+_)) }}
       
@@ -45,7 +42,7 @@ class StreamTest {
 
    @Test def sumOfSquaresEven(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) =>
-         ${ Stream.of('{array})
+         ${ Cooked.of('{array})
             .filter((d) => (d mod long(2)) === long(0))
             .map[Long]((a) => a * a)
             .fold(long(0), (_+_)) }}
@@ -58,8 +55,8 @@ class StreamTest {
 
    @Test def cart(): Unit = {
       def s(using Quotes) = '{ (vHi: Array[Long], vLo: Array[Long]) =>
-         ${ Stream.of('{vHi})
-         .flatMap((d) => Stream.of('{vLo}).map((dp) => d * dp))
+         ${ Cooked.of('{vHi})
+         .flatMap((d) => Cooked.of('{vLo}).map((dp) => d * dp))
          .fold(long(0), (_+_)) }
       }
 
@@ -71,7 +68,7 @@ class StreamTest {
 
    @Test def onefilter(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) => 
-         ${ Stream.of('{array})
+         ${ Cooked.of('{array})
          .filter((d) => (d mod long(2)) === long(0))
          .fold(long(0), (_+_)) }
       }
@@ -84,7 +81,7 @@ class StreamTest {
 
    @Test def manyFilters(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) => 
-         ${ Stream.of('{array})
+         ${ Cooked.of('{array})
          .filter(_ > long(0))
          .filter(_ > long(1))
          .filter(_ > long(2))
@@ -100,7 +97,7 @@ class StreamTest {
 
    @Test def take(): Unit = {
       def s(using Quotes) = { '{ (array: Array[Long]) => 
-         ${ Stream.of('{array})
+         ${ Cooked.of('{array})
          .take(int(2))
          .fold(long(0), (_+_)) }
       }}
@@ -113,8 +110,8 @@ class StreamTest {
 
    @Test def flatMap_take(): Unit = {
       def s(using Quotes) =  '{ (array1: Array[Long], array2: Array[Long]) =>
-         ${ Stream.of('{array1})
-         .flatMap((d) => Stream.of('{array2}))
+         ${ Cooked.of('{array1})
+         .flatMap((d) => Cooked.of('{array2}))
          .take(int(20000000))
          .fold(long(0), (_+_)) }
       }
@@ -127,8 +124,8 @@ class StreamTest {
 
    @Test def dotProduct(): Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
-         ${ Stream.of('{array1})
-         .zipWith[Long, Long](Stream.of('{array2}), _+_)
+         ${ Cooked.of('{array1})
+         .zipWith[Long, Long](Cooked.of('{array2}), _+_)
          .fold(long(0), (_+_)) }
       }
 
@@ -140,10 +137,10 @@ class StreamTest {
 
    @Test def earlyTerminatingZipLeft(): Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
-         ${ Stream
+         ${ Cooked
             .of('{array1})
             .filter((_ > long(2)))
-            .zipWith[Long, Long](Stream.of('{array2}), _+_)
+            .zipWith[Long, Long](Cooked.of('{array2}), _+_)
             .fold(long(0), (_+_)) }
       }
 
@@ -153,9 +150,9 @@ class StreamTest {
 
    @Test def earlyTerminatingZipRight(): Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
-         ${ Stream
+         ${ Cooked
             .of('{array1})
-            .zipWith[Long, Long](Stream.of('{array2}).filter(_ > long(5)), _+_)
+            .zipWith[Long, Long](Cooked.of('{array2}).filter(_ > long(5)), _+_)
             .fold(long(0), (_+_)) }
       }
 
@@ -166,10 +163,10 @@ class StreamTest {
 
    @Test def earlyTerminatingZipBoth(): Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
-         ${ Stream
+         ${ Cooked
             .of('{array1})
             .filter(_ > long(1))
-            .zipWith[Long, Long](Stream.of('{array2}).filter(_ > long(5)), _+_)
+            .zipWith[Long, Long](Cooked.of('{array2}).filter(_ > long(5)), _+_)
             .fold(long(0), (_+_)) } 
       }
       
@@ -180,15 +177,15 @@ class StreamTest {
 
    @Test def testlinearizeScore(): Unit = {
       def s(using Quotes) = 
-         import strymonas.StreamRaw._
+         import Cooked.raw._
          
-         val t1 = Stream.of(inj(Array(1,2,3))).filter(_ > int(1))
-         val t2 = t1.flatMap((d) => Stream.of(inj(Array(1,2,3))))
-         val t3 = t2.flatMap((d) => Stream.of(inj(Array(1,2,3))))
-         val t4 = mkInitVar(int(10), i => Stream.of(inj(Array(1,2,3))).stream)
-         assert(linearize_score(t1.stream) == 3)
-         assert(linearize_score(t2.stream) == 8)
-         assert(linearize_score(t3.stream) == 13)
+         val t1 = Cooked.of_int_array(Array(1,2,3)).filter(_ > int(1))
+         val t2 = t1.flatMap((d) => Cooked.of_int_array(Array(1,2,3)))
+         val t3 = t2.flatMap((d) => Cooked.of_int_array(Array(1,2,3)))
+         val t4 = mkInitVar(int(10), i => Cooked.of_int_array(Array(1,2,3)).stream(using Cooked.raw))
+         assert(linearize_score(t1.stream(using Cooked.raw)) == 3)
+         assert(linearize_score(t2.stream(using Cooked.raw)) == 8)
+         assert(linearize_score(t3.stream(using Cooked.raw)) == 13)
          assert(linearize_score(t4) == 0)
 
       withQuotes(s)
@@ -196,9 +193,9 @@ class StreamTest {
 
    @Test def flatMap_after_zip(): Unit = {
       val t = run { '{ (array1: Array[Long], array2: Array[Long]) =>
-         ${ Stream.of('{array1})
-         .zipWith[Long, Long](Stream.of('{array1}), _+_)
-         .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
+         ${ Cooked.of('{array1})
+         .zipWith[Long, Long](Cooked.of('{array1}), _+_)
+         .flatMap((d) => Cooked.of('{array2}).map((dp) => d + dp))
          .fold(long(0), (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3) ) == 54)
@@ -207,9 +204,9 @@ class StreamTest {
 
    @Test def zip_after_flatMap(): Unit = {
       val t = run { '{ (array1: Array[Long], array2: Array[Long]) =>
-         ${ Stream.of('{array1})
-         .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-         .zipWith[Long, Long](Stream.of('{array1}) , _+_)
+         ${ Cooked.of('{array1})
+         .flatMap((d) => Cooked.of('{array2}).map((dp) => d + dp))
+         .zipWith[Long, Long](Cooked.of('{array1}) , _+_)
          .fold(long(0), (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 15)
@@ -218,8 +215,8 @@ class StreamTest {
 
    @Test def zip_filter_filter: Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
-         ${ Stream.of('{array1}).filter((d) => d > long(7))
-         .zipWith[Long, Long](Stream.of('{array2}).filter((d) => d > long(5)), _+_)
+         ${ Cooked.of('{array1}).filter((d) => d > long(7))
+         .zipWith[Long, Long](Cooked.of('{array2}).filter((d) => d > long(5)), _+_)
          .fold(long(0), _+_) } 
       }
       // println(withQuotes(s.show))
@@ -231,9 +228,9 @@ class StreamTest {
    // Caution: different from the one in the bench
    @Test def zip_flat_flat(): Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
-         ${ Stream.of('{array1})
-         .flatMap((d) => Stream.of('{array2}).map((dp) => d + dp))
-         .zipWith[Long, Long](Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => d + dp)), _+_)
+         ${ Cooked.of('{array1})
+         .flatMap((d) => Cooked.of('{array2}).map((dp) => d + dp))
+         .zipWith[Long, Long](Cooked.of('{array2}).flatMap((d) => Cooked.of('{array1}).map((dp) => d + dp)), _+_)
          .take(int(20000000))
          .fold(long(0), (_+_)) }
       }
@@ -246,7 +243,7 @@ class StreamTest {
 
    @Test def infinite(): Unit = {
       def s(using Quotes) = '{ () =>
-         ${ Stream
+         ${ Cooked
             .iota(int(1))
             .take(int(3))
             .fold(int(0), (_+_)) }

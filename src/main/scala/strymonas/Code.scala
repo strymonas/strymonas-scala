@@ -1,6 +1,7 @@
 package strymonas
 
 import scala.quoted._
+import scala.reflect.ClassTag
 
 type CodeRaw[A] = CodeRaw.Cde[A]
 type VarRaw[A] = CodeRaw.Var[A]
@@ -13,11 +14,12 @@ enum Annot[A]  {
 
 case class Cde[A](sta : Annot[A], dyn : CodeRaw[A])
 
-
 /**
  * The Scala's code generator which applies online partial evaluation
  */
 object Code extends CdeSpec[Cde] {
+   type Compiler = staging.Compiler
+
    given toExpr[A]: Conversion[Cde[A], Expr[A]] = x => x.dyn
    given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x => Cde(Annot.Unk[A](), CodeRaw.ofExpr(x))
 
@@ -42,6 +44,9 @@ object Code extends CdeSpec[Cde] {
          def get(using Quotes): CodeRaw[A] = x.get |> dyn
          def update(e: CodeRaw[A])(using Quotes): CodeRaw[Unit] = x.update(injCde(e)) |> dyn
       }
+   }
+   def injdyn[A, B](k: Cde[A] => Cde[B])(v: CodeRaw[A]): Cde[B] = {
+      ofExpr(dyn(k(injCde(v))))
    }
    
 
@@ -100,12 +105,11 @@ object Code extends CdeSpec[Cde] {
       injCde(CodeRaw.letVar(dyn(init))(v => injVar(v) |> k |> dyn))
    }
 
-   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using Quotes): Cde[A] = {
-      (c1, c2) match {
-         case (Cde(Annot.Sta(()), _), _) => c2
+   def seq[A: Type](c1: Cde[Unit], c2: Cde[A])(using Quotes): Cde[A] =
+      c1 match {
+         case Cde(Annot.Sta(()), _) => c2
          case _ => inj2[Unit, A, A](CodeRaw.seq)(c1, c2)
       }
-   }
 
    def unit(using Quotes): Cde[Unit] = Cde(Annot.Sta(()), CodeRaw.unit)
 
@@ -150,7 +154,12 @@ object Code extends CdeSpec[Cde] {
    def int_minus(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] = lift2[Int, Int, Int](_-_)(int)(CodeRaw.int_minus)(c1, c2)
    def int_times(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] = lift2[Int, Int, Int](_*_)(int)(CodeRaw.int_times)(c1, c2)
    def int_div(c1: Cde[Int], c2: Cde[Int])(using Quotes):   Cde[Int] = lift2[Int, Int, Int](_/_)(int)(CodeRaw.int_div)(c1, c2)
-   def int_mod(c1: Cde[Int], c2: Cde[Int])(using Quotes):   Cde[Int] = lift2[Int, Int, Int](_%_)(int)(CodeRaw.int_mod)(c1, c2)
+   def int_mod(c1: Cde[Int], c2: Cde[Int])(using Quotes): Cde[Int] = {
+      (c1, c2) match {
+         case (_, Cde(Annot.Sta(1),_)) => int(0)
+         case _ => lift2[Int, Int, Int](_%_)(int)(CodeRaw.int_mod)(c1, c2)
+      }
+   }
 
    def int_lt(c1: Cde[Int], c2: Cde[Int])(using Quotes):   Cde[Boolean] = lift2[Int, Int, Boolean](_<_)(bool) (CodeRaw.int_lt)(c1, c2)
    def int_gt(c1: Cde[Int], c2: Cde[Int])(using Quotes):   Cde[Boolean] = lift2[Int, Int, Boolean](_>_)(bool) (CodeRaw.int_gt)(c1, c2)
@@ -167,7 +176,12 @@ object Code extends CdeSpec[Cde] {
    def long_minus(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] = lift2[Long, Long, Long](_-_)(long)(CodeRaw.long_minus)(c1, c2)
    def long_times(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] = lift2[Long, Long, Long](_*_)(long)(CodeRaw.long_times)(c1, c2)
    def long_div(c1: Cde[Long], c2: Cde[Long])(using Quotes):   Cde[Long] = lift2[Long, Long, Long](_/_)(long)(CodeRaw.long_div)(c1, c2)
-   def long_mod(c1: Cde[Long], c2: Cde[Long])(using Quotes):   Cde[Long] = lift2[Long, Long, Long](_%_)(long)(CodeRaw.long_mod)(c1, c2)
+   def long_mod(c1: Cde[Long], c2: Cde[Long])(using Quotes): Cde[Long] = {
+      (c1, c2) match {
+         case (_, Cde(Annot.Sta(1),_)) => long(0)
+         case _ => lift2[Long, Long, Long](_%_)(long)(CodeRaw.long_mod)(c1, c2)
+      }
+   }
    
    def long_lt(c1: Cde[Long], c2: Cde[Long])(using Quotes):   Cde[Boolean] = lift2[Long, Long, Boolean](_<_)(bool) (CodeRaw.long_lt)(c1, c2)
    def long_gt(c1: Cde[Long], c2: Cde[Long])(using Quotes):   Cde[Boolean] = lift2[Long, Long, Boolean](_>_)(bool) (CodeRaw.long_gt)(c1, c2)
@@ -176,7 +190,10 @@ object Code extends CdeSpec[Cde] {
    def long_eq(c1: Cde[Long], c2: Cde[Long])(using Quotes):   Cde[Boolean] = lift2[Long, Long, Boolean](_==_)(bool)(CodeRaw.long_eq)(c1, c2)
    def long_neq(c1: Cde[Long], c2: Cde[Long])(using Quotes):  Cde[Boolean] = lift2[Long, Long, Boolean](_!=_)(bool)(CodeRaw.long_neq)(c1, c2)
 
+   def toInt(c1: Cde[Long])(using Quotes): Cde[Int] = lift1[Long, Int](_.toInt)(int)(CodeRaw.toInt)(c1)
 
+   // Double
+   def double(c1: Double)(using Quotes): Cde[Double] = Cde(Annot.Sta(c1), CodeRaw.double(c1))
 
    // Control operators
    def cond[A: Type](cnd: Cde[Boolean], bt: Cde[A], bf: Cde[A])(using Quotes): Cde[A] = {
@@ -245,7 +262,40 @@ object Code extends CdeSpec[Cde] {
       injCde(CodeRaw.array_set(dyn(arr))(dyn(i))(dyn(v)))
    }
 
-   def int_array[A: Type](arr: Array[Int])(using Quotes): Cde[Array[Int]] = Cde(Annot.Sta(arr), CodeRaw.int_array(arr))
+   def new_array[A: Type: ClassTag, W: Type](i: Array[Cde[A]])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] = {
+      def a(darr: CodeRaw[Array[A]]): Cde[Array[A]] =
+         if i.forall(e =>
+               e match {
+                  case Cde(Annot.Sta(_),  _) => true
+                  case _                    => false
+               }
+            ) then
+               Cde(Annot.Sta(i.map(e =>
+                  e match {
+                     case Cde(Annot.Sta(x),  _) => x
+                     case _                    => assert(false)
+                  }
+               )), darr)
+         else if i.exists(e =>
+               e match {
+                  case Cde(Annot.Unk(),  _) => true
+                  case _                  => false
+               }
+            ) then
+               injCde(darr)
+         else
+            Cde(Annot.Global(), darr)
+
+      injCde(CodeRaw.new_array(i.map(e => dyn(e)))(darr =>
+         dyn(k(a(darr)))
+         )
+      )
+   }
+   
+   def new_uarray[A: Type : ClassTag, W: Type](n: Int, i: Cde[A])(k: (Cde[Array[A]] => Cde[W]))(using Quotes): Cde[W] =
+      injCde(CodeRaw.new_uarray (n, dyn(i)) (t => toExpr(injdyn(k)(t))))
+
+   def int_array(arr: Array[Int])(using Quotes): Cde[Array[Int]] = Cde(Annot.Sta(arr), CodeRaw.int_array(arr))
 
    // Others
    def nil[A: Type]()(using Quotes): Cde[List[A]] = {
@@ -261,6 +311,7 @@ object Code extends CdeSpec[Cde] {
    def pair[A: Type, B: Type](x: Cde[A], y: Cde[B])(using Quotes): Cde[Tuple2[A,B]] = inj2[A, B, Tuple2[A, B]](CodeRaw.pair)(x, y)
    def uninit[A: Type](using Quotes): Cde[A] = injCde(CodeRaw.uninit)
    def blackhole[A: Type](using Quotes): Cde[A] = injCde(CodeRaw.blackhole)
+   def blackhole_arr[A: Type](using Quotes): Cde[Array[A]] = injCde(CodeRaw.blackhole_arr)
 
    def is_static[A: Type](c1: Cde[A])(using Quotes): Boolean = {
       c1 match {
@@ -275,4 +326,8 @@ object Code extends CdeSpec[Cde] {
          case _                 => false
       }
    }
+
+   def withQuotes[A](c1: Quotes ?=> A)(using Compiler): A = staging.withQuotes(c1)
+   def run[A](c: Quotes ?=> Cde[A])(using Compiler): A = staging.run(dyn(c))
+   def show[A](c: Quotes ?=> Cde[A])(using Compiler): Unit = println(staging.withQuotes(dyn(c).show))
 }
