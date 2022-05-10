@@ -1,6 +1,7 @@
 **strymonas** is a library providing fast-streams for Scala 3/dotty through multi-stage programming and partial evaluation.
 
-[![Build Status](https://travis-ci.org/strymonas/strymonas.svg?branch=master)](https://travis-ci.org/strymonas/strymonas) [![Join the chat at https://gitter.im/strymonas/strymonas](https://badges.gitter.im/strymonas/strymonas.svg)](https://gitter.im/strymonas/strymonas?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+![ci](https://github.com/strymonas/strymonas/actions/workflows/ci.yml/badge.svg)
+[![Join the chat at https://gitter.im/strymonas/strymonas](https://badges.gitter.im/strymonas/strymonas.svg)](https://gitter.im/strymonas/strymonas?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## Building strymonas
 
