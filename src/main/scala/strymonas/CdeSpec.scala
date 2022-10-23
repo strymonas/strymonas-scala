@@ -54,6 +54,8 @@ trait IntCde[C[_]] {
          def ===(c2: Cde[Int])(using Quotes): Cde[Boolean] = int_eq(c1, c2)
          def !==(c2: Cde[Int])(using Quotes): Cde[Boolean] = int_neq(c1, c2)
     given IntOps = new IntOps{ }
+    given inject_int(using Quotes): Conversion[Int, Cde[Int]] = x => int(x)
+
 }
 
 trait LongCde[C[_]] {
@@ -91,7 +93,8 @@ trait LongCde[C[_]] {
          def >=(c2: Cde[Long])(using Quotes):  Cde[Boolean] = long_geq(c1, c2)
          def ===(c2: Cde[Long])(using Quotes): Cde[Boolean] = long_eq(c1, c2)
          def !==(c2: Cde[Long])(using Quotes): Cde[Boolean] = long_neq(c1, c2)
-    given LongOps = new LongOps{ }
+   given LongOps = new LongOps{ }
+   given toLong(using Quotes): Conversion[Long, Cde[Long]] = x => long(x)
 }
 
 trait BasicCde[C[_]] {
@@ -143,7 +146,6 @@ trait VarCde[C[_]] {
          def :=(c2: Cde[A])(using Quotes): Cde[Unit] = assign[A](c1, c2)
     given VarOps = new VarOps{ }
 }
-
 
 trait ArrayCde[C[_]] {
    type Cde[A] = C[A]

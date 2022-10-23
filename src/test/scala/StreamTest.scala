@@ -1,15 +1,14 @@
 import scala.quoted._
+import scala.quoted.staging._
 import strymonas._
+import strymonas.Code.{given}
 import org.junit.Test
 import org.junit.Assert._
 
 
 class StreamTest {
    given Code.Compiler = staging.Compiler.make(getClass.getClassLoader)
-   
-   import Code._
-   import Code.given
-   import scala.language.implicitConversions
+   given raw: Raw = Raw(Code)
 
    /**
     *    Basic tests from:
@@ -19,7 +18,7 @@ class StreamTest {
 
    @Test def sum(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) => 
-         ${ Cooked.of('{array}).fold(long(0L), (_+_)) }  
+         ${ Cooked.of('{array}).fold(0L, (_+_)) }  
       }
       
       val t = run { s }
@@ -32,7 +31,7 @@ class StreamTest {
       def s(using Quotes) = '{ (array: Array[Long]) =>
          ${ Cooked.of('{array})
             .map[Long]((a) => a * a )
-            .fold(long(0), (_+_)) }}
+            .fold(0L, (_+_)) }}
       
       val t = run { s }
 
@@ -43,9 +42,9 @@ class StreamTest {
    @Test def sumOfSquaresEven(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) =>
          ${ Cooked.of('{array})
-            .filter((d) => (d mod long(2)) === long(0))
+            .filter((d) => (d mod 2L) === 0L)
             .map[Long]((a) => a * a)
-            .fold(long(0), (_+_)) }}
+            .fold(0L, (_+_)) }}
 
       val t = run { s }
 
@@ -57,7 +56,7 @@ class StreamTest {
       def s(using Quotes) = '{ (vHi: Array[Long], vLo: Array[Long]) =>
          ${ Cooked.of('{vHi})
          .flatMap((d) => Cooked.of('{vLo}).map((dp) => d * dp))
-         .fold(long(0), (_+_)) }
+         .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -69,8 +68,8 @@ class StreamTest {
    @Test def onefilter(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) => 
          ${ Cooked.of('{array})
-         .filter((d) => (d mod long(2)) === long(0))
-         .fold(long(0), (_+_)) }
+         .filter((d) => (d mod 2L) === 0L)
+         .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -82,11 +81,11 @@ class StreamTest {
    @Test def manyFilters(): Unit = {
       def s(using Quotes) = '{ (array: Array[Long]) => 
          ${ Cooked.of('{array})
-         .filter(_ > long(0))
-         .filter(_ > long(1))
-         .filter(_ > long(2))
+         .filter(_ > 0L)
+         .filter(_ > 1L)
+         .filter(_ > 2L)
 
-         .fold(long(0), (_+_)) }
+         .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -98,8 +97,8 @@ class StreamTest {
    @Test def take(): Unit = {
       def s(using Quotes) = { '{ (array: Array[Long]) => 
          ${ Cooked.of('{array})
-         .take(int(2))
-         .fold(long(0), (_+_)) }
+         .take(Code.int(2))
+         .fold(0L, (_+_)) }
       }}
 
       val t = run { s }
@@ -112,8 +111,8 @@ class StreamTest {
       def s(using Quotes) =  '{ (array1: Array[Long], array2: Array[Long]) =>
          ${ Cooked.of('{array1})
          .flatMap((d) => Cooked.of('{array2}))
-         .take(int(20000000))
-         .fold(long(0), (_+_)) }
+         .take(Code.int(20000000))
+         .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -126,7 +125,7 @@ class StreamTest {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
          ${ Cooked.of('{array1})
          .zipWith[Long, Long](Cooked.of('{array2}), _+_)
-         .fold(long(0), (_+_)) }
+         .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -139,9 +138,9 @@ class StreamTest {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
          ${ Cooked
             .of('{array1})
-            .filter((_ > long(2)))
+            .filter(_ > 2L)
             .zipWith[Long, Long](Cooked.of('{array2}), _+_)
-            .fold(long(0), (_+_)) }
+            .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -152,8 +151,8 @@ class StreamTest {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
          ${ Cooked
             .of('{array1})
-            .zipWith[Long, Long](Cooked.of('{array2}).filter(_ > long(5)), _+_)
-            .fold(long(0), (_+_)) }
+            .zipWith[Long, Long](Cooked.of('{array2}).filter(_ > 5L), _+_)
+            .fold(0L, (_+_)) }
       }
 
       val t = run { s }
@@ -165,9 +164,9 @@ class StreamTest {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
          ${ Cooked
             .of('{array1})
-            .filter(_ > long(1))
-            .zipWith[Long, Long](Cooked.of('{array2}).filter(_ > long(5)), _+_)
-            .fold(long(0), (_+_)) } 
+            .filter(_ > 1L)
+            .zipWith[Long, Long](Cooked.of('{array2}).filter(_ > 5L), _+_)
+            .fold(0L, (_+_)) } 
       }
       
       val t = run { s }
@@ -177,15 +176,16 @@ class StreamTest {
 
    @Test def testlinearizeScore(): Unit = {
       def s(using Quotes) = 
-         import Cooked.raw._
-         
-         val t1 = Cooked.of_int_array(Array(1,2,3)).filter(_ > int(1))
+         import Cooked._
+         import raw._
+
+         val t1 = Cooked.of_int_array(Array(1,2,3)).filter(_ > Code.int(1))
          val t2 = t1.flatMap((d) => Cooked.of_int_array(Array(1,2,3)))
          val t3 = t2.flatMap((d) => Cooked.of_int_array(Array(1,2,3)))
-         val t4 = mkInitVar(int(10), i => Cooked.of_int_array(Array(1,2,3)).stream(using Cooked.raw))
-         assert(linearize_score(t1.stream(using Cooked.raw)) == 3)
-         assert(linearize_score(t2.stream(using Cooked.raw)) == 8)
-         assert(linearize_score(t3.stream(using Cooked.raw)) == 13)
+         val t4 = mkInitVar(Code.int(10), i => Cooked.of_int_array(Array(1,2,3)).shape)
+         assert(linearize_score(t1.shape) == 3)
+         assert(linearize_score(t2.shape) == 8)
+         assert(linearize_score(t3.shape) == 13)
          assert(linearize_score(t4) == 0)
 
       withQuotes(s)
@@ -196,7 +196,7 @@ class StreamTest {
          ${ Cooked.of('{array1})
          .zipWith[Long, Long](Cooked.of('{array1}), _+_)
          .flatMap((d) => Cooked.of('{array2}).map((dp) => d + dp))
-         .fold(long(0), (_+_)) }
+         .fold(0L, (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3) ) == 54)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 120)
@@ -207,7 +207,7 @@ class StreamTest {
          ${ Cooked.of('{array1})
          .flatMap((d) => Cooked.of('{array2}).map((dp) => d + dp))
          .zipWith[Long, Long](Cooked.of('{array1}) , _+_)
-         .fold(long(0), (_+_)) }
+         .fold(0L, (_+_)) }
       }}
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 15)
       assert(t(Array(1, 2, 3, 4), Array(1, 2, 3, 4)) == 24)
@@ -215,11 +215,10 @@ class StreamTest {
 
    @Test def zip_filter_filter: Unit = {
       def s(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
-         ${ Cooked.of('{array1}).filter((d) => d > long(7))
-         .zipWith[Long, Long](Cooked.of('{array2}).filter((d) => d > long(5)), _+_)
-         .fold(long(0), _+_) } 
+         ${ Cooked.of('{array1}).filter((d) => d > 7L)
+         .zipWith[Long, Long](Cooked.of('{array2}).filter((d) => d > 5L), _+_)
+         .fold(0L, _+_) } 
       }
-      // println(withQuotes(s.show))
       val t = run { s }
       assert(t(Array(8, 1, 9), Array(1, 2, 6)) == 14)
       assert(t(Array(8, 9, 1, 10), Array(1, 6, 7, 8)) == 14+16+18)
@@ -231,10 +230,9 @@ class StreamTest {
          ${ Cooked.of('{array1})
          .flatMap((d) => Cooked.of('{array2}).map((dp) => d + dp))
          .zipWith[Long, Long](Cooked.of('{array2}).flatMap((d) => Cooked.of('{array1}).map((dp) => d + dp)), _+_)
-         .take(int(20000000))
-         .fold(long(0), (_+_)) }
+         .take(Code.int(20000000))
+         .fold(0L, (_+_)) }
       }
-      // println(withQuotes(s.show))
 
       val t = run { s }
       assert(t(Array(1, 2, 3), Array(1, 2, 3)) == 72)
@@ -244,9 +242,9 @@ class StreamTest {
    @Test def infinite(): Unit = {
       def s(using Quotes) = '{ () =>
          ${ Cooked
-            .iota(int(1))
-            .take(int(3))
-            .fold(int(0), (_+_)) }
+            .iota(Code.int(1))
+            .take(Code.int(3))
+            .fold(Code.int(0), (_+_)) }
       }
       
       val t = run { s }

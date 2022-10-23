@@ -3,22 +3,22 @@ package strymonas
 import scala.quoted._
 import scala.reflect.ClassTag
 
-type CodeRaw[A] = CodeRaw.Cde[A]
-type VarRaw[A] = CodeRaw.Var[A]
-
 enum Annot[A]  {
-  case Sta[A](x: A) extends Annot[A]
-  case Global[A]() extends Annot[A]
-  case Unk[A]() extends Annot[A]
+   case Sta[A](x: A) extends Annot[A]
+   case Global[A]() extends Annot[A]
+   case Unk[A]() extends Annot[A]
 }
 
-case class Cde[A](sta : Annot[A], dyn : CodeRaw[A])
+case class Cde[A](sta : Annot[A], dyn : CodeRaw.Cde[A])
 
 /**
  * The Scala's code generator which applies online partial evaluation
  */
 object Code extends CdeSpec[Cde] {
    type Compiler = staging.Compiler
+
+   type CodeRaw[A] = CodeRaw.Cde[A]
+   type VarRaw[A] = CodeRaw.Var[A]
 
    given toExpr[A]: Conversion[Cde[A], Expr[A]] = x => x.dyn
    given ofExpr[A]: Conversion[Expr[A], Cde[A]] = x => Cde(Annot.Unk[A](), CodeRaw.ofExpr(x))
