@@ -1,128 +1,216 @@
 package strymonas
 
 import scala.quoted._
-import scala.quoted.util._
-import scala.quoted.staging._
-import scala.quoted.autolift
-import imports._
+import scala.reflect.ClassTag
 
-/**
-  * Port of the strymonas library as described in O. Kiselyov et al., Stream fusion, to completeness (POPL 2017)
-  */
+class Cooked[A: Type](val shape: (raw: Raw) ?=> raw.Stream[raw.Cde[A]]) {
 
-type E[T] = QuoteContext ?=> Expr[T]
+   def flatMap[B: Type](f: Cde[A] => Cooked[B])(using Quotes): Cooked[B] = {
+      def newShape(using raw: Raw) = 
+         import raw._
+         import raw.code._
 
-case class Stream[A: Type](stream: StreamShape[Expr[A]]) extends StreamRaw {
-   import imports.Cardinality._
+         flatMapRaw[A, Cde[B]](x => f(x).shape, shape)
 
-   /** Main consumer
-   *
-   * Fold accumulates the results in a variable and delegates its functionality to `foldRaw`
-   *
-   * @param z   the accumulator
-   * @param f   the zipping function
-   * @tparam W  the type of the accumulator
-   * @return
-   */
-   def fold[W: Type](z: Expr[W], f: ((Expr[W], Expr[A]) => Expr[W])): E[W] = {
-      Var(z) { s =>
-         '{
-            ${ foldRaw[Expr[A]]((a: Expr[A]) => s.update(f(s.get, a)), stream) }
+      Cooked(newShape)
+   }
 
-            ${ s.get }
-         }
+   def map[B: Type](f: Cde[A] => Cde[B])(using Quotes): Cooked[B] = {
+      def newShape(using raw: Raw) = 
+         import raw._
+         import raw.code._
+
+         mapRaw[Cde[A], Cde[B]](a => letl(f(a)), shape)
+
+      Cooked[B](newShape)
+   }
+
+   def filter(f: Cde[A] => Cde[Boolean])(using Quotes): Cooked[A] = {
+      def newShape(using raw: Raw) =
+         import raw._
+         import raw.code._
+
+         filterRaw[Cde[A]](f, shape)
+      
+      Cooked[A](newShape)
+   }
+
+   def zipWith[B: Type, C: Type](str2: Cooked[B], f: (Cde[A], Cde[B]) => Cde[C])(using Quotes): Cooked[C] = {
+      def newShape(using raw: Raw) =
+         import raw._
+         import raw.code._
+         
+         mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](shape, str2.shape))
+
+      Cooked[C](newShape)
+   }
+
+   def take(n: Cde[Int])(using Quotes): Cooked[A] = {
+      def newShape(using raw: Raw) =
+         import raw._
+         import raw.code.{_, given}
+         
+         mkInit(n - int(1), i => {
+            var vsSt: Stream[Cde[Unit]] = 
+               mkPullArray[Cde[Unit]](i, i => k => k(unit))
+            val zipSt: Stream[(Cde[Unit], Cde[A])] = zipRaw(vsSt, shape)
+            mapRaw_Direct[(Cde[Unit], Cde[A]), Cde[A]](_._2, zipSt)
+         })
+
+      Cooked[A](newShape)
+   }
+
+   def takeWhile(f: (Cde[A] => Cde[Boolean]))(using Quotes): Cooked[A] = {
+      def newShape(using raw: Raw): raw.Stream[raw.Cde[A]] =
+         import raw._
+         import raw.Goon._
+         import raw.code._
+         
+         mkInitVar(bool(true), zr =>
+            mapRaw((e: Cde[A]) => k => if_(f(e), k(e), zr := bool(false)), guard(GRef(zr), shape))
+         )
+      Cooked[A](newShape)
+   }
+
+   def mapAccum[Z: Type, B: Type](
+      z: Cde[Z],
+      tr: (Cde[Z] =>  Cde[A] => (Cde[Z] => Cde[B] => Cde[Unit]) => Cde[Unit]))(using Quotes): Cooked[B] = {
+         def newShape(using raw: Raw): raw.Stream[raw.Cde[B]] =
+            import raw._
+            import raw.code._
+            
+            mkInitVar(z, zr =>  
+               mapRaw((a: Cde[A]) => k => 
+                        letl(dref(zr))(z =>
+                           tr(z)(a)((z2: Cde[Z]) => (b: Cde[B]) =>
+                           seq(zr := z2, k(b)))),
+                     shape))
+         Cooked[B](newShape)
+   }
+
+   def drop(n: Cde[Int])(using Quotes): Cooked[A] = {
+      def newShape(using raw: Raw): raw.Stream[raw.Cde[A]] =
+         import raw._
+         import raw.code.{_, given}
+
+         mkInitVar(n, z =>
+            filterRaw (e => (dref(z) <= int(0)) || seq(decr(z), bool(false)), shape)
+         )
+      Cooked[A](newShape)
+   }
+
+   def dropWhile(f: (Cde[A] => Cde[Boolean]))(using Quotes): Cooked[A] = {
+      def newShape(using raw: Raw): raw.Stream[raw.Cde[A]] =
+         import raw._
+         import raw.code.{_, given}
+         
+         mkInitVar(bool(false), z =>
+            filterRaw ((e: Cde[A]) => dref(z) || seq(z := not(f(e)), dref(z)), shape)
+         )
+      Cooked[A](newShape)
+   }
+
+   def fold[W: Type](using raw: Raw)(z: Cde[W], f: ((Cde[W], Cde[A]) => Cde[W]))(using Quotes): Cde[W] = {
+      import raw._
+      import raw.code._
+
+      letVar(z) { s => 
+         seq(foldRaw[Cde[A]]((a: Cde[A]) => s := f(dref(s), a), shape(using raw)), dref(s))
       }
    }
 
-   /** Builds a new stream by applying a function to all elements of this stream.
-   *
-   * @param  f the function to apply to each quoted element.
-   * @tparam B the element type of the returned stream
-   * @return a new stream resulting from applying `mapRaw` and threading the element of the first stream downstream.
-   */
-   def map[B : Type](f: (Expr[A] => Expr[B])): Stream[B] = {
-      Stream(mapRaw[Expr[A], Expr[B]](a => k => k(f(a)), stream))
-   }
-
-   /** Flatmap */
-   def flatMap[B : Type](f: (Expr[A] => Stream[B])): Stream[B] = {
-      Stream(flatMapRaw[Expr[A], Expr[B]]((a => { val Stream (nested) = f(a); nested }), stream))
-   }
-
-   /** Selects all elements of this stream which satisfy a predicate.
-   *
-   *    Note: this is merely a special case of `flatMap` as the resulting stream in each step may return 0 or 1
-   *    element.
-   *
-   * @param f    the predicate used to test elements.
-   * @return     a new stream consisting of all elements of the input stream that do satisfy the given
-   *             predicate `pred`.
-   */
-   def filter(pred: (Expr[A] => Expr[Boolean]))(using QuoteContext): Stream[A] = {
-      val filterStream = (a: Expr[A]) =>
-         new Producer[Expr[A]] {
-
-            type St = Expr[A]
-            val card = AtMost1
-
-            def init(k: St => Expr[Unit]): E[Unit] =
-            k(a)
-
-            def step(st: St, k: (Expr[A] => Expr[Unit])): E[Unit] =
-            k(st)
-
-            def hasNext(st: St): E[Boolean] =
-            pred(st)
-         }
-
-      Stream(flatMapRaw[Expr[A], Expr[A]]((a => { Linear(filterStream(a)) }), stream))
-   }
-
-
-   /** A stream containing the first `n` elements of this stream. */
-   def take(n: Expr[Int])(using QuoteContext): Stream[A] = Stream(takeRaw[Expr[A]](n, stream))
-
-   /** zip **/
-   def zip[B: Type, C: Type](f: (Expr[A] => Expr[B] => Expr[C]), stream2: Stream[B])(using QuoteContext): Stream[C] = {
-      val Stream(stream_b) = stream2
-      Stream(mapRaw[(Expr[A], Expr[B]), Expr[C]]((t => k => k(f(t._1)(t._2))), zipRaw[A, Expr[B]](stream, stream_b)))
+   def collect(using raw: Raw)()(using Quotes): Cde[List[A]] = {
+      import raw._
+      import raw.code._
+      
+      this.fold(nil(), (xs, x) => cons(x, xs))
    }
 }
 
-object Stream {
-   def of[A: Type](arr: Expr[Array[A]])(using QuoteContext): Stream[A] = {
-      import imports.Cardinality._
+object Cooked {
+   // val raw = Raw(Code)
 
-      val prod = new Producer[Expr[A]] {
-         type St = (Var[Int], Var[Int], Expr[Array[A]])
+   def of[A: Type](arr: Cde[Array[A]])(using Quotes): Cooked[A] = {
+      def shape(using raw: Raw) = 
+         import raw._
+         import raw.code.{_, given}
 
-         val card = Many
+         mkInit(arr, (arr: Cde[Array[A]]) => 
+            mkInit(array_len(arr) - int(1), (len: Cde[Int]) => 
+               mkPullArray[Cde[A]](len, array_get (arr)))
+         )
 
-         def init(k: St => Expr[Unit]): E[Unit] = {
-            Var('{($arr).length}) { n =>
-               Var(Expr(0)){ i =>
-                  k((i, n, arr))
-               }
-            }
-         }
+      Cooked(shape)
+   }
 
-         def step(st: St, k: (Expr[A] => Expr[Unit])): E[Unit] = {
-            val (i, _, arr) = st
-            '{
-               val el = ($arr).apply(${i.get})
-               ${i.update('{ ${i.get} + 1 })}
-               ${k('el)}
-            }
-         }
+   def of_static[A: Type : ClassTag](arr: Array[Cde[A]])(using Quotes): Cooked[A] = {
+      val len = arr.length
+      def shape(using raw: Raw): raw.Stream[raw.Cde[A]] = 
+         import raw._
+         import raw.code._
 
-         def hasNext(st: St): E[Boolean] =  {
-            val (i, n, _) = st
-            '{
-               (${i.get} < ${n.get})
-            }
-         }
-      }
+         mkInitArr(arr, (arr: Cde[Array[A]]) => 
+            mkPullArray[Cde[A]](int(len-1), array_get (arr))
+         )
 
-      Stream(Linear(prod))
+      Cooked(shape)
+   }
+
+   def of_int_array(using raw: Raw)(arr: Array[Int])(using Quotes): Cooked[Int] = {
+      import raw.code._
+      
+      of_static(arr.map(e => int(e)))
+   }
+
+   def of_long_array(using raw: Raw)(arr: Array[Long])(using Quotes): Cooked[Long] = {
+      import raw.code._
+      
+      of_static(arr.map(e => long(e)))
+   }
+
+   def iota(n: Cde[Int])(using Quotes): Cooked[Int] = {
+      def shape(using raw: Raw) = 
+         import raw._
+         import raw.code.{_, given}
+
+         mkInitVar(n, z => {
+            infinite[Cde[Int]]((k: Cde[Int] => Cde[Unit]) => {
+               letl(dref(z))((v: Cde[Int]) => { seq(z := dref(z) + int(1), k(v))}) 
+            })
+      })
+
+      Cooked[Int](shape)
+   }
+
+   def fromTo(a: Cde[Int], b: Cde[Int], step: Int = 1)(using Quotes): Cooked[Int] = {
+      def shape(using raw: Raw): raw.Stream[raw.Cde[Int]] = 
+         import raw._
+         import raw.code.{_, given}
+
+         if step == 1 
+         then mkPullArray[Cde[Int]](b - a, (e => (k: Cde[Int] => Cde[Unit]) => letl(e + a)(k))) 
+         else
+            mkInitVar[Int, Cde[Int]](a, z =>
+               guard[Cde[Int]](Goon.GExp(if (step >= 0) then (dref(z) <= b) else (dref(z) >= b)),
+                  infinite(k => 
+                     (letl(dref(z))(v => 
+                     seq(if (step == 1) then incr(z)
+                        else if (step == -1) then decr(z) else
+                        z := dref(z) + int(step),
+                        k(v))
+                     ))
+                  )
+               ))
+      Cooked[Int](shape)
+   }
+
+   def zipWith[A: Type, B: Type, C: Type](str1: Cooked[A], str2: Cooked[B], f: (Cde[A], Cde[B]) => Cde[C])(using Quotes): Cooked[C] = {
+      def newShape(using raw: Raw): raw.Stream[raw.Cde[C]] =
+         import raw._
+
+         mapRaw_Direct[(Cde[A], Cde[B]), Cde[C]](p => f(p._1, p._2), zipRaw[Cde[A], Cde[B]](str1.shape, str2.shape))
+
+      Cooked[C](newShape)
    }
 }
+

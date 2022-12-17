@@ -17,6 +17,7 @@ strymonas is built with SBT 1.3.8 or later and uses the [sbt-dotty](https://gith
 * Nick Palladinos ([@palladin](https://github.com/palladin))
 * Yannis Smaragdakis ([yanniss](https://yanniss.github.io/))
 * Nicolas Stucki ([@nicolasstucki](https://github.com/nicolasstucki))
+* Tomoaki Kobayashi ([@moatom](https://github.com/moatom))
 
 ## Credits
 

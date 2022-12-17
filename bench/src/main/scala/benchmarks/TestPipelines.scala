@@ -1,81 +1,141 @@
 package benchmarks
 
 import scala.quoted._
-import scala.quoted.util._
 import scala.quoted.staging._
 import strymonas._
+import strymonas.Code.given
 
 object TestPipelines {
-   given Toolbox = Toolbox.make(getClass.getClassLoader)
+   given Compiler = Compiler.make(getClass.getClassLoader)
+   given Raw = Raw(Code)
 
-   def sum(using QuoteContext) = '{ (array: Array[Int]) => 
-      ${ Stream.of('array)
-         .fold('{0}, ((a, b) => '{ $a + $b })) } 
+   def sumPipeline(using Quotes) = '{ (array: Array[Long]) => 
+      ${ Cooked.of('{array})
+         .fold(0L, _+_) } 
    }
 
-   def sumOfSquares(using QuoteContext) = '{ (array: Array[Int]) =>
-      ${ Stream.of('{array})
-         .map((a) => '{ $a * $a })
-         .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def sumOfSquaresPipeline(using Quotes) = '{ (array: Array[Long]) =>
+      ${ Cooked.of('{array})
+         .map(a => a * a)
+         .fold(0L, _+_) }
    }
 
-   def sumOfSquaresEven(using QuoteContext) = '{ (array: Array[Int]) =>
-      ${ Stream.of('{array})
-      .filter((d) => '{ $d % 2 == 0 })
-      .map((a) => '{ $a * $a })
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def sumOfSquaresEvenPipeline(using Quotes) = '{ (array: Array[Long]) =>
+      ${ Cooked.of('{array})
+      .filter(d => (d mod 2L) === 0L)
+      .map(a => a * a )
+      .fold(0L, _+_) }
    }
 
-   def cart(using QuoteContext) = '{ (vHi: Array[Int], vLo: Array[Int]) =>
-      ${ Stream.of('{vHi})
-      .flatMap((d) => Stream.of('{vLo}).map((dp) => '{ $d * $dp }))
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def cartPipeline(using Quotes) = '{ (vHi: Array[Long], vLo: Array[Long]) =>
+      ${ Cooked.of('{vHi})
+      .flatMap(d => Cooked.of('{vLo}).map(dp => d * dp))
+      .fold(0L, _+_) }
    }
 
-   def filter(using QuoteContext) = '{ (array: Array[Int]) =>
-      ${ Stream.of('{array})
-      .filter((d) => '{ $d % 2 == 0 })
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def mapsMegamorphicPipeline(using Quotes) = '{ (array: Array[Long]) =>
+      ${ Cooked.of('{array})
+         .map(a => a * 1L)
+         .map(a => a * 2L)
+         .map(a => a * 3L)
+         .map(a => a * 4L)
+         .map(a => a * 5L)
+         .map(a => a * 6L)
+         .map(a => a * 7L)
+         .fold(0L, _+_) }
    }
 
-   def take(using QuoteContext) = '{ (array: Array[Int]) =>
-      ${ Stream.of('{array})
-      .take('{2})
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def filtersMegamorphicPipeline(using Quotes) = '{ (array: Array[Long]) =>
+      ${ Cooked.of('{array})
+         .filter(a => a > 1L)
+         .filter(a => a > 2L)
+         .filter(a => a > 3L)
+         .filter(a => a > 4L)
+         .filter(a => a > 5L)
+         .filter(a => a > 6L)
+         .filter(a => a > 7L)
+         .fold(0L, _+_) }
+   } 
+
+   def filterPipeline(using Quotes) = '{ (array: Array[Long]) =>
+      ${ Cooked.of('{array})
+      .filter(d => (d mod 2L) === 0L)
+      .fold(0L, _+_) }
    }
 
-   def flatMap_take(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1})
-      .flatMap((d) => Stream.of('{array2}))
-      .take('{20000000})
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def takePipeline(using Quotes) = '{ (array: Array[Long]) =>
+      ${ Cooked.of('{array})
+      .take(2)
+      .fold(0L, _+_) }
    }
 
-   def dotProduct(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int])  =>
-      ${ Stream.of('{array1})
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}))
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def flatMapTakePipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Cooked.of('{array1})
+      .flatMap(d => Cooked.of('{array2}).map(y => y * d))
+      .take(Settings.vLimit_s)
+      .fold(0L, _+_) }
    }
 
-   def flatMap_after_zip(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1})
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}))
-      .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def dotProductPipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long])  =>
+      ${ Cooked.of('{array1})
+      .zipWith(Cooked.of('{array2}), _*_)
+      .fold(0L, _+_) }
    }
 
-   def zip_after_flatMap(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1})
-      .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array1}) )
-      .fold('{0}, ((a, b) => '{ $a + $b })) }
+   def flatMapAfterZipPipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Cooked.of('{array1})
+      .zipWith(Cooked.of('{array1}), _+_)
+      .flatMap(d => Cooked.of('{array2}).map(dp => d + dp))
+      .fold(0L, _+_) }
    }
 
-   def zip_flat_flat(using QuoteContext) = '{ (array1: Array[Int], array2: Array[Int]) =>
-      ${ Stream.of('{array1})
-      .flatMap((d) => Stream.of('{array2}).map((dp) => '{ $d + $dp }))
-      .zip(((a: Expr[Int]) => (b: Expr[Int]) => '{ $a + $b }), Stream.of('{array2}).flatMap((d) => Stream.of('{array1}).map((dp) => '{ $d + $dp })) )
-      .take('{20000000})
-      .fold('{0}, ((a, b ) => '{ $a + $b })) }
+   def zipAfterFlatMapPipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Cooked.of('{array1})
+      .flatMap(d => Cooked.of('{array2}).map(dp => d + dp))
+      .zipWith(Cooked.of('{array1}), _+_)
+      .fold(0L, _+_) }
+   }
+
+   def zipFlatMapFlatMapPipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Cooked.of('{array1})
+      .flatMap(d => Cooked.of('{array2}).map(dp => d * dp))
+      .zipWith(Cooked.of('{array2}).flatMap(d => Cooked.of('{array1}).map(dp => d - dp)), _+_)
+      .take(Settings.vLimit_s)
+      .fold(0L, _+_) }
+   }
+
+   def zipFilterFilterPipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      ${ Cooked.of('{array1}).filter(d => d > 7L)
+      .zipWith(Cooked.of('{array2}).filter(d => d > 5L), _+_)
+      .fold(0L, _+_) } 
+   }
+
+   extension (st: Cooked[Long])  
+      
+      def decode()(using Quotes): Cooked[Boolean] = 
+         import strymonas.Code._
+
+         st.map(e => toInt(e))
+            .flatMap {el => 
+               def newShape(using raw: Raw) = 
+                  import raw._
+                  mkPullArray[Cde[Boolean]](el, i => k =>
+                     if_(i<el,
+                        k(bool(false)),
+                        if1(i<int(255), k(bool(true)))
+                     )
+                  )
+               
+               Cooked(newShape)
+            }
+
+   def decodingPipeline(using Quotes) = '{ (array1: Array[Long], array2: Array[Long]) =>
+      import strymonas.Code._
+      
+      ${ Cooked.of('{array1})
+         .decode()
+         .zipWith[Boolean, Boolean](Cooked.of('{array2}).decode(), _||_)
+         .map(x => cond(x, 1L, 0L))
+         .fold(0L, _+_) }
    }
 }
