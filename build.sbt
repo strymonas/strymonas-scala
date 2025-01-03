@@ -2,6 +2,7 @@ import xerial.sbt.Sonatype._
 
 val scala3Version = "3.3.4"
 
+ThisBuild / scalafmtOnCompile := true // not recommended, but just for convenience
 
 lazy val root = project
   .in(file("."))
