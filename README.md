@@ -21,7 +21,7 @@ val t = run {
 println(t)
 ```
 
-Construct a streaming pipeline using the Cooked Object (defined in [Stream.scala](src/main/scala/strymonas/Stream.scala)).[^1] Then, invoke the streaming operation with `scala.quoted.staging.run`.
+Construct a streaming pipeline using the Cooked Object (defined in [Stream.scala](src/main/scala/strymonas/Stream.scala)).[^1] Then, invoke the pipeline with `scala.quoted.staging.run`.
 
 
 Refer to the [examples directory](examples) for more details.
@@ -53,7 +53,7 @@ cd strymonas-scala
 # 3. Compile via SBT
 sbt compile
 
-# 4. Clean compile artifacts as needed
+# 4. Clean compilation artifacts as needed
 sbt clean
 rm -rf target/ project/target/ project/project/
 ```
