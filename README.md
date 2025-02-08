@@ -14,7 +14,7 @@ given Code.Compiler = Compiler.make(getClass.getClassLoader)
 given raw: Raw = Raw(Code)
 
 val t = run {
-  // Write a streaming operation here
+  // Construct a streaming pipeline here
   Cooked.of_int_array(Array(1,2,3,4,5,6,7,8,9,10)).fold(0, (_+_))
 }
 
@@ -53,7 +53,7 @@ cd strymonas-scala
 # 3. Compile via SBT
 sbt compile
 
-# 4. Clean compilation artifacts as needed
+# (4. Clean compilation artifacts as needed)
 sbt clean
 rm -rf target/ project/target/ project/project/
 ```
