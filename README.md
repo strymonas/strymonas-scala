@@ -6,6 +6,10 @@
 ## How to Use
 
 ```scala
+libraryDependencies += "io.github.strymonas" %% "strymonas" % "0.1.0"
+```
+
+```scala
 import scala.quoted.staging._
 import strymonas._
 import strymonas.Code.given
