@@ -12,7 +12,7 @@ enum Annot[A] {
 case class Cde[A](sta: Annot[A], dyn: CodeRaw.Cde[A])
 
 /**
- * The Scala's code generator which applies online partial evaluation
+ * The Scala's code generator which applies offline partial evaluation
  */
 object Code extends CdeSpec[Cde] {
   type Compiler = staging.Compiler
